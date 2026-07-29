@@ -1,0 +1,15 @@
+version: 0.1.0
+quality_gates:
+  - { id: QG-INTAKE, owner: orchestrator, definition: ../core/QUALITY.md }
+  - { id: QG-DISCOVERY, owner: business-analyst, definition: ../core/QUALITY.md }
+  - { id: QG-ANALYSIS, owner: business-analyst, definition: ../core/QUALITY.md }
+  - { id: QG-ARCH, owner: software-architect, definition: ../core/QUALITY.md }
+  - { id: QG-PLAN, owner: project-manager, definition: ../core/QUALITY.md }
+  - { id: QG-DESIGN, owner: ux-ui-designer, definition: ../core/QUALITY.md }
+  - { id: QG-IMPLEMENT, owner: qa-engineer, definition: ../core/QUALITY.md }
+  - { id: QG-TEST, owner: qa-engineer, definition: ../core/QUALITY.md }
+  - { id: QG-SECURITY, owner: security-engineer, definition: ../core/QUALITY.md }
+  - { id: QG-DEPLOY, owner: devops-engineer, definition: ../core/QUALITY.md }
+  - { id: QG-DOC, owner: documentation-engineer, definition: ../core/QUALITY.md }
+  - { id: QG-HANDOVER, owner: orchestrator, definition: ../core/QUALITY.md }
+  - { id: QG-CLOSE, owner: orchestrator, definition: ../core/QUALITY.md }

@@ -1,0 +1,47 @@
+version: 0.1.0
+contracts:
+  - id: orchestrator
+    version: 0.1.0
+    path: ../contracts/orchestrator.yaml
+  - id: business-analyst
+    version: 0.1.0
+    path: ../contracts/business-analyst.yaml
+  - id: software-architect
+    version: 0.1.0
+    path: ../contracts/software-architect.yaml
+  - id: project-manager
+    version: 0.1.0
+    path: ../contracts/project-manager.yaml
+  - id: ux-ui-designer
+    version: 0.1.0
+    path: ../contracts/ux-ui-designer.yaml
+  - id: database-engineer
+    version: 0.1.0
+    path: ../contracts/database-engineer.yaml
+  - id: backend-engineer
+    version: 0.1.0
+    path: ../contracts/backend-engineer.yaml
+  - id: frontend-engineer
+    version: 0.1.0
+    path: ../contracts/frontend-engineer.yaml
+  - id: mobile-engineer
+    version: 0.1.0
+    path: ../contracts/mobile-engineer.yaml
+  - id: ai-engineer
+    version: 0.1.0
+    path: ../contracts/ai-engineer.yaml
+  - id: qa-engineer
+    version: 0.1.0
+    path: ../contracts/qa-engineer.yaml
+  - id: security-engineer
+    version: 0.1.0
+    path: ../contracts/security-engineer.yaml
+  - id: devops-engineer
+    version: 0.1.0
+    path: ../contracts/devops-engineer.yaml
+  - id: documentation-engineer
+    version: 0.1.0
+    path: ../contracts/documentation-engineer.yaml
+  - id: support-engineer
+    version: 0.1.0
+    path: ../contracts/support-engineer.yaml

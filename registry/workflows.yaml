@@ -1,0 +1,403 @@
+version: 0.1.0
+workflows:
+- id: asep-self-development-sequential
+  name: "ASEP self-development sequential workflow"
+  version: 0.1.0
+  purpose: "Executar deterministicamente o incremento da Sprint 2"
+  project_types: [software]
+  stages: [business_analysis]
+  agents: [business-analyst]
+  conditions: []
+  gates: [QG-ANALYSIS]
+  approvals: []
+  path: ../workflows/asep-self-development-sequential.yaml
+- id: software-project
+  name: software project workflow
+  version: 0.1.0
+  purpose: govern project type software
+  project_types:
+  - software
+  stages:
+  - intake
+  - discovery
+  - analysis
+  - architecture
+  - planning_design
+  - implementation
+  - assurance
+  - deployment
+  - handover
+  - retrospective
+  agents:
+  - backend-engineer
+  - business-analyst
+  - devops-engineer
+  - documentation-engineer
+  - frontend-engineer
+  - orchestrator
+  - project-manager
+  - qa-engineer
+  - security-engineer
+  - software-architect
+  - support-engineer
+  - ux-ui-designer
+  conditions:
+  - gates
+  - approvals
+  - correction
+  - blocking
+  - cancellation
+  - resumption
+  gates:
+  - QG-INTAKE
+  - QG-DISCOVERY
+  - QG-ANALYSIS
+  - QG-ARCH
+  - QG-PLAN
+  - QG-DESIGN
+  - QG-IMPLEMENT
+  - QG-TEST
+  - QG-SECURITY
+  - QG-DEPLOY
+  - QG-DOC
+  - QG-HANDOVER
+  - QG-CLOSE
+  approvals:
+  - scope-baseline
+  - production-go-no-go
+  - project-closure
+  path: ../workflows/software-project.yaml
+- id: saas-project
+  name: saas project workflow
+  version: 0.1.0
+  purpose: govern project type saas
+  project_types:
+  - saas
+  stages:
+  - intake
+  - discovery
+  - analysis
+  - architecture
+  - planning_design
+  - implementation
+  - assurance
+  - deployment
+  - handover
+  - retrospective
+  agents:
+  - backend-engineer
+  - business-analyst
+  - devops-engineer
+  - documentation-engineer
+  - frontend-engineer
+  - orchestrator
+  - project-manager
+  - qa-engineer
+  - security-engineer
+  - software-architect
+  - support-engineer
+  - ux-ui-designer
+  conditions:
+  - gates
+  - approvals
+  - correction
+  - blocking
+  - cancellation
+  - resumption
+  gates:
+  - QG-INTAKE
+  - QG-DISCOVERY
+  - QG-ANALYSIS
+  - QG-ARCH
+  - QG-PLAN
+  - QG-DESIGN
+  - QG-IMPLEMENT
+  - QG-TEST
+  - QG-SECURITY
+  - QG-DEPLOY
+  - QG-DOC
+  - QG-HANDOVER
+  - QG-CLOSE
+  approvals:
+  - scope-baseline
+  - production-go-no-go
+  - project-closure
+  path: ../workflows/saas-project.yaml
+- id: web-project
+  name: web project workflow
+  version: 0.1.0
+  purpose: govern project type web
+  project_types:
+  - web
+  stages:
+  - intake
+  - discovery
+  - analysis
+  - architecture
+  - planning_design
+  - implementation
+  - assurance
+  - deployment
+  - handover
+  - retrospective
+  agents:
+  - backend-engineer
+  - business-analyst
+  - devops-engineer
+  - documentation-engineer
+  - frontend-engineer
+  - orchestrator
+  - project-manager
+  - qa-engineer
+  - security-engineer
+  - software-architect
+  - support-engineer
+  - ux-ui-designer
+  conditions:
+  - gates
+  - approvals
+  - correction
+  - blocking
+  - cancellation
+  - resumption
+  gates:
+  - QG-INTAKE
+  - QG-DISCOVERY
+  - QG-ANALYSIS
+  - QG-ARCH
+  - QG-PLAN
+  - QG-DESIGN
+  - QG-IMPLEMENT
+  - QG-TEST
+  - QG-SECURITY
+  - QG-DEPLOY
+  - QG-DOC
+  - QG-HANDOVER
+  - QG-CLOSE
+  approvals:
+  - scope-baseline
+  - production-go-no-go
+  - project-closure
+  path: ../workflows/web-project.yaml
+- id: mobile-project
+  name: mobile project workflow
+  version: 0.1.0
+  purpose: govern project type mobile
+  project_types:
+  - mobile
+  stages:
+  - intake
+  - discovery
+  - analysis
+  - architecture
+  - planning_design
+  - implementation
+  - assurance
+  - deployment
+  - handover
+  - retrospective
+  agents:
+  - backend-engineer
+  - business-analyst
+  - devops-engineer
+  - documentation-engineer
+  - mobile-engineer
+  - orchestrator
+  - project-manager
+  - qa-engineer
+  - security-engineer
+  - software-architect
+  - support-engineer
+  - ux-ui-designer
+  conditions:
+  - gates
+  - approvals
+  - correction
+  - blocking
+  - cancellation
+  - resumption
+  gates:
+  - QG-INTAKE
+  - QG-DISCOVERY
+  - QG-ANALYSIS
+  - QG-ARCH
+  - QG-PLAN
+  - QG-DESIGN
+  - QG-IMPLEMENT
+  - QG-TEST
+  - QG-SECURITY
+  - QG-DEPLOY
+  - QG-DOC
+  - QG-HANDOVER
+  - QG-CLOSE
+  approvals:
+  - scope-baseline
+  - production-go-no-go
+  - project-closure
+  path: ../workflows/mobile-project.yaml
+- id: ai-project
+  name: ai project workflow
+  version: 0.1.0
+  purpose: govern project type ai
+  project_types:
+  - ai
+  stages:
+  - intake
+  - discovery
+  - analysis
+  - architecture
+  - planning_design
+  - implementation
+  - assurance
+  - deployment
+  - handover
+  - retrospective
+  agents:
+  - ai-engineer
+  - backend-engineer
+  - business-analyst
+  - devops-engineer
+  - documentation-engineer
+  - orchestrator
+  - project-manager
+  - qa-engineer
+  - security-engineer
+  - software-architect
+  - support-engineer
+  - ux-ui-designer
+  conditions:
+  - gates
+  - approvals
+  - correction
+  - blocking
+  - cancellation
+  - resumption
+  gates:
+  - QG-INTAKE
+  - QG-DISCOVERY
+  - QG-ANALYSIS
+  - QG-ARCH
+  - QG-PLAN
+  - QG-DESIGN
+  - QG-IMPLEMENT
+  - QG-TEST
+  - QG-SECURITY
+  - QG-DEPLOY
+  - QG-DOC
+  - QG-HANDOVER
+  - QG-CLOSE
+  approvals:
+  - scope-baseline
+  - production-go-no-go
+  - project-closure
+  path: ../workflows/ai-project.yaml
+- id: automation-project
+  name: automation project workflow
+  version: 0.1.0
+  purpose: govern project type automation
+  project_types:
+  - automation
+  stages:
+  - intake
+  - discovery
+  - analysis
+  - architecture
+  - planning_design
+  - implementation
+  - assurance
+  - deployment
+  - handover
+  - retrospective
+  agents:
+  - backend-engineer
+  - business-analyst
+  - devops-engineer
+  - documentation-engineer
+  - frontend-engineer
+  - orchestrator
+  - project-manager
+  - qa-engineer
+  - security-engineer
+  - software-architect
+  - support-engineer
+  - ux-ui-designer
+  conditions:
+  - gates
+  - approvals
+  - correction
+  - blocking
+  - cancellation
+  - resumption
+  gates:
+  - QG-INTAKE
+  - QG-DISCOVERY
+  - QG-ANALYSIS
+  - QG-ARCH
+  - QG-PLAN
+  - QG-DESIGN
+  - QG-IMPLEMENT
+  - QG-TEST
+  - QG-SECURITY
+  - QG-DEPLOY
+  - QG-DOC
+  - QG-HANDOVER
+  - QG-CLOSE
+  approvals:
+  - scope-baseline
+  - production-go-no-go
+  - project-closure
+  path: ../workflows/automation-project.yaml
+- id: maintenance-project
+  name: maintenance project workflow
+  version: 0.1.0
+  purpose: govern project type maintenance
+  project_types:
+  - maintenance
+  stages:
+  - intake
+  - discovery
+  - analysis
+  - architecture
+  - planning_design
+  - implementation
+  - assurance
+  - deployment
+  - handover
+  - retrospective
+  agents:
+  - business-analyst
+  - devops-engineer
+  - documentation-engineer
+  - orchestrator
+  - project-manager
+  - qa-engineer
+  - security-engineer
+  - software-architect
+  - support-engineer
+  - ux-ui-designer
+  conditions:
+  - gates
+  - approvals
+  - correction
+  - blocking
+  - cancellation
+  - resumption
+  gates:
+  - QG-INTAKE
+  - QG-DISCOVERY
+  - QG-ANALYSIS
+  - QG-ARCH
+  - QG-PLAN
+  - QG-DESIGN
+  - QG-IMPLEMENT
+  - QG-TEST
+  - QG-SECURITY
+  - QG-DEPLOY
+  - QG-DOC
+  - QG-HANDOVER
+  - QG-CLOSE
+  approvals:
+  - scope-baseline
+  - production-go-no-go
+  - project-closure
+  path: ../workflows/maintenance-project.yaml

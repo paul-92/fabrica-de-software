@@ -1,0 +1,50 @@
+version: 0.1.0
+roles:
+  - id: executive
+    name: "Executive"
+    path: ../roles/executive.md
+  - id: orchestrator
+    name: "Orchestrator"
+    path: ../roles/orchestrator.md
+  - id: business-analysis
+    name: "Business Analysis"
+    path: ../roles/business-analysis.md
+  - id: architecture
+    name: "Architecture"
+    path: ../roles/architecture.md
+  - id: project-management
+    name: "Project Management"
+    path: ../roles/project-management.md
+  - id: product-design
+    name: "Product Design"
+    path: ../roles/product-design.md
+  - id: database-engineering
+    name: "Database Engineering"
+    path: ../roles/database-engineering.md
+  - id: backend-engineering
+    name: "Backend Engineering"
+    path: ../roles/backend-engineering.md
+  - id: frontend-engineering
+    name: "Frontend Engineering"
+    path: ../roles/frontend-engineering.md
+  - id: mobile-engineering
+    name: "Mobile Engineering"
+    path: ../roles/mobile-engineering.md
+  - id: ai-engineering
+    name: "AI Engineering"
+    path: ../roles/ai-engineering.md
+  - id: quality-assurance
+    name: "Quality Assurance"
+    path: ../roles/quality-assurance.md
+  - id: security-engineering
+    name: "Security Engineering"
+    path: ../roles/security-engineering.md
+  - id: devops-engineering
+    name: "DevOps Engineering"
+    path: ../roles/devops-engineering.md
+  - id: documentation-engineering
+    name: "Documentation Engineering"
+    path: ../roles/documentation-engineering.md
+  - id: support-maintenance
+    name: "Support & Maintenance"
+    path: ../roles/support-maintenance.md

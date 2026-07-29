@@ -1,0 +1,41 @@
+# Ambiente virtual
+.venv/
+
+# Arquivos temporários
+.tmp/
+*.tmp
+
+# Cache do Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Cobertura de testes
+.coverage
+htmlcov/
+
+# Build e distribuição
+build/
+dist/
+*.egg-info/
+
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Diretórios temporários do QA
+qa-runtime-temp/
+qa-evidence-temp/
+.qa-tmp-existing/
+
+# Cache temporário do pytest
+pytest-cache-files-*/
+
+# Runtime da ASEP
+projects/*/.asep/
+projects/*/logs/runs/
+projects/*/logs/*.jsonl
+projects/*/artifacts/runs/

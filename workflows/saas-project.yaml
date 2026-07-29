@@ -1,0 +1,53 @@
+id: saas-project
+name: "saas project workflow"
+version: 0.1.0
+description: "Lifecycle declarativo para projeto saas; etapas condicionais são decididas no intake."
+applicable_project_types: [saas]
+required_context: [project-brief, sponsor, data-classification, success-criteria]
+stages:
+  - { id: intake, mode: sequential, workflow: project-intake }
+  - { id: discovery, mode: sequential, workflow: discovery }
+  - { id: analysis, mode: sequential, workflow: business-analysis }
+  - { id: architecture, mode: sequential, workflow: architecture }
+  - { id: planning_design, mode: parallel, workflows: [planning, product-design] }
+  - { id: implementation, mode: sequential, workflow: implementation }
+  - { id: assurance, mode: parallel, workflows: [testing, security-review, documentation] }
+  - { id: deployment, mode: conditional, workflow: deployment }
+  - { id: handover, mode: sequential, workflow: handover }
+  - { id: retrospective, mode: sequential, workflow: retrospective }
+stage_dependencies:
+  discovery: [intake]
+  analysis: [discovery]
+  architecture: [analysis]
+  planning_design: [architecture]
+  implementation: [planning_design]
+  assurance: [implementation]
+  deployment: [assurance]
+  handover: [deployment]
+  retrospective: [handover]
+assigned_agents:
+  intake: [orchestrator]
+  discovery: [business-analyst]
+  analysis: [business-analyst]
+  architecture: [software-architect, security-engineer]
+  planning_design: [project-manager, ux-ui-designer]
+  implementation: [backend-engineer, frontend-engineer]
+  assurance: [qa-engineer, security-engineer, documentation-engineer]
+  deployment: [devops-engineer]
+  handover: [orchestrator, support-engineer]
+  retrospective: [project-manager]
+conditions:
+  - "design may be not_applicable only with recorded justification"
+  - "deployment runs only for an approved release target"
+  - "failed gates return to the producing stage"
+  - "blocked stages require owner and resume trigger"
+quality_gates: [QG-INTAKE, QG-DISCOVERY, QG-ANALYSIS, QG-ARCH, QG-PLAN, QG-DESIGN, QG-IMPLEMENT, QG-TEST, QG-SECURITY, QG-DEPLOY, QG-DOC, QG-HANDOVER, QG-CLOSE]
+human_approvals: [scope-baseline, architecture-high-risk, production-go-no-go, residual-risk, project-closure]
+artifacts: [project-brief, requirements, architecture-document, roadmap, backlog, test-report, security-review, deployment-plan, handover, retrospective]
+failure_handling:
+  retry: "only for transient and idempotent operations"
+  correction: "return with findings and preserved history"
+  blocking: "record cause, owner and resume trigger"
+  cancellation: "preserve audit, artifacts and retention duties"
+  resumption: "revalidate context, versions, approvals and dependencies"
+completion_criteria: [all-required-stages-completed, all-gates-decided, human-approvals-recorded, handover-accepted, no-unowned-critical-pendency]

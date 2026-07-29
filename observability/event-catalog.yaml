@@ -1,0 +1,37 @@
+version: 0.1.0
+required_fields: [event_id, event_type, occurred_at, actor_id, actor_type, project_id, trace_id, correlation_id, source, schema_version, data_classification, payload]
+events:
+  - type: project.created
+    description: "Records project.created transition"
+  - type: workflow.started
+    description: "Records workflow.started transition"
+  - type: workflow.completed
+    description: "Records workflow.completed transition"
+  - type: stage.started
+    description: "Records stage.started transition"
+  - type: stage.blocked
+    description: "Records stage.blocked transition"
+  - type: stage.failed
+    description: "Records stage.failed transition"
+  - type: stage.completed
+    description: "Records stage.completed transition"
+  - type: agent.started
+    description: "Records agent.started transition"
+  - type: agent.completed
+    description: "Records agent.completed transition"
+  - type: quality_gate.failed
+    description: "Records quality_gate.failed transition"
+  - type: quality_gate.approved
+    description: "Records quality_gate.approved transition"
+  - type: human_approval.requested
+    description: "Records human_approval.requested transition"
+  - type: human_approval.completed
+    description: "Records human_approval.completed transition"
+  - type: artifact.created
+    description: "Records artifact.created transition"
+  - type: decision.recorded
+    description: "Records decision.recorded transition"
+  - type: project.completed
+    description: "Records project.completed transition"
+  - type: project.cancelled
+    description: "Records project.cancelled transition"

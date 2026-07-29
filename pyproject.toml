@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "asep"
+version = "0.1.0"
+description = "Núcleo executável local da AI Software Engineering Platform"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "typer>=0.16,<1",
+  "pydantic>=2.11,<3",
+  "PyYAML>=6,<7",
+  "rich>=14,<15",
+  "Jinja2>=3.1,<4",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8,<9", "pytest-cov>=6,<8"]
+
+[project.scripts]
+asep = "asep.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+pythonpath = ["src"]

@@ -1,0 +1,32 @@
+version: 0.1.0
+departments:
+  - id: executive
+    name: "Executive"
+    path: ../departments/executive.md
+  - id: business
+    name: "Business"
+    path: ../departments/business.md
+  - id: architecture
+    name: "Architecture"
+    path: ../departments/architecture.md
+  - id: product-design
+    name: "Product Design"
+    path: ../departments/product-design.md
+  - id: engineering
+    name: "Engineering"
+    path: ../departments/engineering.md
+  - id: data
+    name: "Data"
+    path: ../departments/data.md
+  - id: quality
+    name: "Quality"
+    path: ../departments/quality.md
+  - id: security
+    name: "Security"
+    path: ../departments/security.md
+  - id: operations
+    name: "Operations"
+    path: ../departments/operations.md
+  - id: documentation
+    name: "Documentation"
+    path: ../departments/documentation.md

@@ -1,0 +1,40 @@
+version: 0.1.0
+standards:
+  - id: documentation
+    path: ../standards/documentation.md
+  - id: naming
+    path: ../standards/naming.md
+  - id: versioning
+    path: ../standards/versioning.md
+  - id: repository-structure
+    path: ../standards/repository-structure.md
+  - id: requirements
+    path: ../standards/requirements.md
+  - id: architecture
+    path: ../standards/architecture.md
+  - id: adr
+    path: ../standards/adr.md
+  - id: api
+    path: ../standards/api.md
+  - id: database
+    path: ../standards/database.md
+  - id: backend
+    path: ../standards/backend.md
+  - id: frontend
+    path: ../standards/frontend.md
+  - id: mobile
+    path: ../standards/mobile.md
+  - id: ai
+    path: ../standards/ai.md
+  - id: testing
+    path: ../standards/testing.md
+  - id: security
+    path: ../standards/security.md
+  - id: devops
+    path: ../standards/devops.md
+  - id: observability
+    path: ../standards/observability.md
+  - id: code-review
+    path: ../standards/code-review.md
+  - id: git
+    path: ../standards/git.md

@@ -1,0 +1,152 @@
+version: 0.1.0
+agents:
+  - id: orchestrator
+    name: "Orchestrator"
+    version: 0.1.0
+    status: active
+    capabilities: [validate-inputs, produce-evidence, self-review, handoff]
+    contract: ../contracts/orchestrator.yaml
+    manual: ../agents/orchestrator.md
+    department: Operations
+    dependencies: [core-system, quality-gates]
+    applicable_project_types: [software, saas, web, mobile, ai, automation, maintenance]
+  - id: business-analyst
+    name: "Business Analyst"
+    version: 0.1.0
+    status: active
+    capabilities: [validate-inputs, produce-evidence, self-review, handoff]
+    contract: ../contracts/business-analyst.yaml
+    manual: ../agents/business-analyst.md
+    department: Business
+    dependencies: [core-system, quality-gates]
+    applicable_project_types: [software, saas, web, mobile, ai, automation, maintenance]
+  - id: software-architect
+    name: "Software Architect"
+    version: 0.1.0
+    status: active
+    capabilities: [validate-inputs, produce-evidence, self-review, handoff]
+    contract: ../contracts/software-architect.yaml
+    manual: ../agents/software-architect.md
+    department: Architecture
+    dependencies: [core-system, quality-gates]
+    applicable_project_types: [software, saas, web, mobile, ai, automation, maintenance]
+  - id: project-manager
+    name: "Project Manager"
+    version: 0.1.0
+    status: active
+    capabilities: [validate-inputs, produce-evidence, self-review, handoff]
+    contract: ../contracts/project-manager.yaml
+    manual: ../agents/project-manager.md
+    department: Operations
+    dependencies: [core-system, quality-gates]
+    applicable_project_types: [software, saas, web, mobile, ai, automation, maintenance]
+  - id: ux-ui-designer
+    name: "UX/UI Designer"
+    version: 0.1.0
+    status: active
+    capabilities: [validate-inputs, produce-evidence, self-review, handoff]
+    contract: ../contracts/ux-ui-designer.yaml
+    manual: ../agents/ux-ui-designer.md
+    department: Product Design
+    dependencies: [core-system, quality-gates]
+    applicable_project_types: [software, saas, web, mobile, ai, automation, maintenance]
+  - id: database-engineer
+    name: "Database Engineer"
+    version: 0.1.0
+    status: active
+    capabilities: [validate-inputs, produce-evidence, self-review, handoff]
+    contract: ../contracts/database-engineer.yaml
+    manual: ../agents/database-engineer.md
+    department: Data
+    dependencies: [core-system, quality-gates]
+    applicable_project_types: [software, saas, web, mobile, ai, automation, maintenance]
+  - id: backend-engineer
+    name: "Backend Engineer"
+    version: 0.1.0
+    status: active
+    capabilities: [validate-inputs, produce-evidence, self-review, handoff]
+    contract: ../contracts/backend-engineer.yaml
+    manual: ../agents/backend-engineer.md
+    department: Engineering
+    dependencies: [core-system, quality-gates]
+    applicable_project_types: [software, saas, web, mobile, ai, automation, maintenance]
+  - id: frontend-engineer
+    name: "Frontend Engineer"
+    version: 0.1.0
+    status: active
+    capabilities: [validate-inputs, produce-evidence, self-review, handoff]
+    contract: ../contracts/frontend-engineer.yaml
+    manual: ../agents/frontend-engineer.md
+    department: Engineering
+    dependencies: [core-system, quality-gates]
+    applicable_project_types: [software, saas, web, mobile, ai, automation, maintenance]
+  - id: mobile-engineer
+    name: "Mobile Engineer"
+    version: 0.1.0
+    status: active
+    capabilities: [validate-inputs, produce-evidence, self-review, handoff]
+    contract: ../contracts/mobile-engineer.yaml
+    manual: ../agents/mobile-engineer.md
+    department: Engineering
+    dependencies: [core-system, quality-gates]
+    applicable_project_types: [software, saas, web, mobile, ai, automation, maintenance]
+  - id: ai-engineer
+    name: "AI Engineer"
+    version: 0.1.0
+    status: active
+    capabilities: [validate-inputs, produce-evidence, self-review, handoff]
+    contract: ../contracts/ai-engineer.yaml
+    manual: ../agents/ai-engineer.md
+    department: Engineering
+    dependencies: [core-system, quality-gates]
+    applicable_project_types: [software, saas, web, mobile, ai, automation, maintenance]
+  - id: qa-engineer
+    name: "QA Engineer"
+    version: 0.1.0
+    status: active
+    capabilities: [validate-inputs, produce-evidence, self-review, handoff]
+    contract: ../contracts/qa-engineer.yaml
+    manual: ../agents/qa-engineer.md
+    department: Quality
+    dependencies: [core-system, quality-gates]
+    applicable_project_types: [software, saas, web, mobile, ai, automation, maintenance]
+  - id: security-engineer
+    name: "Security Engineer"
+    version: 0.1.0
+    status: active
+    capabilities: [validate-inputs, produce-evidence, self-review, handoff]
+    contract: ../contracts/security-engineer.yaml
+    manual: ../agents/security-engineer.md
+    department: Security
+    dependencies: [core-system, quality-gates]
+    applicable_project_types: [software, saas, web, mobile, ai, automation, maintenance]
+  - id: devops-engineer
+    name: "DevOps Engineer"
+    version: 0.1.0
+    status: active
+    capabilities: [validate-inputs, produce-evidence, self-review, handoff]
+    contract: ../contracts/devops-engineer.yaml
+    manual: ../agents/devops-engineer.md
+    department: Operations
+    dependencies: [core-system, quality-gates]
+    applicable_project_types: [software, saas, web, mobile, ai, automation, maintenance]
+  - id: documentation-engineer
+    name: "Documentation Engineer"
+    version: 0.1.0
+    status: active
+    capabilities: [validate-inputs, produce-evidence, self-review, handoff]
+    contract: ../contracts/documentation-engineer.yaml
+    manual: ../agents/documentation-engineer.md
+    department: Documentation
+    dependencies: [core-system, quality-gates]
+    applicable_project_types: [software, saas, web, mobile, ai, automation, maintenance]
+  - id: support-engineer
+    name: "Support Engineer"
+    version: 0.1.0
+    status: active
+    capabilities: [validate-inputs, produce-evidence, self-review, handoff]
+    contract: ../contracts/support-engineer.yaml
+    manual: ../agents/support-engineer.md
+    department: Operations
+    dependencies: [core-system, quality-gates]
+    applicable_project_types: [software, saas, web, mobile, ai, automation, maintenance]

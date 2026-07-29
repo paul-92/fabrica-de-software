@@ -1,0 +1,40 @@
+version: 0.1.0
+playbooks:
+  - id: new-client
+    path: ../playbooks/new-client.md
+  - id: new-project
+    path: ../playbooks/new-project.md
+  - id: discovery
+    path: ../playbooks/discovery.md
+  - id: requirements
+    path: ../playbooks/requirements.md
+  - id: architecture
+    path: ../playbooks/architecture.md
+  - id: planning
+    path: ../playbooks/planning.md
+  - id: ux-design
+    path: ../playbooks/ux-design.md
+  - id: database-design
+    path: ../playbooks/database-design.md
+  - id: api-design
+    path: ../playbooks/api-design.md
+  - id: implementation
+    path: ../playbooks/implementation.md
+  - id: code-review
+    path: ../playbooks/code-review.md
+  - id: testing
+    path: ../playbooks/testing.md
+  - id: security-review
+    path: ../playbooks/security-review.md
+  - id: deployment
+    path: ../playbooks/deployment.md
+  - id: maintenance
+    path: ../playbooks/maintenance.md
+  - id: incident-response
+    path: ../playbooks/incident-response.md
+  - id: change-management
+    path: ../playbooks/change-management.md
+  - id: project-recovery
+    path: ../playbooks/project-recovery.md
+  - id: retrospective
+    path: ../playbooks/retrospective.md

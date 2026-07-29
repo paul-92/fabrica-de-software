@@ -1,0 +1,3 @@
+# Memória Organizacional
+
+Entram somente decisões generalizáveis, lições confirmadas, padrões recorrentes, anti-patterns, incidentes sanitizados, definições de métricas e ativos reutilizáveis. Propostas precisam de fonte, revisão do dono do domínio e aprovação de Security/Privacy quando derivadas de clientes. Use SemVer, status e data; itens substituídos permanecem com link ao sucessor. Consultas devem considerar status e aplicabilidade. Deprecação registra motivo e alternativa. Conteúdo global nunca inclui identidade, segredo, contrato ou contexto confidencial de cliente; isso permanece no projeto e nos sistemas autorizados.

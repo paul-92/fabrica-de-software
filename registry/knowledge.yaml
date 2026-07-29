@@ -1,0 +1,70 @@
+version: 0.1.0
+knowledge:
+  - id: architecture-principles
+    path: ../knowledge/architecture/principles.md
+  - id: architecture-architecture-selection
+    path: ../knowledge/architecture/architecture-selection.md
+  - id: architecture-modular-monolith
+    path: ../knowledge/architecture/modular-monolith.md
+  - id: architecture-microservices
+    path: ../knowledge/architecture/microservices.md
+  - id: architecture-clean-architecture
+    path: ../knowledge/architecture/clean-architecture.md
+  - id: architecture-ddd
+    path: ../knowledge/architecture/ddd.md
+  - id: architecture-api-design
+    path: ../knowledge/architecture/api-design.md
+  - id: architecture-event-driven
+    path: ../knowledge/architecture/event-driven.md
+  - id: architecture-scalability
+    path: ../knowledge/architecture/scalability.md
+  - id: architecture-resilience
+    path: ../knowledge/architecture/resilience.md
+  - id: business-requirements
+    path: ../knowledge/business/requirements.md
+  - id: business-stakeholders
+    path: ../knowledge/business/stakeholders.md
+  - id: business-personas
+    path: ../knowledge/business/personas.md
+  - id: business-user-stories
+    path: ../knowledge/business/user-stories.md
+  - id: business-use-cases
+    path: ../knowledge/business/use-cases.md
+  - id: business-business-rules
+    path: ../knowledge/business/business-rules.md
+  - id: business-mvp
+    path: ../knowledge/business/mvp.md
+  - id: business-prioritization
+    path: ../knowledge/business/prioritization.md
+  - id: project-management-estimation
+    path: ../knowledge/project-management/estimation.md
+  - id: project-management-backlog
+    path: ../knowledge/project-management/backlog.md
+  - id: project-management-risk-management
+    path: ../knowledge/project-management/risk-management.md
+  - id: project-management-dependencies
+    path: ../knowledge/project-management/dependencies.md
+  - id: project-management-delivery-planning
+    path: ../knowledge/project-management/delivery-planning.md
+  - id: security-secure-development
+    path: ../knowledge/security/secure-development.md
+  - id: security-threat-modeling
+    path: ../knowledge/security/threat-modeling.md
+  - id: security-authentication
+    path: ../knowledge/security/authentication.md
+  - id: security-authorization
+    path: ../knowledge/security/authorization.md
+  - id: security-secrets
+    path: ../knowledge/security/secrets.md
+  - id: security-privacy
+    path: ../knowledge/security/privacy.md
+  - id: testing-test-strategy
+    path: ../knowledge/testing/test-strategy.md
+  - id: testing-test-pyramid
+    path: ../knowledge/testing/test-pyramid.md
+  - id: testing-acceptance-testing
+    path: ../knowledge/testing/acceptance-testing.md
+  - id: testing-regression
+    path: ../knowledge/testing/regression.md
+  - id: testing-automation
+    path: ../knowledge/testing/automation.md

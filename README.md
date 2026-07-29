@@ -1,0 +1,75 @@
+# AI Software Engineering Platform — ASEP
+
+**Versão documental:** 0.1.0  
+**Status:** motor sequencial da Sprint 2 disponível; QA independente pendente  
+**Dono:** Product Manager da ASEP
+
+A ASEP é um sistema operacional organizacional para desenvolvimento de software assistido por agentes de IA. Ela combina governança, ciclo de vida, especialistas, contratos, workflows, qualidade, memória e observabilidade. Não é uma coleção de prompts e não executa modelos de IA nesta versão.
+
+## Como funciona
+
+Uma demanda é registrada pelo Intake, classificada pelo Orchestrator e associada a um workflow. Cada etapa recebe agentes cujo contrato declara entradas, saídas, limites e gates. Artefatos permanecem no projeto; decisões duráveis usam ADR; aprovações humanas e eventos mantêm a rastreabilidade. O funcionamento central está em [core/SYSTEM.md](core/SYSTEM.md).
+
+## Estrutura principal
+
+| Área | Responsabilidade |
+|---|---|
+| `core/` | funcionamento, governança, lifecycle, qualidade e segurança |
+| `roles/`, `departments/` | autoridade organizacional e especialidades |
+| `agents/`, `contracts/` | comportamento e interfaces dos agentes |
+| `registry/` | catálogo e descoberta dos componentes |
+| `workflows/` | ordem, condições, gates e aprovações |
+| `playbooks/` | procedimentos operacionais |
+| `knowledge/` | conhecimento de negócio e engenharia |
+| `standards/` | regras obrigatórias, recomendações e exceções |
+| `templates/` | modelos de artefatos |
+| `clients/`, `projects/` | contexto segregado de clientes e iniciativas |
+| `memory/` | aprendizado global validado |
+| `observability/` | eventos, métricas, auditoria e status |
+| `orchestrator/`, `runtime/` | especificação da execução futura |
+| `planning/`, `reports/` | evolução da plataforma e auditoria |
+
+## Fluxo de um projeto
+
+Intake → Discovery → Business Analysis → Architecture → Planning → Design → Implementation → Review → Testing → Security → Deployment → Documentation → Handover → Maintenance → Retrospective. Etapas podem ser condicionais ou paralelas conforme o workflow, mas gates não são omitidos.
+
+## Como iniciar
+
+1. Leia [VISION.md](VISION.md), [AGENTS.md](AGENTS.md) e [core/SYSTEM.md](core/SYSTEM.md).
+2. Copie `clients/_template/` se houver novo cliente.
+3. Copie `projects/_template/` e preencha `project.yaml` e o Project Brief.
+4. Execute [workflows/project-intake.md](workflows/project-intake.md).
+5. Selecione um workflow registrado em [registry/workflows.yaml](registry/workflows.yaml).
+6. Registre decisões materiais em `projects/<id>/decisions/`.
+
+### Executar o núcleo 0.1
+
+Requer Python 3.12 ou superior. No diretório do repositório:
+
+```bash
+python -m venv .venv
+python -m pip install -e ".[test]"
+asep run projects/asep-self-development
+```
+
+O comando cria um `run_id`, executa o tailoring sequencial aprovado, persiste
+estado e logs e aciona o Business Analyst determinístico. Artefatos ficam em
+`projects/<id>/artifacts/runs/<run_id>/`. Uma execução bloqueada ou com falha pode
+ser retomada entre etapas com `asep resume <run_id>`. Workflows paralelos ou
+condicionais são rejeitados; não há LLM, rede ou execução distribuída.
+
+## Como criar um novo agente
+
+Use [templates/agent.md](templates/agent.md), mantenha as 27 seções obrigatórias, crie o contrato correspondente, registre ambos em `registry/agents.yaml` e `registry/contracts.yaml`, valide conflitos de autoridade e obtenha aprovação conforme [core/GOVERNANCE.md](core/GOVERNANCE.md).
+
+## Como criar um novo workflow
+
+Use um workflow YAML existente como referência, declare dependências, condições, gates, aprovações, artefatos e falhas; registre em `registry/workflows.yaml`; valide agentes e gates; aprove a mudança segundo [core/CHANGE-MANAGEMENT.md](core/CHANGE-MANAGEMENT.md).
+
+## Como criar um novo projeto
+
+Copie `projects/_template/`, atribua ID único em `kebab-case`, escolha `project_type` e `workflow_id` existentes, mantenha artefatos no próprio projeto e use `artifacts/` apenas para ativos globais aprovados.
+
+## Navegação complementar
+
+O material anterior útil foi preservado em `docs/`, `prompts/` e nos playbooks por tipo de produto. O glossário canônico está em [docs/glossary.md](docs/glossary.md). Decisões humanas abertas estão em [reports/open-decisions.md](reports/open-decisions.md).

@@ -1,0 +1,33 @@
+id: asep-self-development-sequential
+name: ASEP self-development sequential workflow
+version: 0.1.0
+description: >-
+  Tailoring executável da Sprint 2, limitado ao Business Analyst determinístico.
+applicable_project_types:
+  - software
+required_context:
+  - project.yaml
+  - business-analysis/scope.md
+stages:
+  - id: business_analysis
+    mode: sequential
+    workflow: business-analysis
+stage_dependencies:
+  business_analysis: []
+assigned_agents:
+  business_analysis:
+    - business-analyst
+stage_quality_gates:
+  business_analysis: QG-ANALYSIS
+conditions: []
+quality_gates:
+  - QG-ANALYSIS
+human_approvals: []
+artifacts:
+  - business-analysis/execution-summary.md
+failure_handling:
+  retry: "somente por retomada explícita entre etapas"
+  blocking: "registrar lacunas e preservar o run_id"
+completion_criteria:
+  - business-analysis-execution-summary-created
+  - QG-ANALYSIS-decided

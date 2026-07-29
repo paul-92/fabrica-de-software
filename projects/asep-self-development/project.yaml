@@ -1,0 +1,65 @@
+id: asep-self-development
+name: "ASEP Self-development"
+version: 0.2.0
+status: active
+project_type: software
+workflow_id: asep-self-development-sequential
+sponsor: not_assigned
+product_owner: Paulo Cesar
+data_classification: internal
+current_stage: implementation
+current_stage_status: ready_for_qa
+workflow_run_id: RUN-ASEP-BA-001
+active_agent: backend-engineer
+quality_gate:
+  id: QG-IMPLEMENT
+  status: pending
+  reason: "Implementação da Sprint 2 concluída; aguarda QA independente."
+  evaluated_by: backend-engineer
+  evaluated_at: "2026-07-28"
+blockers: []
+approval_requests:
+  - id: APR-ARCH-001
+    authority: product-owner
+    requested_from: Paulo Cesar
+    subject: "Arquitetura e ADR-001–ADR-013 da versão 0.1"
+    status: approved
+    requested_at: "2026-07-28"
+approvals:
+  - id: APR-SCOPE-001
+    authority: product-owner
+    approver: Paulo Cesar
+    decision: approved
+    subject: "Escopo da versão 0.1 e MVP"
+    date: "2026-07-28"
+  - id: APR-STACK-001
+    authority: product-owner
+    approver: Paulo Cesar
+    decision: approved
+    subject: "Stack da versão 0.1"
+    date: "2026-07-28"
+  - id: APR-ARCH-001
+    authority: product-owner
+    approver: Paulo Cesar
+    decision: approved
+    subject: "Arquitetura e ADR-001–ADR-013 da versão 0.1"
+    date: "2026-07-28"
+approved_stack:
+  runtime: "Python 3.12+"
+  cli: Typer
+  validation: Pydantic
+  yaml: PyYAML
+  terminal_output: Rich
+  templates: Jinja2
+  testing: pytest
+success_criteria:
+  - "executar um ciclo assistido com rastreabilidade"
+open_questions:
+  - "Quem exercerá Security?"
+  - "Quando o Security Engineer revisará a baseline antes do gate de Security?"
+sprint:
+  id: sprint-2
+  objective: "Motor sequencial com estado, retomada e artefatos rastreáveis."
+  status: completed
+  completed_at: "2026-07-28"
+last_updated: "2026-07-28"

@@ -1,0 +1,56 @@
+version: 0.1.0
+templates:
+  - id: project-brief
+    path: ../templates/business/project-brief.md
+  - id: executive-summary
+    path: ../templates/business/executive-summary.md
+  - id: stakeholder-map
+    path: ../templates/business/stakeholder-map.md
+  - id: personas
+    path: ../templates/business/personas.md
+  - id: requirements
+    path: ../templates/business/requirements.md
+  - id: business-rules
+    path: ../templates/business/business-rules.md
+  - id: user-stories
+    path: ../templates/business/user-stories.md
+  - id: scope
+    path: ../templates/business/scope.md
+  - id: risks
+    path: ../templates/planning/risks.md
+  - id: assumptions
+    path: ../templates/planning/assumptions.md
+  - id: architecture-document
+    path: ../templates/architecture/architecture-document.md
+  - id: adr
+    path: ../templates/architecture/adr.md
+  - id: api-contract
+    path: ../templates/architecture/api-contract.md
+  - id: database-design
+    path: ../templates/architecture/database-design.md
+  - id: technical-roadmap
+    path: ../templates/planning/technical-roadmap.md
+  - id: backlog
+    path: ../templates/planning/backlog.md
+  - id: test-plan
+    path: ../templates/testing/test-plan.md
+  - id: test-report
+    path: ../templates/testing/test-report.md
+  - id: security-review
+    path: ../templates/security/security-review.md
+  - id: deployment-plan
+    path: ../templates/deployment/deployment-plan.md
+  - id: runbook
+    path: ../templates/operations/runbook.md
+  - id: user-guide
+    path: ../templates/documentation/user-guide.md
+  - id: handover
+    path: ../templates/documentation/handover.md
+  - id: retrospective
+    path: ../templates/operations/retrospective.md
+  - id: lessons-learned
+    path: ../templates/operations/lessons-learned.md
+  - id: change-request
+    path: ../templates/planning/change-request.md
+  - id: incident-report
+    path: ../templates/operations/incident-report.md
