@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import math
 from datetime import datetime
 from enum import StrEnum
-from types import MappingProxyType
 from typing import Any, Mapping
 
 from pydantic import (
@@ -16,6 +14,8 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+
+from asep._json_values import freeze_json, json_value
 
 
 class RunStatus(StrEnum):
@@ -32,43 +32,6 @@ class RunStatus(StrEnum):
             RunStatus.FAILED,
             RunStatus.CANCELLED,
         }
-
-
-def _freeze_json(value: Any, *, location: str) -> Any:
-    if value is None or isinstance(value, (str, bool, int)):
-        return value
-    if isinstance(value, float):
-        if not math.isfinite(value):
-            raise ValueError(f"{location} contém número não finito")
-        return value
-    if isinstance(value, Mapping):
-        if not all(isinstance(key, str) for key in value):
-            raise ValueError(f"{location} deve usar apenas chaves string")
-        return MappingProxyType(
-            {
-                key: _freeze_json(item, location=f"{location}.{key}")
-                for key, item in value.items()
-            }
-        )
-    if isinstance(value, (list, tuple)):
-        return tuple(
-            _freeze_json(item, location=f"{location}[{index}]")
-            for index, item in enumerate(value)
-        )
-    raise ValueError(
-        f"{location} contém tipo não serializável: {type(value).__name__}"
-    )
-
-
-def _json_value(value: Any) -> Any:
-    if isinstance(value, Mapping):
-        return {
-            key: _json_value(item)
-            for key, item in sorted(value.items())
-        }
-    if isinstance(value, tuple):
-        return [_json_value(item) for item in value]
-    return value
 
 
 class RunError(BaseModel):
@@ -92,13 +55,13 @@ class RunError(BaseModel):
     def details_are_json(
         cls, value: Mapping[str, Any]
     ) -> Mapping[str, Any]:
-        return _freeze_json(value, location="error.details")
+        return freeze_json(value, location="error.details")
 
     @field_serializer("details")
     def serialize_details(
         self, value: Mapping[str, Any]
     ) -> dict[str, Any]:
-        return _json_value(value)
+        return json_value(value)
 
 
 class Run(BaseModel):
@@ -156,13 +119,13 @@ class Run(BaseModel):
     def metadata_is_json(
         cls, value: Mapping[str, Any]
     ) -> Mapping[str, Any]:
-        return _freeze_json(value, location="metadata")
+        return freeze_json(value, location="metadata")
 
     @field_serializer("metadata")
     def serialize_metadata(
         self, value: Mapping[str, Any]
     ) -> dict[str, Any]:
-        return _json_value(value)
+        return json_value(value)
 
     @model_validator(mode="after")
     def timestamps_are_consistent(self) -> Run:

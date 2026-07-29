@@ -90,5 +90,6 @@ decidir:
 - fonte de `summary`, `error` e provider;
 - atomicidade entre `ExecutionState` e um repository durável.
 
-A Sprint 6.2 poderá associar eventos de Timeline ao `Run.id`, mas Timeline,
-eventos e persistência durável não fazem parte desta implementação.
+A Sprint 6.2 implementou o domínio e armazenamento em memória da
+[Execution Timeline](ExecutionTimeline.md), associados ao `Run.id`. A
+instrumentação do fluxo e toda persistência durável permanecem pendentes.

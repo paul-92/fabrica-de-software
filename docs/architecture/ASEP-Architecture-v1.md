@@ -60,6 +60,8 @@ flowchart LR
     GRAPH --> BPMN["BpmnExporter"]
     RUNMODEL["Run"] --> RUNREPO["RunRepository"]
     RUNREPO --> MEMORY["InMemoryRunRepository"]
+    RUNMODEL -. run_id .-> TIMELINE["TimelineEvent"]
+    RECORDER["TimelineRecorder"] --> TIMELINE
 ```
 
 O caminho `PromptBuilder → ExecutionPackageBuilder → AgentProvider` ocorre
@@ -139,6 +141,7 @@ documentais encontradas:
 - [CLI](CLI.md)
 - [Roadmap](Roadmap.md)
 - [Run Repository](RunRepository.md)
+- [Execution Timeline](ExecutionTimeline.md)
 - [Revisão de consistência arquitetural](Architectural-Consistency-Review.md)
 - [ADR-015 proposto](decisions/ADR-015-provider-boundaries-and-execution-graph-isolation.md)
 - [Plano de refatoração proposto](Provider-Graph-Refactoring-Plan.md)

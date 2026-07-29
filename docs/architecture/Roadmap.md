@@ -10,7 +10,7 @@ timeline
     title Evolução planejada da ASEP
     v0.6 : JSON concluído
          : Run Repository em memória concluído
-         : Timeline planejada
+         : Timeline em memória concluída
          : Metrics
          : Claude Provider
     v0.8 : Parallel Execution
@@ -29,7 +29,8 @@ timeline
 
 - exporter JSON — implementado;
 - modelo e contrato Run Repository com implementação em memória — implementado;
-- timeline derivada do histórico;
+- modelo, repository e recorder de Timeline em memória — implementados;
+- integração da Timeline ao lifecycle e persistência durável — planejadas;
 - métricas;
 - Claude Provider por `AgentProvider`.
 
