@@ -110,7 +110,7 @@ class ArtifactDraft(BaseModel):
 
 
 class ArtifactReference(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
     artifact_id: str
     run_id: str

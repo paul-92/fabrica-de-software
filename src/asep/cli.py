@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import os
+import tempfile
+from enum import StrEnum
 from pathlib import Path
 from uuid import uuid4
 
@@ -9,10 +12,15 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from asep.errors import AsepError
+from asep.errors import AsepError, ConfigurationError, ConsistencyError
+from asep.execution_graph import ExecutionGraphBuilder
 from asep.logging_config import configure_logging
 from asep.orchestrator.service import Orchestrator
 from asep.execution.state import RunLocator
+from asep.exporters import MermaidExporter
+from asep.project.loader import ProjectLoader
+from asep.registry.loader import RegistryLoader
+from asep.workflow.loader import WorkflowLoader
 
 app = typer.Typer(
     name="asep",
@@ -21,6 +29,10 @@ app = typer.Typer(
 )
 console = Console()
 error_console = Console(stderr=True)
+
+
+class GraphFormat(StrEnum):
+    MERMAID = "mermaid"
 
 
 @app.callback()
@@ -111,6 +123,135 @@ def resume(
     table.add_row("Estado", result.status)
     table.add_row("Etapas concluídas", str(len(result.completed_stages)))
     console.print(table)
+
+
+@app.command()
+def graph(
+    project: Path = typer.Argument(
+        ...,
+        exists=True,
+        file_okay=False,
+        dir_okay=True,
+        readable=True,
+        resolve_path=True,
+        help="Diretório do projeto ASEP.",
+    ),
+    output_format: GraphFormat = typer.Option(
+        GraphFormat.MERMAID,
+        "--format",
+        help="Formato textual de saída.",
+    ),
+    output: Path | None = typer.Option(
+        None,
+        "--output",
+        "-o",
+        file_okay=True,
+        dir_okay=False,
+        resolve_path=False,
+        help="Arquivo de destino; omita para usar stdout.",
+    ),
+    force: bool = typer.Option(
+        False,
+        "--force",
+        help="Substitui atomicamente um arquivo de saída existente.",
+    ),
+) -> None:
+    """Gera o grafo estático do workflow no formato solicitado."""
+    if force and output is None:
+        raise typer.BadParameter("--force requer --output.")
+    try:
+        loaded_project = ProjectLoader().load(project)
+        repository_root = ProjectLoader.find_repository_root(
+            loaded_project.path
+        )
+        registry = RegistryLoader().load(repository_root / "registry")
+        workflow_entry = registry.workflows.get(
+            loaded_project.definition.workflow_id
+        )
+        if workflow_entry is None:
+            raise ConsistencyError(
+                "Workflow do projeto não existe no Registry: "
+                f"{loaded_project.definition.workflow_id}"
+            )
+        workflow = WorkflowLoader().load(workflow_entry, registry)
+        execution_graph = ExecutionGraphBuilder().build(
+            workflow,
+            project_name=loaded_project.definition.name,
+        )
+        if output_format is GraphFormat.MERMAID:
+            content = MermaidExporter().export(execution_graph)
+        else:  # pragma: no cover - proteção para formatos futuros
+            raise ConfigurationError(
+                f"Formato de grafo não suportado: {output_format}"
+            )
+
+        if output is None:
+            typer.echo(content, nl=False)
+            return
+        target = output.expanduser().resolve()
+        _write_graph_output(target, content, force=force)
+        typer.echo(
+            f"Mermaid graph written to {target}",
+            err=True,
+        )
+    except AsepError as exc:
+        error_console.print(f"[bold red]{exc.code}[/bold red] {exc}")
+        error_console.print(f"Próxima ação: {exc.next_action}")
+        raise typer.Exit(code=exc.exit_code) from exc
+
+
+def _write_graph_output(
+    target: Path,
+    content: str,
+    *,
+    force: bool,
+) -> None:
+    if target.exists() and not force:
+        raise ConfigurationError(
+            "Arquivo de saída já existe; use --force para substituir.",
+            path=target,
+        )
+
+    temporary: Path | None = None
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            newline="\n",
+            prefix=".asep-graph-",
+            suffix=".tmp",
+            dir=target.parent,
+            delete=False,
+        ) as stream:
+            temporary = Path(stream.name)
+            stream.write(content)
+        if force:
+            os.replace(temporary, target)
+            temporary = None
+        else:
+            try:
+                os.link(temporary, target)
+            except FileExistsError as exc:
+                raise ConfigurationError(
+                    "Arquivo de saída já existe; use --force para substituir.",
+                    path=target,
+                ) from exc
+            temporary.unlink()
+            temporary = None
+    except ConfigurationError:
+        raise
+    except OSError as exc:
+        raise ConfigurationError(
+            f"Falha ao escrever grafo Mermaid: {exc}",
+            path=target,
+        ) from exc
+    finally:
+        if temporary is not None:
+            try:
+                temporary.unlink(missing_ok=True)
+            except OSError:
+                pass
 
 
 def main() -> None:
