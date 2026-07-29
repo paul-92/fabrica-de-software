@@ -8,3 +8,14 @@ class MermaidExportError(AsepError):
     category = "validation"
     next_action = "Verifique o ExecutionGraph e o EdgeType informado."
     exit_code = 3
+
+
+class BpmnExportError(AsepError):
+    code = "BPMN_EXPORT_ERROR"
+    category = "validation"
+    next_action = "Verifique se o ExecutionGraph é acíclico e suportado."
+    exit_code = 3
+
+
+class UnsupportedBpmnGraphError(BpmnExportError):
+    code = "BPMN_GRAPH_UNSUPPORTED"

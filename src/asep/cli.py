@@ -17,7 +17,7 @@ from asep.execution_graph import ExecutionGraphBuilder
 from asep.logging_config import configure_logging
 from asep.orchestrator.service import Orchestrator
 from asep.execution.state import RunLocator
-from asep.exporters import MermaidExporter
+from asep.exporters import BpmnExporter, MermaidExporter
 from asep.project.loader import ProjectLoader
 from asep.registry.loader import RegistryLoader
 from asep.workflow.loader import WorkflowLoader
@@ -33,6 +33,7 @@ error_console = Console(stderr=True)
 
 class GraphFormat(StrEnum):
     MERMAID = "mermaid"
+    BPMN = "bpmn"
 
 
 @app.callback()
@@ -180,6 +181,8 @@ def graph(
         )
         if output_format is GraphFormat.MERMAID:
             content = MermaidExporter().export(execution_graph)
+        elif output_format is GraphFormat.BPMN:
+            content = BpmnExporter().export(execution_graph)
         else:  # pragma: no cover - proteção para formatos futuros
             raise ConfigurationError(
                 f"Formato de grafo não suportado: {output_format}"
@@ -190,8 +193,13 @@ def graph(
             return
         target = output.expanduser().resolve()
         _write_graph_output(target, content, force=force)
+        format_name = (
+            "Mermaid"
+            if output_format is GraphFormat.MERMAID
+            else "BPMN"
+        )
         typer.echo(
-            f"Mermaid graph written to {target}",
+            f"{format_name} graph written to {target}",
             err=True,
         )
     except AsepError as exc:
@@ -243,7 +251,7 @@ def _write_graph_output(
         raise
     except OSError as exc:
         raise ConfigurationError(
-            f"Falha ao escrever grafo Mermaid: {exc}",
+            f"Falha ao escrever grafo: {exc}",
             path=target,
         ) from exc
     finally:

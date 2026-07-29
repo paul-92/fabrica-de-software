@@ -402,6 +402,9 @@ def test_public_exports_are_intentional() -> None:
     import asep.exporters as exporters
 
     assert set(exporters.__all__) == {
+        "BpmnExporter",
+        "BpmnExportError",
+        "BpmnExportOptions",
         "MermaidDirection",
         "MermaidExporter",
         "MermaidExportError",

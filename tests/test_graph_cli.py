@@ -1,13 +1,18 @@
 from __future__ import annotations
 
 from pathlib import Path
+from xml.etree import ElementTree as ET
 
 import yaml
 from typer.testing import CliRunner
 
 import asep.cli as cli_module
 from asep.cli import app
-from asep.exporters import MermaidExportError
+from asep.exporters import BpmnExportError, MermaidExportError
+
+BPMN_NS = "http://www.omg.org/spec/BPMN/20100524/MODEL"
+BPMNDI_NS = "http://www.omg.org/spec/BPMN/20100524/DI"
+NS = {"bpmn": BPMN_NS, "bpmndi": BPMNDI_NS}
 
 
 def make_parallel_workflow(repository: Path) -> None:
@@ -67,6 +72,8 @@ def test_graph_command_help_documents_supported_options() -> None:
     assert "--output" in result.stdout
     assert "--force" in result.stdout
     assert "--run-id" not in result.stdout
+    assert "mermaid" in result.stdout
+    assert "bpmn" in result.stdout
 
 
 def test_graph_generates_linear_workflow_on_stdout(
@@ -118,12 +125,119 @@ def test_graph_accepts_explicit_mermaid_format(
     assert result.stdout.startswith("flowchart TD\n")
 
 
-def test_graph_rejects_unsupported_format_without_creating_output(
+def test_graph_rejects_invalid_format_without_creating_output(
     sample_repository: Path,
     tmp_path: Path,
 ) -> None:
     target = tmp_path / "graph.mmd"
 
+    result = CliRunner().invoke(
+        app,
+        [
+            "graph",
+            str(project_path(sample_repository)),
+            "--format",
+            "plantuml",
+            "--output",
+            str(target),
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "plantuml" in result.output
+    assert not target.exists()
+
+
+def test_graph_generates_bpmn_only_on_stdout(
+    sample_repository: Path,
+) -> None:
+    result = CliRunner().invoke(
+        app,
+        [
+            "graph",
+            str(project_path(sample_repository)),
+            "--format",
+            "bpmn",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert result.stderr == ""
+    assert result.stdout.startswith(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+    )
+    root = ET.fromstring(result.stdout)
+    assert root.tag == f"{{{BPMN_NS}}}definitions"
+    assert root.find("bpmn:process", NS) is not None
+    assert root.find(".//bpmndi:BPMNDiagram", NS) is not None
+
+
+def test_graph_writes_deterministic_utf8_bpmn_file(
+    sample_repository: Path,
+    tmp_path: Path,
+) -> None:
+    target = tmp_path / "workflow.any-extension"
+    arguments = [
+        "graph",
+        str(project_path(sample_repository)),
+        "--format",
+        "bpmn",
+        "--output",
+        str(target),
+    ]
+
+    first = CliRunner().invoke(app, arguments)
+    first_content = target.read_bytes()
+    target.unlink()
+    second = CliRunner().invoke(app, arguments)
+
+    assert first.exit_code == second.exit_code == 0
+    assert first.stdout == second.stdout == ""
+    assert "BPMN graph written to" in first.stderr
+    assert first_content == target.read_bytes()
+    decoded = first_content.decode("utf-8")
+    assert ET.fromstring(decoded).tag == f"{{{BPMN_NS}}}definitions"
+
+
+def test_graph_bpmn_existing_output_requires_force(
+    sample_repository: Path,
+    tmp_path: Path,
+) -> None:
+    target = tmp_path / "workflow.bpmn"
+    target.write_text("original", encoding="utf-8")
+    arguments = [
+        "graph",
+        str(project_path(sample_repository)),
+        "--format",
+        "bpmn",
+        "--output",
+        str(target),
+    ]
+
+    refused = CliRunner().invoke(app, arguments)
+    original_after_refusal = target.read_text(encoding="utf-8")
+    replaced = CliRunner().invoke(app, [*arguments, "--force"])
+
+    assert refused.exit_code == 5
+    assert original_after_refusal == "original"
+    assert replaced.exit_code == 0
+    assert target.read_text(encoding="utf-8").startswith(
+        '<?xml version="1.0" encoding="UTF-8"?>'
+    )
+    assert not list(tmp_path.glob(".asep-graph-*.tmp"))
+
+
+def test_graph_bpmn_export_failure_leaves_no_partial_file(
+    sample_repository: Path,
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    target = tmp_path / "workflow.bpmn"
+
+    def fail_export(self, execution_graph, options=None):
+        raise BpmnExportError("fault injection")
+
+    monkeypatch.setattr(cli_module.BpmnExporter, "export", fail_export)
     result = CliRunner().invoke(
         app,
         [
@@ -136,9 +250,10 @@ def test_graph_rejects_unsupported_format_without_creating_output(
         ],
     )
 
-    assert result.exit_code == 2
-    assert "bpmn" in result.output
+    assert result.exit_code == 3
+    assert "BPMN_EXPORT_ERROR" in result.stderr
     assert not target.exists()
+    assert not list(tmp_path.glob(".asep-graph-*.tmp"))
 
 
 def test_graph_writes_utf8_file_and_keeps_stdout_empty(

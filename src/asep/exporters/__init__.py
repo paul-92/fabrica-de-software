@@ -1,6 +1,13 @@
 """Exportadores derivados exclusivamente do ExecutionGraph."""
 
-from asep.exporters.errors import MermaidExportError
+from asep.exporters.bpmn import (
+    BpmnExporter,
+    BpmnExportOptions,
+)
+from asep.exporters.errors import (
+    BpmnExportError,
+    MermaidExportError,
+)
 from asep.exporters.mermaid import (
     MermaidDirection,
     MermaidExporter,
@@ -8,6 +15,9 @@ from asep.exporters.mermaid import (
 )
 
 __all__ = [
+    "BpmnExporter",
+    "BpmnExportError",
+    "BpmnExportOptions",
     "MermaidDirection",
     "MermaidExporter",
     "MermaidExportError",
