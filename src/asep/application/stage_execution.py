@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 
 import yaml
@@ -16,9 +17,11 @@ from asep.execution.models import (
     ArtifactDraft,
     ArtifactReference,
     GateResult,
+    ExecutionState,
+    StageState,
     StageStatus,
 )
-from asep.models import RegistrySnapshot
+from asep.models import LoadedProject, RegistrySnapshot
 from asep.quality.engine import QualityGateEngine
 from asep.runtime.agent_runtime import AgentRuntime
 
@@ -124,4 +127,54 @@ class StageExecutionService:
             artifact_references=references,
             gate_result=gate,
             gate_artifact_reference=gate_reference,
+        )
+
+    def execute_stage(
+        self,
+        project: LoadedProject,
+        state: ExecutionState,
+        stage: StageState,
+        registry: RegistrySnapshot,
+        artifacts_path: Path,
+        logger: logging.Logger,
+    ) -> StageExecutionReport:
+        """Monta o contexto e delega a execução interna da etapa."""
+        scope_path = project.path / "business-analysis" / "scope.md"
+        constraints_path = (
+            project.path / "business-analysis" / "constraints.md"
+        )
+        scope = (
+            scope_path.read_text(encoding="utf-8")
+            if scope_path.is_file()
+            else None
+        )
+        constraints = (
+            (constraints_path.read_text(encoding="utf-8"),)
+            if constraints_path.is_file()
+            else ()
+        )
+        context = AgentContext(
+            run_id=state.run_id,
+            project_id=state.project_id,
+            project_name=project.definition.name,
+            workflow_id=state.workflow_id,
+            stage_id=stage.id,
+            agent_id=stage.agent_id,
+            started_at=datetime.now(UTC),
+            objective=(
+                project.definition.sprint.objective
+                if project.definition.sprint
+                else None
+            ),
+            scope_received=scope,
+            constraints=constraints,
+            pending_items=tuple(project.definition.open_questions),
+        )
+        return self.execute(
+            context,
+            registry,
+            artifacts_path,
+            stage.quality_gate_id or "QG-UNSPECIFIED",
+            StageStatus.RUNNING,
+            logger,
         )

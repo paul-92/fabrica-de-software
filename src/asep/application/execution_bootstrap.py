@@ -53,29 +53,8 @@ class ExecutionBootstrap:
     def prepare(
         self, project_path: Path, run_id: str
     ) -> ExecutionBootstrapResult:
-        project = self._project_loader.load(project_path)
-        repository_root = self._project_loader.find_repository_root(
-            project.path
-        )
-        registry = self._registry_loader.load(repository_root / "registry")
-
-        workflow_entry = registry.workflows.get(
-            project.definition.workflow_id
-        )
-        if workflow_entry is None:
-            raise ConsistencyError(
-                f"Workflow não registrado: {project.definition.workflow_id}"
-            )
-        workflow = self._workflow_loader.load(workflow_entry, registry)
-        if (
-            project.definition.project_type
-            not in workflow.applicable_project_types
-        ):
-            raise ConsistencyError(
-                f"Workflow {workflow.id} não se aplica a "
-                f"{project.definition.project_type}."
-            )
-
+        project, registry, workflow = self._load_execution_inputs(project_path)
+        workflow_entry = registry.workflows[workflow.id]
         workflow_path = (registry.root / workflow_entry.path).resolve()
         self._workflow_engine.validate(workflow, path=workflow_path)
 
@@ -108,3 +87,68 @@ class ExecutionBootstrap:
             run_context=run_context,
             state=state,
         )
+
+    def resume(self, state_path: Path) -> ExecutionBootstrapResult:
+        """Carrega os insumos de uma execução existente sem transicioná-la."""
+        state = self._state_manager.load(
+            state_path,
+            expected_run_id=state_path.parent.name,
+        )
+        project_path = state_path.resolve().parents[3]
+        project, registry, workflow = self._load_execution_inputs(project_path)
+        if (
+            project.definition.id != state.project_id
+            or workflow.id != state.workflow_id
+        ):
+            raise ConsistencyError(
+                "Estado diverge do projeto ou workflow atual."
+            )
+        self._workflow_engine.validate(workflow)
+        run_context = RunContext(
+            run_id=state.run_id,
+            project_id=state.project_id,
+            workflow_id=state.workflow_id,
+            started_at=state.created_at,
+            resumed_at=state.resumed_at,
+            current_stage=state.current_stage,
+            execution_status=state.execution_status,
+            project_path=project.path,
+            state_path=state_path,
+            artifacts_path=(
+                project.path / "artifacts" / "runs" / state.run_id
+            ),
+            logs_path=project.path / "logs" / "runs" / f"{state.run_id}.jsonl",
+        )
+        return ExecutionBootstrapResult(
+            project=project,
+            registry=registry,
+            workflow=workflow,
+            run_context=run_context,
+            state=state,
+        )
+
+    def _load_execution_inputs(
+        self, project_path: Path
+    ) -> tuple[LoadedProject, RegistrySnapshot, WorkflowDefinition]:
+        project = self._project_loader.load(project_path)
+        repository_root = self._project_loader.find_repository_root(
+            project.path
+        )
+        registry = self._registry_loader.load(repository_root / "registry")
+        workflow_entry = registry.workflows.get(
+            project.definition.workflow_id
+        )
+        if workflow_entry is None:
+            raise ConsistencyError(
+                f"Workflow não registrado: {project.definition.workflow_id}"
+            )
+        workflow = self._workflow_loader.load(workflow_entry, registry)
+        if (
+            project.definition.project_type
+            not in workflow.applicable_project_types
+        ):
+            raise ConsistencyError(
+                f"Workflow {workflow.id} não se aplica a "
+                f"{project.definition.project_type}."
+            )
+        return project, registry, workflow
