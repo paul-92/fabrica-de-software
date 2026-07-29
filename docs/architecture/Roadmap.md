@@ -12,7 +12,7 @@ timeline
          : Run Repository em memória concluído
          : Timeline em memória concluída
          : Run Query Service e CLI history concluídos
-         : Metrics
+         : Metrics Service concluído
          : Claude Provider
     v0.8 : Parallel Execution
          : Retry
@@ -33,7 +33,7 @@ timeline
 - modelo, repository e recorder de Timeline em memória — implementados;
 - consultas unificadas e interface CLI de histórico em memória — implementadas;
 - integração da Timeline ao lifecycle e persistência durável — planejadas;
-- métricas;
+- Metrics Service somente leitura — implementado;
 - Claude Provider por `AgentProvider`.
 
 ## v0.8

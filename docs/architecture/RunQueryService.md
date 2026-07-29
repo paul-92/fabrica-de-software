@@ -76,5 +76,5 @@ Essa composição **não é histórico durável**:
   Orchestrator.
 
 Uma persistência futura pode implementar os mesmos Protocols sem alterar o
-serviço ou os formatadores. Métricas também poderão consumir o serviço, mas não
-estão implementadas.
+serviço ou os formatadores. O [Metrics Service](MetricsService.md) consome essa
+camada sem acessar os repositories diretamente.

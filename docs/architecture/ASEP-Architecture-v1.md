@@ -65,6 +65,7 @@ flowchart LR
     RUNREPO --> QUERY["RunQueryService"]
     TIMELINE --> QUERY
     QUERY --> HISTORY["CLI: runs / run show / run timeline"]
+    QUERY --> METRICS["MetricsService"]
 ```
 
 O caminho `PromptBuilder → ExecutionPackageBuilder → AgentProvider` ocorre
@@ -146,6 +147,7 @@ documentais encontradas:
 - [Run Repository](RunRepository.md)
 - [Execution Timeline](ExecutionTimeline.md)
 - [Run Query Service](RunQueryService.md)
+- [Metrics Service](MetricsService.md)
 - [Revisão de consistência arquitetural](Architectural-Consistency-Review.md)
 - [ADR-015 proposto](decisions/ADR-015-provider-boundaries-and-execution-graph-isolation.md)
 - [Plano de refatoração proposto](Provider-Graph-Refactoring-Plan.md)
