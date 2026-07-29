@@ -62,6 +62,9 @@ flowchart LR
     RUNREPO --> MEMORY["InMemoryRunRepository"]
     RUNMODEL -. run_id .-> TIMELINE["TimelineEvent"]
     RECORDER["TimelineRecorder"] --> TIMELINE
+    RUNREPO --> QUERY["RunQueryService"]
+    TIMELINE --> QUERY
+    QUERY --> HISTORY["CLI: runs / run show / run timeline"]
 ```
 
 O caminho `PromptBuilder → ExecutionPackageBuilder → AgentProvider` ocorre
@@ -142,6 +145,7 @@ documentais encontradas:
 - [Roadmap](Roadmap.md)
 - [Run Repository](RunRepository.md)
 - [Execution Timeline](ExecutionTimeline.md)
+- [Run Query Service](RunQueryService.md)
 - [Revisão de consistência arquitetural](Architectural-Consistency-Review.md)
 - [ADR-015 proposto](decisions/ADR-015-provider-boundaries-and-execution-graph-isolation.md)
 - [Plano de refatoração proposto](Provider-Graph-Refactoring-Plan.md)

@@ -12,6 +12,9 @@ stderr quando o stdout precisa permanecer consumível por pipelines.
 | `asep run PROJECT` | cria UUID v4, configura log e inicia execução |
 | `asep resume RUN_ID` | localiza `state.yaml` no workspace e retoma |
 | `asep graph PROJECT` | carrega workflow, constrói grafo estático e exporta |
+| `asep runs` | lista Runs disponíveis no processo atual |
+| `asep run show RUN_ID` | mostra detalhes de um Run |
+| `asep run timeline RUN_ID` | mostra a Timeline de um Run |
 
 Opção `--verbose/-v` existe em `run` e `resume`.
 
@@ -57,6 +60,30 @@ sequenceDiagram
 Erros esperados descendem de `AsepError`, possuem código e exit code e são
 impressos sem traceback. Validação de opções do Typer retorna código diferente
 de zero antes de criar saída. O CLI não executa Codex real no comando `graph`.
+
+## Histórico de Runs
+
+```text
+asep runs [--status pending|running|succeeded|failed|cancelled]
+asep run show RUN_ID
+asep run timeline RUN_ID
+```
+
+Os comandos usam `RunQueryService`; consulta e formatação permanecem separadas.
+Runs são exibidos do mais recente para o mais antigo. Timelines são exibidas em
+ordem cronológica. Datas usam ISO 8601, campos ausentes usam `-`, metadata usa
+JSON com chaves ordenadas e Runs ativos mostram duração `running`.
+
+O parser de `run` preserva `asep run PROJECT` e reserva as ações `show` e
+`timeline` para consultas hierárquicas. Não existem aliases planos. Um Run
+inexistente produz `RUN_NOT_FOUND`, stderr e exit code 2. Uma lista ou Timeline
+vazia é uma consulta válida e retorna exit code zero.
+
+Os repositories atuais são somente em memória e ainda não são alimentados pelo
+lifecycle de execução. Assim, processos independentes da CLI não compartilham
+histórico e normalmente iniciam vazios. Consulte
+[Run Query Service](RunQueryService.md); não há persistência durável nesta
+versão.
 
 ## Adicionar comando
 

@@ -12,6 +12,8 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from asep.application.query_composition import get_run_query_service
+from asep.cli_history import format_run, format_runs, format_timeline
 from asep.errors import AsepError, ConfigurationError, ConsistencyError
 from asep.execution_graph import ExecutionGraphBuilder
 from asep.logging_config import configure_logging
@@ -20,6 +22,7 @@ from asep.execution.state import RunLocator
 from asep.exporters import BpmnExporter, JsonExporter, MermaidExporter
 from asep.project.loader import ProjectLoader
 from asep.registry.loader import RegistryLoader
+from asep.runs import RunStatus
 from asep.workflow.loader import WorkflowLoader
 
 app = typer.Typer(
@@ -29,6 +32,7 @@ app = typer.Typer(
 )
 console = Console()
 error_console = Console(stderr=True)
+run_query_service_provider = get_run_query_service
 
 
 class GraphFormat(StrEnum):
@@ -44,18 +48,36 @@ def root() -> None:
 
 @app.command()
 def run(
-    project: Path = typer.Argument(
+    command_or_project: str = typer.Argument(
         ...,
-        exists=True,
-        file_okay=False,
-        dir_okay=True,
-        readable=True,
-        resolve_path=True,
-        help="Diretório do projeto ASEP.",
+        metavar="PROJECT|show|timeline",
+        help="Diretório do projeto ou subcomando de consulta.",
+    ),
+    run_id: str | None = typer.Argument(
+        None,
+        help="Identificador exigido por show e timeline.",
     ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Logs detalhados."),
 ) -> None:
-    """Executa o workflow sequencial aprovado para o projeto."""
+    """Executa PROJECT ou consulta com `run show|timeline RUN_ID`."""
+    if command_or_project == "show":
+        _show_run(_required_query_run_id(run_id, action="show"))
+        return
+    if command_or_project == "timeline":
+        _show_run_timeline(
+            _required_query_run_id(run_id, action="timeline")
+        )
+        return
+    if run_id is not None:
+        raise typer.BadParameter(
+            "argumento adicional permitido apenas após show ou timeline.",
+            param_hint="RUN_ID",
+        )
+    project = _validated_project_path(command_or_project)
+    _execute_project(project, verbose=verbose)
+
+
+def _execute_project(project: Path, *, verbose: bool) -> None:
     run_id = str(uuid4())
     try:
         log_path = project / "logs" / "runs" / f"{run_id}.jsonl"
@@ -125,6 +147,45 @@ def resume(
     table.add_row("Estado", result.status)
     table.add_row("Etapas concluídas", str(len(result.completed_stages)))
     console.print(table)
+
+
+@app.command("runs")
+def list_runs(
+    status: RunStatus | None = typer.Option(
+        None,
+        "--status",
+        help="Filtra pelo status exato do Run.",
+    ),
+) -> None:
+    """Lista Runs disponíveis no processo atual."""
+    service = run_query_service_provider()
+    try:
+        runs = (
+            service.list_runs()
+            if status is None
+            else service.list_runs_by_status(status)
+        )
+    except AsepError as exc:
+        _print_expected_error(exc)
+    typer.echo(format_runs(runs))
+
+
+def _show_run(run_id: str) -> None:
+    service = run_query_service_provider()
+    try:
+        selected = service.get_run(_validated_cli_run_id(run_id))
+    except AsepError as exc:
+        _print_expected_error(exc)
+    typer.echo(format_run(selected))
+
+
+def _show_run_timeline(run_id: str) -> None:
+    service = run_query_service_provider()
+    try:
+        events = service.get_timeline(_validated_cli_run_id(run_id))
+    except AsepError as exc:
+        _print_expected_error(exc)
+    typer.echo(format_timeline(events))
 
 
 @app.command()
@@ -263,6 +324,54 @@ def _write_graph_output(
                 temporary.unlink(missing_ok=True)
             except OSError:
                 pass
+
+
+def _print_expected_error(error: AsepError) -> None:
+    error_console.print(f"[bold red]{error.code}[/bold red] {error}")
+    error_console.print(f"Próxima ação: {error.next_action}")
+    raise typer.Exit(code=error.exit_code) from error
+
+
+def _validated_cli_run_id(run_id: str) -> str:
+    if not run_id.strip():
+        raise typer.BadParameter(
+            "run_id não pode ser vazio.",
+            param_hint="RUN_ID",
+        )
+    return run_id
+
+
+def _required_query_run_id(
+    run_id: str | None,
+    *,
+    action: str,
+) -> str:
+    if run_id is None:
+        raise typer.BadParameter(
+            f"run_id é obrigatório para 'run {action}'.",
+            param_hint="RUN_ID",
+        )
+    return _validated_cli_run_id(run_id)
+
+
+def _validated_project_path(value: str) -> Path:
+    project = Path(value).expanduser()
+    if not project.exists():
+        raise typer.BadParameter(
+            f"Directory '{value}' does not exist.",
+            param_hint="PROJECT",
+        )
+    if not project.is_dir():
+        raise typer.BadParameter(
+            f"Path '{value}' is not a directory.",
+            param_hint="PROJECT",
+        )
+    if not os.access(project, os.R_OK):
+        raise typer.BadParameter(
+            f"Directory '{value}' is not readable.",
+            param_hint="PROJECT",
+        )
+    return project.resolve()
 
 
 def main() -> None:
