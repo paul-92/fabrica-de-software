@@ -2,6 +2,9 @@
 
 **Status:** accepted | **Responsável:** Software Architect | **Data:** 2026-07-28
 
+**Supersessão proposta:** [ADR-015](../../../docs/architecture/decisions/ADR-015-provider-boundaries-and-execution-graph-isolation.md).
+A supersessão só se torna efetiva após aprovação do ADR-015.
+
 ## Contexto
 IA externa está fora do MVP, mas agentes futuros podem precisar dela.
 ## Problema

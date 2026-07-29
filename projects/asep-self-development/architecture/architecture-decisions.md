@@ -19,6 +19,7 @@
 | ADR-012 | pytest em pirâmide orientada a risco | accepted | [ADR-012](../decisions/ADR-012-testing-strategy.md) |
 | ADR-013 | porta inativa para provedores futuros | accepted | [ADR-013](../decisions/ADR-013-ai-provider-extensibility.md) |
 | ADR-014 | tailoring sequencial explícito para o piloto | accepted | [ADR-014](../decisions/ADR-014-sequential-execution-tailoring.md) |
+| ADR-015 | limites de providers e isolamento do ExecutionGraph | review | [ADR-015](../../../docs/architecture/decisions/ADR-015-provider-boundaries-and-execution-graph-isolation.md) |
 
 ## Avaliação da stack aprovada
 
