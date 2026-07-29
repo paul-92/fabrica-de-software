@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import tempfile
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 from uuid import uuid4
@@ -15,6 +16,29 @@ from asep.execution.models import ArtifactDraft, ArtifactReference
 
 
 class ArtifactManager:
+    @staticmethod
+    def _write_atomic_text(target: Path, content: str) -> None:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        descriptor, temporary_name = tempfile.mkstemp(
+            prefix=".asep-",
+            suffix=".tmp",
+            dir=target.parent,
+            text=True,
+        )
+        temporary = Path(temporary_name)
+        try:
+            try:
+                stream = os.fdopen(descriptor, "w", encoding="utf-8")
+            except OSError:
+                os.close(descriptor)
+                raise
+            with stream:
+                stream.write(content)
+            os.replace(temporary, target)
+        except OSError:
+            temporary.unlink(missing_ok=True)
+            raise
+
     def persist(
         self,
         draft: ArtifactDraft,
@@ -52,24 +76,18 @@ class ArtifactManager:
             created_at=created_at,
             checksum=checksum,
         )
-        temporary = target.with_name(f".{target.name}.{run_id}.tmp")
         metadata = target.with_suffix(target.suffix + ".metadata.yaml")
-        metadata_temporary = metadata.with_name(f".{metadata.name}.{run_id}.tmp")
         try:
-            temporary.write_text(draft.content, encoding="utf-8")
-            metadata_temporary.write_text(
+            self._write_atomic_text(target, draft.content)
+            self._write_atomic_text(
+                metadata,
                 yaml.safe_dump(
                     reference.model_dump(mode="json"),
                     allow_unicode=True,
                     sort_keys=False,
                 ),
-                encoding="utf-8",
             )
-            os.replace(temporary, target)
-            os.replace(metadata_temporary, metadata)
         except OSError as exc:
-            temporary.unlink(missing_ok=True)
-            metadata_temporary.unlink(missing_ok=True)
             target.unlink(missing_ok=True)
             raise ArtifactError(
                 f"Falha ao persistir artefato: {exc}", path=target
