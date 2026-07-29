@@ -39,3 +39,4 @@ projects/*/.asep/
 projects/*/logs/runs/
 projects/*/logs/*.jsonl
 projects/*/artifacts/runs/
+estrutura.txt
