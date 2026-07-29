@@ -8,9 +8,9 @@ Mudanças de contrato exigem decisão arquitetural e testes.
 ```mermaid
 timeline
     title Evolução planejada da ASEP
-    v0.6 : JSON
-         : Run Repository
-         : Timeline
+    v0.6 : JSON concluído
+         : Run Repository em memória concluído
+         : Timeline planejada
          : Metrics
          : Claude Provider
     v0.8 : Parallel Execution
@@ -27,8 +27,8 @@ timeline
 
 ## v0.6
 
-- exporter JSON;
-- Run Repository para localização e consulta;
+- exporter JSON — implementado;
+- modelo e contrato Run Repository com implementação em memória — implementado;
 - timeline derivada do histórico;
 - métricas;
 - Claude Provider por `AgentProvider`.

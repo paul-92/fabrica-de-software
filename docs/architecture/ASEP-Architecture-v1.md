@@ -58,6 +58,8 @@ flowchart LR
     GRAPH --> JSON["ExecutionGraphSerializer"]
     GRAPH --> MERMAID["MermaidExporter"]
     GRAPH --> BPMN["BpmnExporter"]
+    RUNMODEL["Run"] --> RUNREPO["RunRepository"]
+    RUNREPO --> MEMORY["InMemoryRunRepository"]
 ```
 
 O caminho `PromptBuilder → ExecutionPackageBuilder → AgentProvider` ocorre
@@ -136,6 +138,7 @@ documentais encontradas:
 - [Exporters](Exporters.md)
 - [CLI](CLI.md)
 - [Roadmap](Roadmap.md)
+- [Run Repository](RunRepository.md)
 - [Revisão de consistência arquitetural](Architectural-Consistency-Review.md)
 - [ADR-015 proposto](decisions/ADR-015-provider-boundaries-and-execution-graph-isolation.md)
 - [Plano de refatoração proposto](Provider-Graph-Refactoring-Plan.md)
