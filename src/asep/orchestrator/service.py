@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import logging
-import yaml
 from datetime import UTC, datetime
 from pathlib import Path
 from time import perf_counter
 
 from asep.agents.business_analyst import BusinessAnalystAgent
+from asep.application.stage_execution import StageExecutionService
 from asep.artifacts.manager import ArtifactManager
 from asep.errors import AsepError, ConsistencyError
 from asep.execution.engine import SequentialWorkflowEngine
@@ -16,7 +16,6 @@ from asep.execution.models import (
     AgentContext,
     AgentResult,
     AgentResultStatus,
-    ArtifactDraft,
     ExecutionOutcome,
     ExecutionState,
     ExecutionStatus,
@@ -46,6 +45,7 @@ class Orchestrator:
         agent_runtime: AgentRuntime | None = None,
         artifact_manager: ArtifactManager | None = None,
         gate_engine: QualityGateEngine | None = None,
+        stage_execution_service: StageExecutionService | None = None,
     ) -> None:
         self._project_loader = project_loader or ProjectLoader()
         self._registry_loader = registry_loader or RegistryLoader()
@@ -57,6 +57,14 @@ class Orchestrator:
         )
         self._artifact_manager = artifact_manager or ArtifactManager()
         self._gate_engine = gate_engine or QualityGateEngine()
+        self._stage_execution_service = (
+            stage_execution_service
+            or StageExecutionService(
+                self._agent_runtime,
+                self._artifact_manager,
+                self._gate_engine,
+            )
+        )
 
     def prepare(self, project_path: Path, logger: logging.Logger) -> PreparationResult:
         started = perf_counter()
@@ -318,80 +326,31 @@ class Orchestrator:
                         "stage_id": stage.id,
                     },
                 )
-                result = self._agent_runtime.execute(
+                stage_report = self._stage_execution_service.execute(
                     self._agent_context(project, state, stage.id, stage.agent_id),
                     registry,
+                    artifacts_path,
+                    stage.quality_gate_id or "QG-UNSPECIFIED",
+                    StageStatus.RUNNING,
                     logger,
                 )
+                result = stage_report.agent_result
                 if result.status != AgentResultStatus.COMPLETED:
                     self._block_from_result(state, stage.id, result, state_path, logger)
                     return self._outcome(state, state_path, artifacts_path)
 
-                references = [
-                    self._artifact_manager.persist(
-                        draft,
-                        artifacts_path,
-                        run_id=state.run_id,
-                        project_id=state.project_id,
-                        stage_id=stage.id,
-                        agent_id=stage.agent_id,
-                    )
-                    for draft in result.artifacts
-                ]
+                references = stage_report.artifact_references
                 state.artifact_references.extend(
                     reference.model_dump(mode="json") for reference in references
                 )
-                for reference in references:
-                    logger.info(
-                        "Artefato criado.",
-                        extra={
-                            "event_type": "artifact_created",
-                            "project_id": state.project_id,
-                            "workflow_id": state.workflow_id,
-                            "stage_id": stage.id,
-                            "agent_id": stage.agent_id,
-                        },
+                gate = stage_report.gate_result
+                gate_reference = stage_report.gate_artifact_reference
+                if gate is None or gate_reference is None:
+                    raise ConsistencyError(
+                        "Execução concluída da etapa não retornou quality gate."
                     )
-                gate_id = stage.quality_gate_id or "QG-UNSPECIFIED"
-                logger.info(
-                    "Quality gate iniciado.",
-                    extra={
-                        "event_type": "gate_started",
-                        "project_id": state.project_id,
-                        "workflow_id": state.workflow_id,
-                        "stage_id": stage.id,
-                    },
-                )
-                gate = self._gate_engine.evaluate(
-                    gate_id, result, references, StageStatus.RUNNING
-                )
-                gate_reference = self._artifact_manager.persist(
-                    ArtifactDraft(
-                        relative_path=f"quality-gates/{stage.id}-result.yaml",
-                        type="yaml",
-                        content=yaml.safe_dump(
-                            gate.model_dump(mode="json"),
-                            allow_unicode=True,
-                            sort_keys=False,
-                        ),
-                    ),
-                    artifacts_path,
-                    run_id=state.run_id,
-                    project_id=state.project_id,
-                    stage_id=stage.id,
-                    agent_id="quality-gate-engine",
-                )
                 state.artifact_references.append(
                     gate_reference.model_dump(mode="json")
-                )
-                logger.info(
-                    f"Quality gate concluído: {gate.decision}.",
-                    extra={
-                        "event_type": "gate_completed",
-                        "project_id": state.project_id,
-                        "workflow_id": state.workflow_id,
-                        "stage_id": stage.id,
-                    },
                 )
                 if gate.decision == GateDecision.BLOCKED:
                     self._state_manager.transition_stage(
