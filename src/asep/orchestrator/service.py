@@ -27,6 +27,7 @@ from asep.models import LoadedProject, PreparationResult, RegistrySnapshot, Work
 from asep.project.loader import ProjectLoader
 from asep.quality.engine import QualityGateEngine
 from asep.registry.loader import RegistryLoader
+from asep.providers import AgentProvider
 from asep.runtime.agent_runtime import AgentRuntime
 from asep.workflow.loader import WorkflowLoader
 
@@ -44,6 +45,7 @@ class Orchestrator:
         agent_runtime: AgentRuntime | None = None,
         artifact_manager: ArtifactManager | None = None,
         gate_engine: QualityGateEngine | None = None,
+        agent_provider: AgentProvider | None = None,
         stage_execution_service: StageExecutionService | None = None,
         execution_bootstrap: ExecutionBootstrap | None = None,
     ) -> None:
@@ -63,6 +65,7 @@ class Orchestrator:
                 self._agent_runtime,
                 self._artifact_manager,
                 self._gate_engine,
+                provider=agent_provider,
             )
         )
         self._execution_bootstrap = (
@@ -274,6 +277,15 @@ class Orchestrator:
         )
         result = stage_report.agent_result
         if result.status != AgentResultStatus.COMPLETED:
+            if result.status == AgentResultStatus.FAILED:
+                self._fail_from_result(
+                    state,
+                    stage.id,
+                    result,
+                    state_path,
+                    logger,
+                )
+                return self._outcome(state, state_path, artifacts_path)
             self._block_from_result(
                 state,
                 stage.id,
@@ -475,6 +487,40 @@ class Orchestrator:
             "Execução bloqueada.",
             extra={
                 "event_type": "run_blocked",
+                "project_id": state.project_id,
+                "workflow_id": state.workflow_id,
+                "stage_id": stage_id,
+            },
+        )
+
+    def _fail_from_result(
+        self,
+        state: ExecutionState,
+        stage_id: str,
+        result: AgentResult,
+        state_path: Path,
+        logger: logging.Logger,
+    ) -> None:
+        self._state_manager.transition_stage(
+            state,
+            stage_id,
+            StageStatus.FAILED,
+            "Agente ou provider reportou falha.",
+            "stage-execution-service",
+        )
+        self._state_manager.transition_execution(
+            state,
+            ExecutionStatus.FAILED,
+            "Etapa falhou.",
+            "orchestrator",
+        )
+        state.errors.extend(result.errors)
+        self._state_manager.save(state, state_path)
+        self._log_state_change(state, logger, f"stage:{stage_id}")
+        logger.error(
+            "Execução interrompida por falha da etapa.",
+            extra={
+                "event_type": "run_failed",
                 "project_id": state.project_id,
                 "workflow_id": state.workflow_id,
                 "stage_id": stage_id,
