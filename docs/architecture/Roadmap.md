@@ -13,7 +13,13 @@ timeline
          : Timeline em memória concluída
          : Run Query Service e CLI history concluídos
          : Metrics Service concluído
+         : Dashboard API interna concluída
          : Claude Provider
+    v0.7 : FileRunRepository não localizado
+         : FileTimelineRepository concluído
+         : Repository Factory próxima
+         : Configuration System futura
+         : SQLite Repository futura
     v0.8 : Parallel Execution
          : Retry
          : Cancellation
@@ -34,6 +40,7 @@ timeline
 - consultas unificadas e interface CLI de histórico em memória — implementadas;
 - integração da Timeline ao lifecycle e persistência durável — planejadas;
 - Metrics Service somente leitura — implementado;
+- Dashboard API interna e somente leitura — implementada;
 - Claude Provider por `AgentProvider`.
 
 ## v0.8
@@ -42,6 +49,18 @@ timeline
 - política de retry;
 - cancelamento coordenado;
 - Dashboard MVP.
+
+## v0.7
+
+- 7.1 FileRunRepository — não localizado no HEAD `b949a6c`; inconsistência de
+  pré-condição registrada;
+- 7.2 FileTimelineRepository — implementado;
+- 7.3 Repository Factory — próximo, não iniciado;
+- 7.4 Configuration System — futuro;
+- 7.5 SQLite Repository — futuro.
+
+A aplicação padrão continua usando repositories em memória. A implementação em
+arquivo exige injeção explícita até uma decisão futura de composição.
 
 ## v1.0
 

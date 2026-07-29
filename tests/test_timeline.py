@@ -328,11 +328,16 @@ def test_public_exports_are_intentional() -> None:
 
     assert set(timeline.__all__) == {
         "DuplicateTimelineEventError",
+        "FileTimelineRepository",
         "InMemoryTimelineRepository",
+        "InvalidTimelineStorageFormatError",
         "TimelineEvent",
         "TimelineEventType",
         "TimelineRecorder",
         "TimelineRepository",
+        "TimelineStorageError",
+        "TimelineStorageReadError",
+        "TimelineStorageWriteError",
     }
 
 

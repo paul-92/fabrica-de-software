@@ -62,10 +62,14 @@ flowchart LR
     RUNREPO --> MEMORY["InMemoryRunRepository"]
     RUNMODEL -. run_id .-> TIMELINE["TimelineEvent"]
     RECORDER["TimelineRecorder"] --> TIMELINE
+    TIMELINE --> FILETIMELINE["FileTimelineRepository"]
+    FILETIMELINE --> TIMELINEJSON["timeline-events.json"]
     RUNREPO --> QUERY["RunQueryService"]
     TIMELINE --> QUERY
     QUERY --> HISTORY["CLI: runs / run show / run timeline"]
     QUERY --> METRICS["MetricsService"]
+    QUERY --> DASHAPI["Dashboard API"]
+    METRICS --> DASHAPI
 ```
 
 O caminho `PromptBuilder → ExecutionPackageBuilder → AgentProvider` ocorre
@@ -148,6 +152,7 @@ documentais encontradas:
 - [Execution Timeline](ExecutionTimeline.md)
 - [Run Query Service](RunQueryService.md)
 - [Metrics Service](MetricsService.md)
+- [Dashboard API](DashboardAPI.md)
 - [Revisão de consistência arquitetural](Architectural-Consistency-Review.md)
 - [ADR-015 proposto](decisions/ADR-015-provider-boundaries-and-execution-graph-isolation.md)
 - [Plano de refatoração proposto](Provider-Graph-Refactoring-Plan.md)

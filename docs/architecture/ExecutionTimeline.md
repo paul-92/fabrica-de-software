@@ -1,6 +1,6 @@
 # Execution Timeline
 
-**Dono:** Engenharia ASEP | **Versão:** 1.0 | **Status:** implementado sem integração
+**Dono:** Engenharia ASEP | **Versão:** 1.1 | **Status:** persistência disponível sem integração padrão
 
 ## Objetivo
 
@@ -14,6 +14,8 @@ flowchart LR
     RECORDER["TimelineRecorder"] --> EVENT
     RECORDER --> PORT["TimelineRepository"]
     PORT --> MEMORY["InMemoryTimelineRepository"]
+    PORT --> FILE["FileTimelineRepository"]
+    FILE --> JSON["timeline-events.json"]
 ```
 
 ## TimelineEvent
@@ -66,6 +68,79 @@ com `run_id` vazio é rejeitada.
 índices em memória por `run_id`. Os dados são perdidos no encerramento do
 processo. Não há arquivo, banco, concorrência multiprocesso, retenção ou
 paginação.
+
+## Implementação em arquivo
+
+`FileTimelineRepository(path)` implementa o mesmo Protocol e pode ser injetado
+sem alterações no `TimelineRecorder` ou `RunQueryService`. A aplicação padrão
+continua usando memória; não existe Repository Factory nesta versão.
+
+O arquivo configurável usa o envelope:
+
+```json
+{
+  "events": [
+    {
+      "id": "event-id",
+      "message": "Stage started.",
+      "metadata": {},
+      "run_id": "run-id",
+      "stage_id": "implementation",
+      "timestamp": "2026-07-29T17:30:00Z",
+      "type": "stage.started"
+    }
+  ],
+  "version": "1.0"
+}
+```
+
+`TimelineEventCodec` enumera explicitamente os sete campos reais. Enums são
+armazenados por valor, timestamps em ISO 8601 com timezone, e Unicode permanece
+legível. A desserialização reconstrói e valida `TimelineEvent`; campos extras,
+obrigatórios ausentes, tipos desconhecidos, metadata inválida e IDs duplicados
+no arquivo são corrupção explícita.
+
+### Leitura e erros
+
+- arquivo inexistente representa repository vazio e não é criado pela leitura;
+- arquivo de zero bytes ou somente whitespace é inválido;
+- JSON malformado, envelope divergente e versão desconhecida geram
+  `InvalidTimelineStorageFormatError`;
+- falhas do filesystem são encadeadas em `TimelineStorageReadError` ou
+  `TimelineStorageWriteError`;
+- arquivos inválidos nunca são corrigidos nem sobrescritos automaticamente.
+
+### Escrita e ordenação
+
+Cada operação relê o documento completo. `append` rejeita ID já existente
+globalmente, preservando a semântica append-only do repository em memória.
+Eventos com IDs diferentes podem ter conteúdo igual. O armazenamento e a
+consulta são ordenados por timestamp e ID.
+
+A escrita serializa tudo antes de tocar no destino, cria o diretório pai e um
+temporário curto no mesmo diretório, executa flush e `fsync`, fecha o arquivo e
+usa `os.replace`. Em falha, o temporário é removido quando possível e o arquivo
+anterior permanece intacto. Essa estratégia é compatível com Windows.
+
+### Limitações
+
+- não existe lock ou transação multiprocesso; duas escritas concorrentes podem
+  produzir lost update, embora cada arquivo final permaneça íntegro;
+- não há transação entre Run e Timeline nem validação da existência do Run;
+- o documento inteiro é carregado e reescrito, sendo inadequado para alto
+  volume;
+- não há índice, paginação, compactação, rotação, backup ou recovery;
+- o `FileRunRepository` esperado da Sprint 7.1 não está presente no HEAD
+  avaliado, portanto não houve reutilização de codec, writer ou erros daquela
+  implementação.
+
+Exemplo:
+
+```python
+repository = FileTimelineRepository(Path("storage/timeline-events.json"))
+recorder = TimelineRecorder(repository)
+recorder.record("run-id", TimelineEventType.RUN_STARTED)
+```
 
 ## TimelineRecorder
 
