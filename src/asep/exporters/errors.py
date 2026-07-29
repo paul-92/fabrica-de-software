@@ -19,3 +19,10 @@ class BpmnExportError(AsepError):
 
 class UnsupportedBpmnGraphError(BpmnExportError):
     code = "BPMN_GRAPH_UNSUPPORTED"
+
+
+class JsonExportError(AsepError):
+    code = "JSON_EXPORT_ERROR"
+    category = "validation"
+    next_action = "Verifique se o ExecutionGraph contém apenas dados serializáveis."
+    exit_code = 3

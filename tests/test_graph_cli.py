@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
@@ -8,7 +9,11 @@ from typer.testing import CliRunner
 
 import asep.cli as cli_module
 from asep.cli import app
-from asep.exporters import BpmnExportError, MermaidExportError
+from asep.exporters import (
+    BpmnExportError,
+    JsonExportError,
+    MermaidExportError,
+)
 
 BPMN_NS = "http://www.omg.org/spec/BPMN/20100524/MODEL"
 BPMNDI_NS = "http://www.omg.org/spec/BPMN/20100524/DI"
@@ -74,6 +79,7 @@ def test_graph_command_help_documents_supported_options() -> None:
     assert "--run-id" not in result.stdout
     assert "mermaid" in result.stdout
     assert "bpmn" in result.stdout
+    assert "json" in result.stdout
 
 
 def test_graph_generates_linear_workflow_on_stdout(
@@ -252,6 +258,83 @@ def test_graph_bpmn_export_failure_leaves_no_partial_file(
 
     assert result.exit_code == 3
     assert "BPMN_EXPORT_ERROR" in result.stderr
+    assert not target.exists()
+    assert not list(tmp_path.glob(".asep-graph-*.tmp"))
+
+
+def test_graph_generates_json_only_on_stdout(
+    sample_repository: Path,
+) -> None:
+    result = CliRunner().invoke(
+        app,
+        [
+            "graph",
+            str(project_path(sample_repository)),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert result.stderr == ""
+    payload = json.loads(result.stdout)
+    assert payload["version"] == "1.0"
+    assert payload["generated_at"] is None
+    assert payload["graph"]["nodes"][0]["id"] == "intake"
+    assert payload["graph"]["edges"] == []
+
+
+def test_graph_writes_deterministic_json_file(
+    sample_repository: Path,
+    tmp_path: Path,
+) -> None:
+    target = tmp_path / "graph.json"
+    arguments = [
+        "graph",
+        str(project_path(sample_repository)),
+        "--format",
+        "json",
+        "--output",
+        str(target),
+    ]
+
+    first = CliRunner().invoke(app, arguments)
+    first_content = target.read_bytes()
+    target.unlink()
+    second = CliRunner().invoke(app, arguments)
+
+    assert first.exit_code == second.exit_code == 0
+    assert first.stdout == second.stdout == ""
+    assert "JSON graph written to" in first.stderr
+    assert first_content == target.read_bytes()
+    assert json.loads(first_content)["version"] == "1.0"
+
+
+def test_graph_json_export_failure_leaves_no_partial_file(
+    sample_repository: Path,
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    target = tmp_path / "graph.json"
+
+    def fail_export(self, execution_graph):
+        raise JsonExportError("fault injection")
+
+    monkeypatch.setattr(cli_module.JsonExporter, "export", fail_export)
+    result = CliRunner().invoke(
+        app,
+        [
+            "graph",
+            str(project_path(sample_repository)),
+            "--format",
+            "json",
+            "--output",
+            str(target),
+        ],
+    )
+
+    assert result.exit_code == 3
+    assert "JSON_EXPORT_ERROR" in result.stderr
     assert not target.exists()
     assert not list(tmp_path.glob(".asep-graph-*.tmp"))
 

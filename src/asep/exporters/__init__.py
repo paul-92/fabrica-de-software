@@ -6,7 +6,12 @@ from asep.exporters.bpmn import (
 )
 from asep.exporters.errors import (
     BpmnExportError,
+    JsonExportError,
     MermaidExportError,
+)
+from asep.exporters.json_exporter import (
+    JSON_GRAPH_FORMAT_VERSION,
+    JsonExporter,
 )
 from asep.exporters.mermaid import (
     MermaidDirection,
@@ -18,6 +23,9 @@ __all__ = [
     "BpmnExporter",
     "BpmnExportError",
     "BpmnExportOptions",
+    "JSON_GRAPH_FORMAT_VERSION",
+    "JsonExporter",
+    "JsonExportError",
     "MermaidDirection",
     "MermaidExporter",
     "MermaidExportError",

@@ -17,7 +17,7 @@ from asep.execution_graph import ExecutionGraphBuilder
 from asep.logging_config import configure_logging
 from asep.orchestrator.service import Orchestrator
 from asep.execution.state import RunLocator
-from asep.exporters import BpmnExporter, MermaidExporter
+from asep.exporters import BpmnExporter, JsonExporter, MermaidExporter
 from asep.project.loader import ProjectLoader
 from asep.registry.loader import RegistryLoader
 from asep.workflow.loader import WorkflowLoader
@@ -34,6 +34,7 @@ error_console = Console(stderr=True)
 class GraphFormat(StrEnum):
     MERMAID = "mermaid"
     BPMN = "bpmn"
+    JSON = "json"
 
 
 @app.callback()
@@ -183,6 +184,8 @@ def graph(
             content = MermaidExporter().export(execution_graph)
         elif output_format is GraphFormat.BPMN:
             content = BpmnExporter().export(execution_graph)
+        elif output_format is GraphFormat.JSON:
+            content = JsonExporter().export(execution_graph)
         else:  # pragma: no cover - proteção para formatos futuros
             raise ConfigurationError(
                 f"Formato de grafo não suportado: {output_format}"
@@ -196,7 +199,7 @@ def graph(
         format_name = (
             "Mermaid"
             if output_format is GraphFormat.MERMAID
-            else "BPMN"
+            else output_format.value.upper()
         )
         typer.echo(
             f"{format_name} graph written to {target}",
