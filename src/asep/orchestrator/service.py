@@ -8,6 +8,7 @@ from pathlib import Path
 from time import perf_counter
 
 from asep.agents.business_analyst import BusinessAnalystAgent
+from asep.application.execution_bootstrap import ExecutionBootstrap
 from asep.application.stage_execution import StageExecutionService
 from asep.artifacts.manager import ArtifactManager
 from asep.errors import AsepError, ConsistencyError
@@ -46,6 +47,7 @@ class Orchestrator:
         artifact_manager: ArtifactManager | None = None,
         gate_engine: QualityGateEngine | None = None,
         stage_execution_service: StageExecutionService | None = None,
+        execution_bootstrap: ExecutionBootstrap | None = None,
     ) -> None:
         self._project_loader = project_loader or ProjectLoader()
         self._registry_loader = registry_loader or RegistryLoader()
@@ -63,6 +65,16 @@ class Orchestrator:
                 self._agent_runtime,
                 self._artifact_manager,
                 self._gate_engine,
+            )
+        )
+        self._execution_bootstrap = (
+            execution_bootstrap
+            or ExecutionBootstrap(
+                self._project_loader,
+                self._registry_loader,
+                self._workflow_loader,
+                self._workflow_engine,
+                self._state_manager,
             )
         )
 
@@ -141,27 +153,12 @@ class Orchestrator:
     def execute(
         self, project_path: Path, run_id: str, logger: logging.Logger
     ) -> ExecutionOutcome:
-        project, registry, workflow = self._load_execution_inputs(project_path)
-        workflow_path = (registry.root / registry.workflows[workflow.id].path).resolve()
-        self._workflow_engine.validate(workflow, path=workflow_path)
-        run_root = project.path / ".asep" / "runs" / run_id
-        state_path = run_root / "state.yaml"
-        artifacts_path = project.path / "artifacts" / "runs" / run_id
-        run_context = RunContext(
-            run_id=run_id,
-            project_id=project.definition.id,
-            workflow_id=workflow.id,
-            started_at=datetime.now(UTC),
-            current_stage=None,
-            execution_status=ExecutionStatus.CREATED,
-            project_path=project.path,
-            state_path=state_path,
-            artifacts_path=artifacts_path,
-            logs_path=project.path / "logs" / "runs" / f"{run_id}.jsonl",
-        )
-        state = self._state_manager.create(
-            run_id, project.definition.id, workflow, run_context.state_path
-        )
+        bootstrap = self._execution_bootstrap.prepare(project_path, run_id)
+        project = bootstrap.project
+        registry = bootstrap.registry
+        workflow = bootstrap.workflow
+        run_context = bootstrap.run_context
+        state = bootstrap.state
         logger.info(
             "Execução criada.",
             extra={
@@ -176,7 +173,7 @@ class Orchestrator:
         self._state_manager.transition_execution(
             state, ExecutionStatus.RUNNING, "Execução sequencial iniciada.", "orchestrator"
         )
-        self._state_manager.save(state, state_path)
+        self._state_manager.save(state, run_context.state_path)
         self._log_state_change(state, logger, "execution")
         logger.info(
             "Execução iniciada.",
@@ -187,7 +184,13 @@ class Orchestrator:
             },
         )
         return self._run_loop(
-            project, registry, workflow, state, state_path, artifacts_path, logger
+            project,
+            registry,
+            workflow,
+            state,
+            run_context.state_path,
+            run_context.artifacts_path,
+            logger,
         )
 
     def resume(self, state_path: Path, logger: logging.Logger) -> ExecutionOutcome:
