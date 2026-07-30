@@ -26,6 +26,15 @@ class TimelineEventType(StrEnum):
     PROVIDER_FINISHED = "provider.finished"
     WARNING = "warning"
     ERROR = "error"
+    AGENT_EXECUTION_REQUESTED = "agent_execution_requested"
+    AGENT_EXECUTION_VALIDATED = "agent_execution_validated"
+    AGENT_EXECUTION_STARTED = "agent_execution_started"
+    AGENT_EXECUTION_SUCCEEDED = "agent_execution_succeeded"
+    AGENT_EXECUTION_FAILED = "agent_execution_failed"
+    AGENT_EXECUTION_REJECTED = "agent_execution_rejected"
+    AGENT_EXECUTION_RETRYING = "agent_execution_retrying"
+    AGENT_EXECUTION_TIMED_OUT = "agent_execution_timed_out"
+    AGENT_EXECUTION_CANCELLED = "agent_execution_cancelled"
 
 
 class TimelineEvent(BaseModel):

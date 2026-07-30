@@ -1,0 +1,21 @@
+{
+  "runs": [
+    {
+      "error": null,
+      "finished_at": "2026-07-30T12:00:00Z",
+      "id": "run-file",
+      "metadata": {
+        "step_count": 1,
+        "workflow_status": "completed"
+      },
+      "project_id": null,
+      "provider_name": null,
+      "stage_id": null,
+      "started_at": "2026-07-30T12:00:00Z",
+      "status": "succeeded",
+      "summary": "Workflow concluído.",
+      "workflow_id": "workflow"
+    }
+  ],
+  "version": "1.0"
+}

@@ -1,0 +1,107 @@
+run_id: 15a9355b-cbc1-4bb1-a017-8a3daec4bb08
+project_id: sample
+workflow_id: software-project
+execution_status: completed
+current_stage: intake
+created_at: '2026-07-30T14:26:44.298481Z'
+updated_at: '2026-07-30T14:26:44.485055Z'
+resumed_at: '2026-07-30T14:26:44.413109Z'
+stages:
+- id: intake
+  status: completed
+  agent_id: business-analyst
+  quality_gate_id: QG-INTAKE
+  attempts: 2
+transition_history:
+- timestamp: '2026-07-30T14:26:44.307430Z'
+  run_id: 15a9355b-cbc1-4bb1-a017-8a3daec4bb08
+  entity: execution
+  previous_state: created
+  new_state: ready
+  reason: Entradas carregadas e validadas.
+  component: orchestrator
+- timestamp: '2026-07-30T14:26:44.307455Z'
+  run_id: 15a9355b-cbc1-4bb1-a017-8a3daec4bb08
+  entity: execution
+  previous_state: ready
+  new_state: running
+  reason: Execução sequencial iniciada.
+  component: orchestrator
+- timestamp: '2026-07-30T14:26:44.321137Z'
+  run_id: 15a9355b-cbc1-4bb1-a017-8a3daec4bb08
+  entity: stage:intake
+  previous_state: pending
+  new_state: ready
+  reason: Dependências concluídas.
+  component: workflow-engine
+- timestamp: '2026-07-30T14:26:44.338866Z'
+  run_id: 15a9355b-cbc1-4bb1-a017-8a3daec4bb08
+  entity: stage:intake
+  previous_state: ready
+  new_state: running
+  reason: Execução da etapa iniciada.
+  component: orchestrator
+- timestamp: '2026-07-30T14:26:44.359101Z'
+  run_id: 15a9355b-cbc1-4bb1-a017-8a3daec4bb08
+  entity: stage:intake
+  previous_state: running
+  new_state: blocked
+  reason: Agente reportou entradas pendentes.
+  component: agent-runtime
+- timestamp: '2026-07-30T14:26:44.359135Z'
+  run_id: 15a9355b-cbc1-4bb1-a017-8a3daec4bb08
+  entity: execution
+  previous_state: running
+  new_state: blocked
+  reason: Etapa não pode avançar.
+  component: orchestrator
+- timestamp: '2026-07-30T14:26:44.413109Z'
+  run_id: 15a9355b-cbc1-4bb1-a017-8a3daec4bb08
+  entity: execution
+  previous_state: blocked
+  new_state: running
+  reason: Retomada validada entre etapas.
+  component: state-manager
+- timestamp: '2026-07-30T14:26:44.426786Z'
+  run_id: 15a9355b-cbc1-4bb1-a017-8a3daec4bb08
+  entity: stage:intake
+  previous_state: blocked
+  new_state: running
+  reason: Execução da etapa iniciada.
+  component: orchestrator
+- timestamp: '2026-07-30T14:26:44.460013Z'
+  run_id: 15a9355b-cbc1-4bb1-a017-8a3daec4bb08
+  entity: stage:intake
+  previous_state: running
+  new_state: completed
+  reason: Quality gate APPROVED.
+  component: orchestrator
+- timestamp: '2026-07-30T14:26:44.485055Z'
+  run_id: 15a9355b-cbc1-4bb1-a017-8a3daec4bb08
+  entity: execution
+  previous_state: running
+  new_state: completed
+  reason: Todas as etapas foram concluídas.
+  component: orchestrator
+pending_approvals: []
+errors:
+- 'Entradas obrigatórias ausentes: scope_received'
+artifact_references:
+- artifact_id: 69e887b2-d1ff-4af2-80e1-85cfcecdede7
+  run_id: 15a9355b-cbc1-4bb1-a017-8a3daec4bb08
+  project_id: sample
+  stage_id: intake
+  agent_id: business-analyst
+  path: business-analysis/execution-summary.md
+  type: markdown
+  created_at: '2026-07-30T14:26:44.447518Z'
+  checksum: 7a23fceebf68493e6a71b4aca4a74ac41c002e33f932f94f4102dcace93ca6e5
+- artifact_id: e3520ff8-175c-4d9b-ade2-3f3f6cdf4c0b
+  run_id: 15a9355b-cbc1-4bb1-a017-8a3daec4bb08
+  project_id: sample
+  stage_id: intake
+  agent_id: quality-gate-engine
+  path: quality-gates/intake-result.yaml
+  type: yaml
+  created_at: '2026-07-30T14:26:44.454480Z'
+  checksum: bf8e5487cba6d0b87e06ad09f19ab6851da51eb0cb537d6d2f462612e964f4c3

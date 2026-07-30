@@ -1,0 +1,8 @@
+gate_id: QG-INTAKE
+run_id: f2f1a9f1-2c60-4fa0-9120-6b9197589488
+stage_id: intake
+decision: BLOCKED
+satisfied_criteria: []
+unsatisfied_criteria:
+- revisão obrigatória
+evaluated_at: '2026-07-30T14:26:50.733260Z'

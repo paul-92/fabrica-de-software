@@ -32,10 +32,7 @@ timeline
          : Agent Registry concluído
          : Workflow Persistence concluída
          : Architecture Hardening RC1 concluído localmente
-         : Parallel Execution
-         : Retry
-         : Cancellation
-         : Dashboard MVP
+    v0.9 : Intelligent Agent Runtime concluído localmente
     v1.0 : Blueprint
          : API
          : Dashboard
@@ -64,10 +61,18 @@ timeline
 - 8.5 Workflow Persistence — implementado;
 - 8.6 Architecture Hardening & RC1 — concluído localmente;
 
-A Fase 9 não foi iniciada ou aprovada.
-- 8.2 Workflow Engine, Validator e Executor — implementados;
+## v0.9
+
+- 9.1 Intelligent Agent Runtime — implementado localmente;
+- próxima Sprint da Fase 9 — não iniciada.
+
+O runtime é síncrono, resolve agentes pelo Registry e integra Timeline e
+métricas. Paralelismo, agentes autônomos, memória semântica e infraestrutura
+distribuída continuam fora do estado implementado.
+
+Itens futuros sem Sprint aprovada:
+
 - execução paralela real;
-- política de retry;
 - cancelamento coordenado;
 - Dashboard MVP.
 

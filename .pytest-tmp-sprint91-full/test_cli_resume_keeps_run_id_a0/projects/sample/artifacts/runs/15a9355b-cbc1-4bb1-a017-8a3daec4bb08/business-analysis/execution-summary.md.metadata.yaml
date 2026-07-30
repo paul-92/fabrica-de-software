@@ -1,0 +1,9 @@
+artifact_id: 69e887b2-d1ff-4af2-80e1-85cfcecdede7
+run_id: 15a9355b-cbc1-4bb1-a017-8a3daec4bb08
+project_id: sample
+stage_id: intake
+agent_id: business-analyst
+path: business-analysis/execution-summary.md
+type: markdown
+created_at: '2026-07-30T14:26:44.447518Z'
+checksum: 7a23fceebf68493e6a71b4aca4a74ac41c002e33f932f94f4102dcace93ca6e5

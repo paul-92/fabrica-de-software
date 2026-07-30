@@ -1,0 +1,31 @@
+# Resumo de execução — Business Analysis
+
+**Projeto:** Sample (`sample`)
+**Run ID:** `f2f1a9f1-2c60-4fa0-9120-6b9197589488`
+**Agente:** `business-analyst`
+**Etapa:** `intake`
+**Data e hora:** 2026-07-30T14:27:22.364449+00:00
+**Status:** completed
+
+## Objetivo recebido
+
+Executar teste sequencial.
+
+## Escopo recebido
+
+# Scope
+
+Escopo confirmado para teste.
+
+
+## Restrições identificadas
+
+- Nenhuma restrição adicional fornecida ao agente.
+
+
+## Itens pendentes
+
+- Nenhum item pendente informado no contexto.
+
+
+> Artefato determinístico. Nenhum requisito foi inferido ou criado.

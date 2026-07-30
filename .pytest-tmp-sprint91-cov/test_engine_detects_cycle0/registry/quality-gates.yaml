@@ -1,0 +1,5 @@
+version: 0.1.0
+quality_gates:
+  - id: QG-INTAKE
+    owner: orchestrator
+    definition: ../core/QUALITY.md

@@ -1,45 +1,42 @@
 # Prompt oficial da Sprint atual
 
-**Sprint:** 8.6 — Architecture Hardening & Release Candidate RC1  
-**Estado:** concluída localmente; publicação pendente
+**Sprint:** 9.1 — Intelligent Agent Runtime
+**Estado:** implementada localmente; validação e publicação pendentes
 
 ## Objetivo
 
-Auditar arquitetura, código, documentação, testes, dependências, segurança e
-Git, preparando migração e um candidato estável sem adicionar funcionalidade.
+Implementar uma infraestrutura síncrona, determinística e observável para
+executar os agentes formais da ASEP.
 
 ## Escopo entregue
 
-- seis relatórios de auditoria;
-- cobertura e estatísticas reproduzíveis;
-- correção de `httpx2` para a dependência real `httpx`;
-- fechamento explícito de conexões SQLite em fixtures;
-- Migration Guide;
-- Release Candidate RC1;
-- documentação central sincronizada.
+- AgentRuntime, serviço, modelos, policy, validator e exceções;
+- Registry, Timeline e métricas integrados por contratos;
+- AgentStepAdapter integrado ao runtime sem acoplar o Engine;
+- retry explícito, timeout observacional e idempotência local;
+- segurança de metadados e compatibilidade com agente existente;
+- documentação técnica e ADR-022.
 
 ## Evidência
 
-- 665 testes aprovados;
-- 95% de cobertura;
-- zero ciclos internos de imports;
-- `pip check`, verificador do ambiente, `compileall`, links e diff check;
-- nenhuma dependência proibida no Workflow Engine.
+- testes unitários e integrados em `tests/test_agent_runtime.py`;
+- testes legados de contratos, Registry e Workflow preservados;
+- gates finais: suíte, cobertura, `compileall`, links e `git diff --check`.
 
 ## Restrições
 
-- nenhuma funcionalidade nova;
-- nenhuma Fase 9 iniciada;
-- nenhum novo Agent, Workflow, plugin, fila ou evento;
+- nenhum agente autônomo, provider, fila, scheduler ou paralelismo;
+- nenhuma memória vetorial, RAG ou planejamento multiagente;
+- nenhum lock distribuído ou mudança de schema;
 - nenhum commit, push ou tag automático.
 
-## Gate de publicação
+## Limites
 
-RC1 é tecnicamente válido localmente. Ainda exige revisão do diff acumulado,
-commits/push, clone limpo ou CI, scanner de histórico e autorização de tag.
+O timeout não interrompe chamada bloqueada; idempotência e métricas online são
+locais à instância. A Sprint 9.2 não foi iniciada.
 
 Referências:
-[Sprint 8.6](../docs/phase-08/Sprint-8.6-Architecture-Hardening-RC1.md),
-[RC1](../docs/releases/ReleaseCandidate_RC1.md),
-[auditorias](../docs/audits/ArchitectureAudit.md) e
+[Sprint 9.1](../docs/phase-09/Sprint-9.1-Intelligent-Agent-Runtime.md),
+[Agent Runtime](../docs/agents/AgentRuntime.md),
+[ADR-022](../docs/adr/ADR-022-intelligent-agent-runtime.md) e
 [NEXT_STEPS](../project/NEXT_STEPS.md).

@@ -1,0 +1,14 @@
+{
+  "events": [
+    {
+      "id": "recorded",
+      "message": "Provider iniciado.",
+      "metadata": {},
+      "run_id": "run",
+      "stage_id": null,
+      "timestamp": "2026-07-29T17:30:00Z",
+      "type": "provider.started"
+    }
+  ],
+  "version": "1.0"
+}

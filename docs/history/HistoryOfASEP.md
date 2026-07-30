@@ -96,6 +96,20 @@ A Sprint 8.6 não ampliou o produto. Auditorias, cobertura e revisão documental
 consolidaram o RC1. A declaração técnica permaneceu separada da publicação:
 Git, CI, scanner de histórico e clone limpo continuam gates humanos/operacionais.
 
+### Capítulo — Fase 09: uma fronteira antes da autonomia
+
+A Sprint 9.1 iniciou agentes inteligentes sem introduzir autonomia. O contrato
+de Agent já existia, mas faltava um único lugar para resolver Registry, validar
+capability, aplicar política e observar cada chamada. O novo runtime foi
+colocado entre `AgentStepAdapter` e Agent; assim, o Engine permaneceu genérico e
+o Registry permaneceu catálogo.
+
+Retry explícito, timeout observacional, resultados estruturados, Timeline,
+métricas e idempotência local formaram um lifecycle determinístico. O
+aprendizado foi tratar segurança e correlação como parte da fronteira desde o
+início, mantendo input/output fora dos eventos. Autonomia, concorrência e
+controle distribuído permaneceram deliberadamente fora.
+
 ## Testes
 
 A história é conferida contra testes de contrato, testes SQLite e imports
@@ -121,7 +135,9 @@ para evidências.
 [Fase 07](Phase-07.md), [Fase 08](Phase-08.md),
 [Sprint 8.4](../phase-08/Sprint-8.4-Agent-Registry.md) e
 [ADR-020](../adr/ADR-020-in-memory-agent-registry.md).
+Fase 9: [Sprint 9.1](../phase-09/Sprint-9.1-Intelligent-Agent-Runtime.md) e
+[ADR-022](../adr/ADR-022-intelligent-agent-runtime.md).
 
 ## Relacionado a
 
-Fases 07–08; Architecture v1; Roadmap; ADRs; glossário; testes.
+Fases 07–09; Architecture v1; Roadmap; ADRs; glossário; testes.

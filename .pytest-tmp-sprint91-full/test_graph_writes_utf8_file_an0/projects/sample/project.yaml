@@ -1,0 +1,11 @@
+id: sample
+name: Projeto Ágil
+version: 0.1.0
+status: active
+project_type: software
+workflow_id: software-project
+data_classification: internal
+sprint:
+  id: sprint-2
+  objective: Executar teste sequencial.
+  status: running

@@ -1,0 +1,25 @@
+run_id: dd2a665b-294e-470d-b9bd-33d36424c259
+project_id: sample
+workflow_id: software-project
+execution_status: ready
+current_stage: null
+created_at: '2026-07-30T14:26:41.029859Z'
+updated_at: '2026-07-30T14:26:41.034851Z'
+resumed_at: null
+stages:
+- id: intake
+  status: pending
+  agent_id: business-analyst
+  quality_gate_id: QG-INTAKE
+  attempts: 0
+transition_history:
+- timestamp: '2026-07-30T14:26:41.034851Z'
+  run_id: dd2a665b-294e-470d-b9bd-33d36424c259
+  entity: execution
+  previous_state: created
+  new_state: ready
+  reason: qa-ready
+  component: qa
+pending_approvals: []
+errors: []
+artifact_references: []

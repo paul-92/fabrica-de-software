@@ -57,6 +57,7 @@ docs/
 | Entender a Sprint 8.3 | [fotografia](phase-08/Sprint-8.3-Agent-Contracts.md) | [Agent Contracts](workflows/AgentContracts.md) |
 | Entender a Sprint 8.4 | [fotografia](phase-08/Sprint-8.4-Agent-Registry.md) | [Agent Registry](workflows/AgentRegistry.md) |
 | Entender a Sprint 8.5 | [fotografia](phase-08/Sprint-8.5-Workflow-Persistence.md) | [Workflow Persistence](workflows/WorkflowPersistence.md) |
+| Entender a Sprint 9.1 | [fotografia](phase-09/Sprint-9.1-Intelligent-Agent-Runtime.md) | [Agent Runtime](agents/AgentRuntime.md) |
 | Avaliar o RC1 | [Release Candidate](releases/ReleaseCandidate_RC1.md) | [Auditoria arquitetural](audits/ArchitectureAudit.md) |
 | Migrar o ambiente | [Migration Guide](migration/MigrationGuide.md) | [Checklist](../project/MIGRATION_CHECKLIST.md) |
 
@@ -122,6 +123,12 @@ novos ADRs documentais usam `docs/adr/` até decisão de consolidação.
 - [ADR-021](adr/ADR-021-workflow-snapshot-persistence.md): decisão.
 - [Sprint 8.6](phase-08/Sprint-8.6-Architecture-Hardening-RC1.md): hardening;
 - [Release Candidate RC1](releases/ReleaseCandidate_RC1.md): gate consolidado.
+
+### Catálogo da Sprint 9.1
+
+- [Sprint 9.1](phase-09/Sprint-9.1-Intelligent-Agent-Runtime.md): fotografia;
+- [Agent Runtime](agents/AgentRuntime.md): contratos, lifecycle e operação;
+- [ADR-022](adr/ADR-022-intelligent-agent-runtime.md): fronteira do runtime.
 
 ### Auditorias RC1
 

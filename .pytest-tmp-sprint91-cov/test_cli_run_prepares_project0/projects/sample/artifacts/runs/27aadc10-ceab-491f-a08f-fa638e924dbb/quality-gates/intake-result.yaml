@@ -1,0 +1,12 @@
+gate_id: QG-INTAKE
+run_id: 27aadc10-ceab-491f-a08f-fa638e924dbb
+stage_id: intake
+decision: APPROVED
+satisfied_criteria:
+- resultado do agente é válido
+- artefato obrigatório existe
+- campos obrigatórios estão preenchidos
+- não existem erros críticos
+- estado da etapa é compatível
+unsatisfied_criteria: []
+evaluated_at: '2026-07-30T14:27:14.096895Z'

@@ -1,0 +1,8 @@
+version: 0.1.0
+contracts:
+  - id: orchestrator
+    version: 0.1.0
+    path: ../contracts/orchestrator.yaml
+  - id: business-analyst
+    version: 0.1.0
+    path: ../contracts/business-analyst.yaml

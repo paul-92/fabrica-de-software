@@ -1,0 +1,60 @@
+run_id: f2f1a9f1-2c60-4fa0-9120-6b9197589488
+project_id: sample
+workflow_id: software-project
+execution_status: completed
+current_stage: review
+created_at: '2026-07-29T00:00:00Z'
+updated_at: '2026-07-30T14:27:22.981884Z'
+resumed_at: '2026-07-30T14:27:22.919488Z'
+stages:
+- id: intake
+  status: completed
+  agent_id: business-analyst
+  quality_gate_id: QG-INTAKE
+  attempts: 1
+- id: review
+  status: completed
+  agent_id: business-analyst
+  quality_gate_id: QG-INTAKE
+  attempts: 2
+transition_history:
+- timestamp: '2026-07-30T14:27:22.919488Z'
+  run_id: f2f1a9f1-2c60-4fa0-9120-6b9197589488
+  entity: execution
+  previous_state: blocked
+  new_state: running
+  reason: Retomada validada entre etapas.
+  component: state-manager
+- timestamp: '2026-07-30T14:27:22.946386Z'
+  run_id: f2f1a9f1-2c60-4fa0-9120-6b9197589488
+  entity: stage:review
+  previous_state: blocked
+  new_state: running
+  reason: Execução da etapa iniciada.
+  component: orchestrator
+- timestamp: '2026-07-30T14:27:22.964442Z'
+  run_id: f2f1a9f1-2c60-4fa0-9120-6b9197589488
+  entity: stage:review
+  previous_state: running
+  new_state: completed
+  reason: Quality gate APPROVED.
+  component: orchestrator
+- timestamp: '2026-07-30T14:27:22.981884Z'
+  run_id: f2f1a9f1-2c60-4fa0-9120-6b9197589488
+  entity: execution
+  previous_state: running
+  new_state: completed
+  reason: Todas as etapas foram concluídas.
+  component: orchestrator
+pending_approvals: []
+errors: []
+artifact_references:
+- artifact_id: gate-reference
+  run_id: f2f1a9f1-2c60-4fa0-9120-6b9197589488
+  project_id: sample
+  stage_id: review
+  agent_id: quality-gate-engine
+  path: quality-gates/review-result.yaml
+  type: yaml
+  created_at: '2026-07-29T00:00:00Z'
+  checksum: '0000000000000000000000000000000000000000000000000000000000000000'

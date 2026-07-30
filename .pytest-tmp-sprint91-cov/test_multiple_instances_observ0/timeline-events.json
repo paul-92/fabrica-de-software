@@ -1,0 +1,23 @@
+{
+  "events": [
+    {
+      "id": "first",
+      "message": "Etapa iniciada.",
+      "metadata": {},
+      "run_id": "a",
+      "stage_id": "implementation",
+      "timestamp": "2026-07-29T17:30:00Z",
+      "type": "stage.started"
+    },
+    {
+      "id": "second",
+      "message": "Etapa iniciada.",
+      "metadata": {},
+      "run_id": "b",
+      "stage_id": "implementation",
+      "timestamp": "2026-07-29T17:30:00Z",
+      "type": "stage.started"
+    }
+  ],
+  "version": "1.0"
+}

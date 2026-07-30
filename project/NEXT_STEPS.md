@@ -1,41 +1,39 @@
 # Próximos passos
 
-**Estado:** RC1 local após conclusão da Sprint 8.6
+**Estado:** Sprint 9.1 implementada localmente
 
 ## Sprint atual
 
-Sprint 8.6 — Architecture Hardening & RC1: auditorias e validações concluídas
-localmente. A Fase 9 não está iniciada nem aprovada.
+Sprint 9.1 — Intelligent Agent Runtime: implementação, integração e
+documentação concluídas localmente. A Sprint 9.2 não foi iniciada.
 
 ## Objetivo e escopo concluídos
 
-Auditorias, correção de dependência de testes, fixtures SQLite sem warnings,
-guia de migração e documento do Release Candidate.
+Runtime síncrono com Registry, policy, validator, Timeline, métricas,
+idempotência local e integração ao Workflow Engine por adapter.
 
 ## Critérios já atendidos
 
-- 665 testes;
-- cobertura de 95%;
-- integração Run/Timeline/Metrics/Dashboard e Factory;
-- seis auditorias, migração, RC1, glossário, história, mapa e índice;
-- compileall e diff check.
+- runtime e contratos testados sem provider real;
+- compatibilidade do Business Analyst e do caminho direto;
+- eventos e métricas terminais;
+- proteção de metadata sensível;
+- documentação e ADR-022.
 
 ## Pendências imediatas
 
-1. revisar o diff acumulado da Fase 8/RC1;
-2. criar commit intencional;
-3. enviar o branch, incluindo o commit 7.5 ainda local;
-4. confirmar CI/remoto;
-5. fazer backup opcional dos runs/artifacts/logs locais;
-6. clonar e validar na máquina nova;
-7. executar scanner de histórico;
-8. decidir lockfile;
-9. aprovar formalmente a Fase 9 antes de qualquer implementação.
+1. executar e revisar os gates finais da Sprint 9.1;
+2. revisar o diff acumulado da Fase 8/RC1 e Fase 9.1;
+3. criar commit intencional somente após autorização;
+4. enviar o branch e confirmar CI/remoto;
+5. executar scanner de histórico;
+6. aprovar formalmente a Sprint 9.2 antes de qualquer implementação.
 
 ## Próximo planejamento
 
-O Roadmap cita paralelismo, retry, cancelamento coordenado e Dashboard MVP, mas
-não atribui número/ordem. Não implementar nenhum deles sem prompt e decisão.
+Não iniciar a Sprint 9.2. Evoluções possíveis incluem cancelamento cooperativo,
+idempotência durável e composição do coletor de métricas, mas exigem prompt e
+decisão próprios.
 
 ## Validação
 
@@ -56,5 +54,5 @@ git status --short
 
 Referências: [Roadmap](../docs/architecture/Roadmap.md),
 [prompt oficial](../prompts/CurrentSprintPrompt.md) e
-[Sprint 8.6](../docs/phase-08/Sprint-8.6-Architecture-Hardening-RC1.md) e
-[RC1](../docs/releases/ReleaseCandidate_RC1.md).
+[Sprint 9.1](../docs/phase-09/Sprint-9.1-Intelligent-Agent-Runtime.md) e
+[Agent Runtime](../docs/agents/AgentRuntime.md).

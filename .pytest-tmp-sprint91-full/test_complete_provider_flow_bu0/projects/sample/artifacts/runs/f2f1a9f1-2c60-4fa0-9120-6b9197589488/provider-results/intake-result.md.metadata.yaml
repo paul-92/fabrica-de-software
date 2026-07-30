@@ -1,0 +1,9 @@
+artifact_id: e5abdd16-ce16-4573-86a2-24367bed3829
+run_id: f2f1a9f1-2c60-4fa0-9120-6b9197589488
+project_id: sample
+stage_id: intake
+agent_id: business-analyst
+path: provider-results/intake-result.md
+type: markdown
+created_at: '2026-07-30T14:26:50.142700Z'
+checksum: aab62c9eae98f5d514f65640c30e36ad69f12809cf9fac02617aa7893cf842b3

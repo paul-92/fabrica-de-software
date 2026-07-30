@@ -1,0 +1,23 @@
+{
+  "events": [
+    {
+      "id": "offset",
+      "message": "Etapa iniciada.",
+      "metadata": {},
+      "run_id": "run-1",
+      "stage_id": "implementation",
+      "timestamp": "2026-07-29T14:30:00-03:00",
+      "type": "stage.started"
+    },
+    {
+      "id": "utc",
+      "message": "Etapa iniciada.",
+      "metadata": {},
+      "run_id": "run-1",
+      "stage_id": "implementation",
+      "timestamp": "2026-07-29T17:30:00Z",
+      "type": "stage.started"
+    }
+  ],
+  "version": "1.0"
+}

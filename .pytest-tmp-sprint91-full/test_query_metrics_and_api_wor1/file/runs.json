@@ -1,0 +1,18 @@
+{
+  "runs": [
+    {
+      "error": null,
+      "finished_at": "2026-07-30T12:00:02Z",
+      "id": "run",
+      "metadata": {},
+      "project_id": null,
+      "provider_name": "codex",
+      "stage_id": null,
+      "started_at": "2026-07-30T12:00:00Z",
+      "status": "succeeded",
+      "summary": null,
+      "workflow_id": null
+    }
+  ],
+  "version": "1.0"
+}

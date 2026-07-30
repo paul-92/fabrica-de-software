@@ -21,7 +21,8 @@ persistência.
 - Sprint 8.4: implementada e validada localmente, ainda pendente de commit;
 - Sprint 8.5: implementada e validada localmente, ainda pendente de commit;
 - Sprint 8.6: hardening concluído localmente; RC1 pendente de publicação;
-- próxima Sprint numerada: não aprovada no repositório.
+- Sprint 9.1: Intelligent Agent Runtime implementado localmente;
+- Sprint 9.2: não iniciada.
 
 O último commit local é `863766f` (Sprint 7.5) e ainda não consta no remote
 tracking branch. A árvore possui mudanças da Fase 8. Não migre confiando apenas
@@ -40,8 +41,9 @@ Monólito modular Python. Principais módulos: `application`, `orchestrator`,
 `execution`, `workflow`, `runtime`, `providers`, `artifacts`, `quality`,
 `runs`, `timeline`, `repositories`, `configuration`, `sqlite`, `metrics`,
 `api`, `execution_graph` e `exporters`.
-O pacote `agents` expõe contratos formais e um Registry em memória independente
-de provider e Workflow Engine.
+O pacote `agents` expõe contratos formais, Registry em memória e runtime
+inteligente independente de provider. O Workflow Engine chega ao runtime
+somente por `AgentStepAdapter`.
 
 Persistência: memory, file JSON e SQLite. Integrações: Codex por subprocess,
 CLI Typer, FastAPI, Mermaid, BPMN e JSON.
@@ -66,8 +68,8 @@ python -m pytest -v
 ## Evidência
 
 Python validado: 3.14.4 64-bit no Windows 11. Suporte declarado: `>=3.12`.
-Suíte: 665 testes aprovados, cobertura de 95%. `compileall`, `pip check`,
-links e `git diff --check` aprovados.
+Suíte: 684 testes aprovados e cobertura global de 95%. `compileall`, links e
+`git diff --check` integram o gate final da Sprint.
 
 ## Pendências e limitações
 
@@ -75,7 +77,9 @@ links e `git diff --check` aprovados.
 - sem lockfile: dependências usam intervalos no `pyproject.toml`;
 - workflow genérico apenas síncrono/sequencial;
 - sem retry, timeout, paralelismo ou subworkflows no Engine genérico;
-- contratos de agentes existem, mas nenhum agente inteligente novo foi criado;
+- nenhum agente autônomo novo foi criado;
+- Agent Runtime é síncrono; timeout não interrompe chamada bloqueada;
+- idempotência e métricas do runtime são somente em memória;
 - Agent Registry é somente em memória, sem discovery ou persistência;
 - Workflow Persistence possui memory/file/sqlite, mas não permite retomada;
 - RC1 ainda depende de commit/push, clone limpo, CI e scanner de histórico;
@@ -85,7 +89,8 @@ links e `git diff --check` aprovados.
 
 ## Decisões essenciais
 
-ADRs 016–021: SQLite; Orchestrator; Engine; Agents; Workflow Persistence.
+ADRs 016–022: SQLite; Orchestrator; Engine; Agents; Workflow Persistence;
+Intelligent Agent Runtime.
 Sprint 8.6 não criou ADR por não alterar decisão arquitetural.
 
 ## Leitura essencial

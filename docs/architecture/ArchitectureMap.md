@@ -1,6 +1,6 @@
 # Mapa da arquitetura ASEP
 
-**Dono:** Engenharia ASEP | **Versão:** 1.2 | **Status:** consolidado para RC1
+**Dono:** Engenharia ASEP | **Versão:** 1.3 | **Status:** atualizado na Sprint 9.1
 
 ## Visão Geral
 
@@ -115,6 +115,19 @@ Orchestrator -> PersistenceService -> WorkflowRepository
 
 O snapshot referencia Timeline e métricas sem armazenar objetos vivos.
 
+### Runtime inteligente
+
+```text
+WorkflowEngine -> AgentStepAdapter -> AgentRuntime -> AgentExecutionService
+                                                   /        |         \
+                                             Registry    Timeline   Metrics
+                                                 |
+                                               Agent
+```
+
+O Engine continua sem resolver agentes. O runtime aplica validação, política,
+correlação, segurança e observabilidade sem conhecer providers concretos.
+
 ## Componentes envolvidos
 
 CLI/API, application, execution, workflow, agents, providers, artifacts,
@@ -164,4 +177,5 @@ Atualizar níveis afetados somente após mudanças implementadas.
 
 ## Relacionado a
 
-Sprints 7.5 e 8.4; Fases 07–08; ADRs 016 e 020; módulos; testes; Roadmap.
+Sprints 7.5, 8.4 e 9.1; Fases 07–09; ADRs 016, 020 e 022; módulos; testes;
+Roadmap.

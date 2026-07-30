@@ -1,0 +1,61 @@
+run_id: f2f1a9f1-2c60-4fa0-9120-6b9197589488
+project_id: sample
+workflow_id: software-project
+execution_status: failed
+current_stage: intake
+created_at: '2026-07-30T14:27:23.609131Z'
+updated_at: '2026-07-30T14:27:23.718110Z'
+resumed_at: null
+stages:
+- id: intake
+  status: failed
+  agent_id: business-analyst
+  quality_gate_id: QG-INTAKE
+  attempts: 1
+transition_history:
+- timestamp: '2026-07-30T14:27:23.658676Z'
+  run_id: f2f1a9f1-2c60-4fa0-9120-6b9197589488
+  entity: execution
+  previous_state: created
+  new_state: ready
+  reason: Entradas carregadas e validadas.
+  component: orchestrator
+- timestamp: '2026-07-30T14:27:23.658705Z'
+  run_id: f2f1a9f1-2c60-4fa0-9120-6b9197589488
+  entity: execution
+  previous_state: ready
+  new_state: running
+  reason: Execução sequencial iniciada.
+  component: orchestrator
+- timestamp: '2026-07-30T14:27:23.686113Z'
+  run_id: f2f1a9f1-2c60-4fa0-9120-6b9197589488
+  entity: stage:intake
+  previous_state: pending
+  new_state: ready
+  reason: Dependências concluídas.
+  component: workflow-engine
+- timestamp: '2026-07-30T14:27:23.702985Z'
+  run_id: f2f1a9f1-2c60-4fa0-9120-6b9197589488
+  entity: stage:intake
+  previous_state: ready
+  new_state: running
+  reason: Execução da etapa iniciada.
+  component: orchestrator
+- timestamp: '2026-07-30T14:27:23.718095Z'
+  run_id: f2f1a9f1-2c60-4fa0-9120-6b9197589488
+  entity: stage:intake
+  previous_state: running
+  new_state: failed
+  reason: Agente ou provider reportou falha.
+  component: stage-execution-service
+- timestamp: '2026-07-30T14:27:23.718110Z'
+  run_id: f2f1a9f1-2c60-4fa0-9120-6b9197589488
+  entity: execution
+  previous_state: running
+  new_state: failed
+  reason: Etapa falhou.
+  component: orchestrator
+pending_approvals: []
+errors:
+- Provider fake indisponível.
+artifact_references: []

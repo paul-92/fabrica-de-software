@@ -1,0 +1,66 @@
+{
+  "additional_context": [
+    {
+      "name": "Idioma",
+      "value": "Português"
+    },
+    {
+      "name": "Prioridade",
+      "value": "Alta"
+    }
+  ],
+  "contract": {
+    "constraints": [
+      "Não expor segredos."
+    ],
+    "expected_outputs": [
+      "requirements.md",
+      "risks.md"
+    ],
+    "id": "business-analyst",
+    "mission": "Analisar sem inventar.",
+    "required_inputs": [
+      "brief",
+      "scope"
+    ],
+    "version": "0.1.0"
+  },
+  "inputs": [
+    {
+      "name": "brief",
+      "required": true,
+      "value": "Objetivo confirmado"
+    },
+    {
+      "name": "scope",
+      "required": true,
+      "value": "Escopo aprovado"
+    }
+  ],
+  "open_questions": [
+    "Qual é o prazo?",
+    "Quem aprova?"
+  ],
+  "project": {
+    "description": "Plataforma de engenharia.",
+    "id": "asep",
+    "name": "ASEP"
+  },
+  "quality_gate": {
+    "criteria": [
+      "Clareza",
+      "Rastreabilidade"
+    ],
+    "id": "QG-ANALYSIS"
+  },
+  "stage": {
+    "description": null,
+    "id": "analysis",
+    "name": "Análise"
+  },
+  "workflow": {
+    "description": null,
+    "id": "software-project",
+    "name": "Software"
+  }
+}

@@ -1,0 +1,9 @@
+artifact_id: e9b72086-f4f9-4a3d-96a4-f4f609f3078a
+run_id: e725c814-5eaa-47c6-9203-315bc3e37d25
+project_id: sample
+stage_id: analysis
+agent_id: business-analyst
+path: summary.md
+type: markdown
+created_at: '2026-07-30T14:27:12.266547Z'
+checksum: 1223fcefccd1ce246319f7fe60ab6b0f4361c1153848813948bb83da30d32c0f

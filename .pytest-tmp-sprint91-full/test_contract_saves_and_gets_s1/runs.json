@@ -1,0 +1,18 @@
+{
+  "runs": [
+    {
+      "error": null,
+      "finished_at": null,
+      "id": "run",
+      "metadata": {},
+      "project_id": null,
+      "provider_name": null,
+      "stage_id": null,
+      "started_at": "2026-07-30T10:00:00Z",
+      "status": "pending",
+      "summary": null,
+      "workflow_id": null
+    }
+  ],
+  "version": "1.0"
+}

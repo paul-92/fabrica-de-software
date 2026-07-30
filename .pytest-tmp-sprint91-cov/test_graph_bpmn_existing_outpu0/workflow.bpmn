@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_workflow_software_project_0_1_0" targetNamespace="https://asep.dev/schema/bpmn" exporter="ASEP" exporterVersion="0.1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <bpmn:process id="Process_workflow_software_project_0_1_0" name="Software Project" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_workflow_software_project_0_1_0" name="Start">
+      <bpmn:outgoing>Flow_start_root</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_intake" name="intake">
+      <bpmn:incoming>Flow_start_root</bpmn:incoming>
+      <bpmn:outgoing>Flow_final_end</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="EndEvent_workflow_software_project_0_1_0" name="End">
+      <bpmn:incoming>Flow_final_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_start_root" sourceRef="StartEvent_workflow_software_project_0_1_0" targetRef="Task_intake" />
+    <bpmn:sequenceFlow id="Flow_final_end" sourceRef="Task_intake" targetRef="EndEvent_workflow_software_project_0_1_0" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="Diagram_workflow_software_project_0_1_0">
+    <bpmndi:BPMNPlane id="Plane_workflow_software_project_0_1_0" bpmnElement="Process_workflow_software_project_0_1_0">
+      <bpmndi:BPMNShape id="Shape_StartEvent_workflow_software_project_0_1_0" bpmnElement="StartEvent_workflow_software_project_0_1_0">
+        <dc:Bounds x="60" y="82" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_intake" bpmnElement="Task_intake">
+        <dc:Bounds x="280" y="60" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_EndEvent_workflow_software_project_0_1_0" bpmnElement="EndEvent_workflow_software_project_0_1_0">
+        <dc:Bounds x="500" y="82" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_Flow_start_root" bpmnElement="Flow_start_root">
+        <di:waypoint x="96" y="100" />
+        <di:waypoint x="280" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_final_end" bpmnElement="Flow_final_end">
+        <di:waypoint x="400" y="100" />
+        <di:waypoint x="500" y="100" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

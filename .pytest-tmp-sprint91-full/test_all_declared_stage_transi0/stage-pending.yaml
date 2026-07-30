@@ -1,0 +1,18 @@
+run_id: a52a04cb-1cea-4d94-b0b3-8d91d4f525ee
+project_id: sample
+workflow_id: software-project
+execution_status: created
+current_stage: null
+created_at: '2026-07-30T14:26:40.560780Z'
+updated_at: '2026-07-30T14:26:40.560780Z'
+resumed_at: null
+stages:
+- id: intake
+  status: pending
+  agent_id: business-analyst
+  quality_gate_id: QG-INTAKE
+  attempts: 0
+transition_history: []
+pending_approvals: []
+errors: []
+artifact_references: []

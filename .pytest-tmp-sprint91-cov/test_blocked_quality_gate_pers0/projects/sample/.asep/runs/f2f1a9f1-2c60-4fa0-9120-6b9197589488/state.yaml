@@ -1,0 +1,78 @@
+run_id: f2f1a9f1-2c60-4fa0-9120-6b9197589488
+project_id: sample
+workflow_id: software-project
+execution_status: blocked
+current_stage: intake
+created_at: '2026-07-30T14:27:23.809432Z'
+updated_at: '2026-07-30T14:27:23.871933Z'
+resumed_at: null
+stages:
+- id: intake
+  status: blocked
+  agent_id: business-analyst
+  quality_gate_id: QG-INTAKE
+  attempts: 1
+transition_history:
+- timestamp: '2026-07-30T14:27:23.825729Z'
+  run_id: f2f1a9f1-2c60-4fa0-9120-6b9197589488
+  entity: execution
+  previous_state: created
+  new_state: ready
+  reason: Entradas carregadas e validadas.
+  component: orchestrator
+- timestamp: '2026-07-30T14:27:23.825749Z'
+  run_id: f2f1a9f1-2c60-4fa0-9120-6b9197589488
+  entity: execution
+  previous_state: ready
+  new_state: running
+  reason: Execução sequencial iniciada.
+  component: orchestrator
+- timestamp: '2026-07-30T14:27:23.834051Z'
+  run_id: f2f1a9f1-2c60-4fa0-9120-6b9197589488
+  entity: stage:intake
+  previous_state: pending
+  new_state: ready
+  reason: Dependências concluídas.
+  component: workflow-engine
+- timestamp: '2026-07-30T14:27:23.841849Z'
+  run_id: f2f1a9f1-2c60-4fa0-9120-6b9197589488
+  entity: stage:intake
+  previous_state: ready
+  new_state: running
+  reason: Execução da etapa iniciada.
+  component: orchestrator
+- timestamp: '2026-07-30T14:27:23.871893Z'
+  run_id: f2f1a9f1-2c60-4fa0-9120-6b9197589488
+  entity: stage:intake
+  previous_state: running
+  new_state: blocked
+  reason: Quality gate bloqueado.
+  component: quality-gate-engine
+- timestamp: '2026-07-30T14:27:23.871933Z'
+  run_id: f2f1a9f1-2c60-4fa0-9120-6b9197589488
+  entity: execution
+  previous_state: running
+  new_state: blocked
+  reason: Quality gate bloqueado.
+  component: orchestrator
+pending_approvals: []
+errors: []
+artifact_references:
+- artifact_id: bd48242e-c520-48e6-ac61-94c6408ee7ed
+  run_id: f2f1a9f1-2c60-4fa0-9120-6b9197589488
+  project_id: sample
+  stage_id: intake
+  agent_id: business-analyst
+  path: provider-results/intake-result.md
+  type: markdown
+  created_at: '2026-07-30T14:27:23.857497Z'
+  checksum: aab62c9eae98f5d514f65640c30e36ad69f12809cf9fac02617aa7893cf842b3
+- artifact_id: 28739b31-fa08-45e2-ab70-af8121fe3852
+  run_id: f2f1a9f1-2c60-4fa0-9120-6b9197589488
+  project_id: sample
+  stage_id: intake
+  agent_id: quality-gate-engine
+  path: quality-gates/intake-result.yaml
+  type: yaml
+  created_at: '2026-07-30T14:27:23.865041Z'
+  checksum: 694c2d9453b2ab4e355fadc4901822cf5c4ce74ac6da0f1e2ffe60a8fa391342

@@ -6,6 +6,12 @@ from datetime import UTC, datetime
 
 from jinja2 import Environment, StrictUndefined
 
+from asep.agents.contracts import (
+    AgentCapability,
+    AgentId,
+    AgentMetadata,
+    AgentRequest,
+)
 from asep.execution.models import (
     AgentContext,
     AgentResult,
@@ -51,7 +57,27 @@ TEMPLATE = """# Resumo de execução — Business Analysis
 class BusinessAnalystAgent:
     id = "business-analyst"
 
-    def execute(self, context: AgentContext) -> AgentResult:
+    @property
+    def metadata(self) -> AgentMetadata:
+        return AgentMetadata(
+            id=AgentId(value=self.id),
+            name="Business Analyst",
+            description="Produces deterministic business analysis summaries.",
+            version="1.0.0",
+            capabilities=(
+                AgentCapability(id="business-analysis"),
+            ),
+        )
+
+    def execute(
+        self,
+        request: AgentRequest | AgentContext,
+        context: AgentContext | None = None,
+    ) -> AgentResult:
+        if context is None:
+            if not isinstance(request, AgentContext):
+                raise TypeError("AgentContext é obrigatório.")
+            context = request
         finished_at = datetime.now(UTC)
         missing = [
             name

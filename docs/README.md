@@ -62,6 +62,12 @@ Coordenação de workflows:
 - [Workflow Persistence](workflows/WorkflowPersistence.md);
 - [ADR-021](adr/ADR-021-workflow-snapshot-persistence.md).
 
+Agentes inteligentes:
+
+- [Sprint 9.1](phase-09/Sprint-9.1-Intelligent-Agent-Runtime.md);
+- [Agent Runtime](agents/AgentRuntime.md);
+- [ADR-022](adr/ADR-022-intelligent-agent-runtime.md).
+
 ## Release Candidate
 
 - [Sprint 8.6](phase-08/Sprint-8.6-Architecture-Hardening-RC1.md);

@@ -1,0 +1,26 @@
+id: business-analyst
+name: Business Analyst
+version: 0.1.0
+status: active
+department: business
+role: business-analysis
+reports_to: orchestrator
+mission: Analisar
+capabilities: [analysis]
+receives: [project-brief]
+required_inputs: [project-brief]
+optional_inputs: []
+produces: [execution-summary]
+required_outputs: [execution-summary]
+consults:
+  - ../AGENTS.md
+  - ../core/QUALITY.md
+  - ../agents/business-analyst.md
+quality_gates: [QG-INTAKE]
+approval_rules: [human-gate]
+next_agents: []
+cannot: [invent]
+human_approval_required: [scope]
+escalation_conditions: [missing-input]
+success_criteria: [output-exists]
+failure_conditions: [missing-output]

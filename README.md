@@ -1,7 +1,7 @@
 # AI Software Engineering Platform — ASEP
 
 **Versão documental:** 0.1.0
-**Status:** Fases 6–8 concluídas localmente; RC1 em validação operacional
+**Status:** Fases 6–8 concluídas; Sprint 9.1 implementada localmente
 **Dono:** Product Manager da ASEP
 
 A ASEP é uma plataforma local para desenvolvimento de software assistido por
@@ -87,6 +87,9 @@ O material anterior útil foi preservado em `docs/`, `prompts/` e nos playbooks 
 Os contratos e o catálogo em memória de agentes da Fase 8 estão documentados
 em [Agent Contracts](docs/workflows/AgentContracts.md) e
 [Agent Registry](docs/workflows/AgentRegistry.md).
+O runtime inteligente da Fase 9, com política, validação, Timeline, métricas e
+integração ao Workflow Engine, está em
+[Agent Runtime](docs/agents/AgentRuntime.md).
 Snapshots completos de execução são descritos em
 [Workflow Persistence](docs/workflows/WorkflowPersistence.md).
 

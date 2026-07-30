@@ -1,0 +1,3 @@
+# Scope
+
+Agora confirmado.
