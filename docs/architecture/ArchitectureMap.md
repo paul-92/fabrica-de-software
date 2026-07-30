@@ -1,6 +1,6 @@
 # Mapa da arquitetura ASEP
 
-**Dono:** Engenharia ASEP | **Versão:** 1.0 | **Status:** vigente na Sprint 7.5
+**Dono:** Engenharia ASEP | **Versão:** 1.2 | **Status:** consolidado para RC1
 
 ## Visão Geral
 
@@ -84,10 +84,41 @@ asep.db -> SQLite repositories -> RunQueryService -> MetricsService
 
 Cada diagrama reduz o nível de detalhe para uma pergunta diferente.
 
+### Workflow genérico da Sprint 8.1
+
+```text
+Workflow -> WorkflowOrchestrator -> Run/Timeline ports
+   |
+   `-> WorkflowEngine -> Validator -> Executor -> Steps -> Result
+```
+
+Esse coordenador valida infraestrutura com Steps simuladas. Ele não substitui
+o Orchestrator de projetos do fluxo de execução.
+
+### Contratos e Registry de agentes
+
+```text
+Composition -> InMemoryAgentRegistry -> Agent
+                                      -> AgentStepAdapter -> WorkflowStep
+                                                            -> Engine
+```
+
+O Engine não consulta o Registry. A composição resolve o agente e monta a Step.
+
+### Persistência de workflow
+
+```text
+Orchestrator -> PersistenceService -> WorkflowRepository
+                                      /      |      \
+                                  memory    file   sqlite
+```
+
+O snapshot referencia Timeline e métricas sem armazenar objetos vivos.
+
 ## Componentes envolvidos
 
-CLI/API, application, execution, workflow, providers, artifacts, quality,
-configuration, repositories, SQLite, Query, Metrics e exporters.
+CLI/API, application, execution, workflow, agents, providers, artifacts,
+quality, configuration, repositories, SQLite, Query, Metrics e exporters.
 
 ## Fluxo completo
 
@@ -128,8 +159,9 @@ Atualizar níveis afetados somente após mudanças implementadas.
 
 [Architecture v1](ASEP-Architecture-v1.md),
 [SQLite Architecture](../persistence/SQLiteArchitecture.md) e
-[Execution](Execution.md).
+[Execution](Execution.md). Auditoria:
+[ArchitectureAudit](../audits/ArchitectureAudit.md).
 
 ## Relacionado a
 
-Sprint 7.5; Fase 07; ADR-016; módulos principais; testes; Roadmap; Glossário.
+Sprints 7.5 e 8.4; Fases 07–08; ADRs 016 e 020; módulos; testes; Roadmap.

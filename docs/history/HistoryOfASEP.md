@@ -66,6 +66,36 @@ SQLite não resolveu tudo. Migrations, concorrência avançada, backup e operaç
 distribuída ficaram explicitamente fora. A plataforma terminou a fase preparada
 para avaliar essas necessidades com evidência, não antecipação.
 
+### Capítulo — Fase 08: coordenação antes de inteligência
+
+Com persistência e consulta estáveis, a ASEP iniciou a coordenação genérica de
+workflows. A Sprint 8.1 deliberadamente não adicionou agentes inteligentes:
+primeiro validou ordem, Context compartilhado, falha, cancelamento e resultado
+estruturado com Steps simuladas. Runs e Timeline tornaram o fluxo imediatamente
+visível para Metrics e Dashboard. O aprendizado foi preservar o Orchestrator
+de projetos existente e criar uma fronteira incremental, documentada no
+ADR-017.
+
+Na Sprint 8.2, o loop foi extraído para um Engine composto. Validator, Executor
+e StepExecutor reduziram a responsabilidade do Orchestrator, preservando os
+contratos públicos da Sprint anterior.
+
+As Sprints 8.3 e 8.4 introduziram, em sequência, o contrato formal de Agent e
+um Registry em memória. A integração permaneceu na composição por
+`AgentStepAdapter`: o Engine continua sem localizar agentes. Identidade única,
+listagem determinística e ausência de Singleton prepararam evolução futura sem
+antecipar persistência ou plugins.
+
+Na Sprint 8.5, a plataforma passou a guardar uma fotografia especializada de
+cada workflow. A decisão foi persistir dados neutros, não Context ou Steps
+executáveis. O Orchestrator ganhou uma porta opcional, enquanto o Engine
+permaneceu puro. Factory, configuração e os três backends da Fase 7 foram
+reutilizados.
+
+A Sprint 8.6 não ampliou o produto. Auditorias, cobertura e revisão documental
+consolidaram o RC1. A declaração técnica permaneceu separada da publicação:
+Git, CI, scanner de histórico e clone limpo continuam gates humanos/operacionais.
+
 ## Testes
 
 A história é conferida contra testes de contrato, testes SQLite e imports
@@ -88,10 +118,10 @@ para evidências.
 
 ## Referências
 
-[Fase 07](Phase-07.md), [Sprint 7.5](../phase-07/Sprint-7.5-SQLite-Repository.md)
-e [ADR-016](../adr/ADR-016-sqlite-persistence.md).
+[Fase 07](Phase-07.md), [Fase 08](Phase-08.md),
+[Sprint 8.4](../phase-08/Sprint-8.4-Agent-Registry.md) e
+[ADR-020](../adr/ADR-020-in-memory-agent-registry.md).
 
 ## Relacionado a
 
-Fase 07; Sprint 7.5; Architecture v1; Roadmap; ADR-016; glossário; testes de
-persistência.
+Fases 07–08; Architecture v1; Roadmap; ADRs; glossário; testes.

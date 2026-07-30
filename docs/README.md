@@ -9,6 +9,15 @@ A navegação completa, trilhas por público e rastreabilidade estão no
 A revisão de consistência e a decisão supersessora proposta estão em
 [architecture/Architectural-Consistency-Review.md](architecture/Architectural-Consistency-Review.md).
 
+## Instalação e continuidade
+
+- [Bootstrap](../BOOTSTRAP.md): instalação e validação em uma máquina limpa;
+- [Estado atual](../project/PROJECT_STATE.md): fotografia técnica e operacional;
+- [Próximos passos](../project/NEXT_STEPS.md): continuidade da Sprint;
+- [Checklist de migração](../project/MIGRATION_CHECKLIST.md);
+- [Inventário de ambiente](../project/ENVIRONMENT_INVENTORY.md);
+- [prompts oficiais](../prompts/README.md).
+
 ## Persistência
 
 O backend SQLite da Sprint 7.5 está documentado como uma trilha de estudo:
@@ -33,3 +42,29 @@ História e decisões da Fase 07:
 - [ADR-016 — persistência SQLite](adr/ADR-016-sqlite-persistence.md);
 - [mapa da arquitetura](architecture/ArchitectureMap.md);
 - [glossário de persistência](glossary/PersistenceGlossary.md).
+
+Coordenação de workflows:
+
+- [Sprint 8.1](phase-08/Sprint-8.1-Workflow-Orchestrator.md);
+- [Workflow Orchestrator](workflows/WorkflowOrchestrator.md);
+- [Fase 08](history/Phase-08.md);
+- [ADR-017](adr/ADR-017-workflow-orchestrator-boundary.md).
+- [Sprint 8.2](phase-08/Sprint-8.2-Workflow-Engine.md);
+- [Workflow Engine](workflows/WorkflowEngine.md);
+- [ADR-018](adr/ADR-018-workflow-engine-separation.md).
+- [Sprint 8.3](phase-08/Sprint-8.3-Agent-Contracts.md);
+- [Agent Contracts](workflows/AgentContracts.md);
+- [ADR-019](adr/ADR-019-agent-contract-boundary.md).
+- [Sprint 8.4](phase-08/Sprint-8.4-Agent-Registry.md);
+- [Agent Registry](workflows/AgentRegistry.md);
+- [ADR-020](adr/ADR-020-in-memory-agent-registry.md).
+- [Sprint 8.5](phase-08/Sprint-8.5-Workflow-Persistence.md);
+- [Workflow Persistence](workflows/WorkflowPersistence.md);
+- [ADR-021](adr/ADR-021-workflow-snapshot-persistence.md).
+
+## Release Candidate
+
+- [Sprint 8.6](phase-08/Sprint-8.6-Architecture-Hardening-RC1.md);
+- [RC1](releases/ReleaseCandidate_RC1.md);
+- [auditorias](audits/ArchitectureAudit.md);
+- [guia de migração](migration/MigrationGuide.md).

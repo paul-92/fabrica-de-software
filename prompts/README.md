@@ -8,6 +8,10 @@ Prompts são aceleradores, não fontes de verdade. Antes do uso, remova dados se
 - `architecture-review.md`: revisar uma proposta arquitetural.
 - `quality-review.md`: identificar lacunas de teste e aceite.
 - `delivery-handoff.md`: gerar um handoff verificável.
+- `DocumentationStandard.md`: padrão permanente da documentação ASEP.
+- `DocumentationPrompt.md`: instrução reutilizável para trabalho documental.
+- `SprintPromptTemplate.md`: contrato-base para novas Sprints.
+- `CurrentSprintPrompt.md`: estado e escopo da Sprint corrente.
 
 ## Regras
 

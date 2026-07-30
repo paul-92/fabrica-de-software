@@ -35,6 +35,7 @@ Os demais valores continuam disponíveis:
 | `ASEP_STORAGE_DIRECTORY` | `storage` | backend `file` |
 | `ASEP_RUNS_FILENAME` | `runs.json` | arquivo de Runs |
 | `ASEP_TIMELINE_FILENAME` | `timeline-events.json` | arquivo da Timeline |
+| `ASEP_WORKFLOWS_FILENAME` | `workflow-snapshots.json` | snapshots no backend file |
 
 Para ativar SQLite, o backend deve ser exatamente `sqlite`, em letras
 minúsculas. Definir apenas o caminho do banco não muda o backend padrão.

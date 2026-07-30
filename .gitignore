@@ -26,6 +26,21 @@ Thumbs.db
 # Logs
 *.log
 
+# Configuração local (o exemplo seguro permanece versionado)
+.env
+.env.*
+!.env.example
+
+# Bancos e dados locais gerados
+*.db
+*.sqlite
+*.sqlite3
+storage/
+
+# IDEs
+.idea/
+.vscode/
+
 # Diretórios temporários do QA
 qa-runtime-temp/
 qa-evidence-temp/

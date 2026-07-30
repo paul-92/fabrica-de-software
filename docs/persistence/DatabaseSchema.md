@@ -11,10 +11,11 @@ Schema é a planta do banco de dados. Assim como a planta de uma casa define
 quais cômodos existem, o schema define tabelas, colunas, tipos, chaves e
 índices.
 
-O banco SQLite da ASEP contém duas tabelas:
+O banco SQLite da ASEP contém três tabelas:
 
 - `runs`, com o último snapshot conhecido de cada execução;
 - `timeline_events`, com os acontecimentos associados às execuções.
+- `workflow_snapshots`, com fotografias completas de workflows executados.
 
 Ele também possui um índice para localizar rapidamente eventos pelo `run_id`.
 
@@ -38,6 +39,22 @@ CREATE TABLE IF NOT EXISTS timeline_events (
 
 CREATE INDEX IF NOT EXISTS idx_timeline_events_run
     ON timeline_events (run_id);
+
+CREATE TABLE IF NOT EXISTS workflow_snapshots (
+    id TEXT PRIMARY KEY,
+    workflow_id TEXT NOT NULL,
+    run_id TEXT NOT NULL,
+    status TEXT NOT NULL,
+    started_at TEXT NOT NULL,
+    payload TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_workflow_snapshots_workflow
+    ON workflow_snapshots (workflow_id);
+CREATE INDEX IF NOT EXISTS idx_workflow_snapshots_run
+    ON workflow_snapshots (run_id);
+CREATE INDEX IF NOT EXISTS idx_workflow_snapshots_status
+    ON workflow_snapshots (status);
 ```
 
 `TEXT` é um tipo de afinidade do SQLite para texto. `NOT NULL` impede ausência

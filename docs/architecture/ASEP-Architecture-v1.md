@@ -84,6 +84,12 @@ flowchart LR
     QUERY --> METRICS["MetricsService"]
     QUERY --> DASHAPI["Dashboard API"]
     METRICS --> DASHAPI
+    GENERICWF["Workflow + Steps simuladas"] --> WFORCH["WorkflowOrchestrator"]
+    WFORCH --> WFENGINE["WorkflowEngine"]
+    WFENGINE --> WFVALIDATOR["WorkflowValidator"]
+    WFENGINE --> WFEXECUTOR["WorkflowExecutor"]
+    WFORCH --> RUNREPO
+    WFORCH --> TIMELINEREPO
 ```
 
 O caminho `PromptBuilder → ExecutionPackageBuilder → AgentProvider` ocorre
@@ -121,6 +127,9 @@ Regras confirmadas no código:
   `Configuration`;
 - `RepositoryFactory` é o único ponto de seleção e criação das implementações
   concretas de repositories e depende somente de `ApplicationSettings`;
+- `WorkflowOrchestrator` genérico depende das portas Run/Timeline e permanece
+  separado do `Orchestrator` de projetos, agentes, artefatos e quality gates;
+- `WorkflowEngine` interpreta/valida e delega o loop ao `WorkflowExecutor`;
 - integrações externas são adaptadores (`CodexProvider`, `ProcessRunner`,
   exporters e loaders);
 - Mermaid e BPMN recebem somente `ExecutionGraph`.
@@ -241,6 +250,21 @@ documentais encontradas:
 - [ADR-016 — persistência SQLite](../adr/ADR-016-sqlite-persistence.md)
 - [História da Fase 07](../history/Phase-07.md)
 - [Glossário de persistência](../glossary/PersistenceGlossary.md)
+- [Workflow Orchestrator](../workflows/WorkflowOrchestrator.md)
+- [Sprint 8.1](../phase-08/Sprint-8.1-Workflow-Orchestrator.md)
+- [ADR-017](../adr/ADR-017-workflow-orchestrator-boundary.md)
+- [Workflow Engine](../workflows/WorkflowEngine.md)
+- [Sprint 8.2](../phase-08/Sprint-8.2-Workflow-Engine.md)
+- [ADR-018](../adr/ADR-018-workflow-engine-separation.md)
+- [Agent Contracts](../workflows/AgentContracts.md)
+- [Sprint 8.3](../phase-08/Sprint-8.3-Agent-Contracts.md)
+- [ADR-019](../adr/ADR-019-agent-contract-boundary.md)
+- [Agent Registry](../workflows/AgentRegistry.md)
+- [Sprint 8.4](../phase-08/Sprint-8.4-Agent-Registry.md)
+- [ADR-020](../adr/ADR-020-in-memory-agent-registry.md)
+- [Workflow Persistence](../workflows/WorkflowPersistence.md)
+- [Sprint 8.5](../phase-08/Sprint-8.5-Workflow-Persistence.md)
+- [ADR-021](../adr/ADR-021-workflow-snapshot-persistence.md)
 - [Revisão de consistência arquitetural](Architectural-Consistency-Review.md)
 - [ADR-015 proposto](decisions/ADR-015-provider-boundaries-and-execution-graph-isolation.md)
 - [Plano de refatoração proposto](Provider-Graph-Refactoring-Plan.md)

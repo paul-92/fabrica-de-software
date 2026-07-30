@@ -1,10 +1,12 @@
 # AI Software Engineering Platform — ASEP
 
-**Versão documental:** 0.1.0  
-**Status:** motor sequencial da Sprint 2 disponível; QA independente pendente  
+**Versão documental:** 0.1.0
+**Status:** Fases 6–8 concluídas localmente; RC1 em validação operacional
 **Dono:** Product Manager da ASEP
 
-A ASEP é um sistema operacional organizacional para desenvolvimento de software assistido por agentes de IA. Ela combina governança, ciclo de vida, especialistas, contratos, workflows, qualidade, memória e observabilidade. Não é uma coleção de prompts e não executa modelos de IA nesta versão.
+A ASEP é uma plataforma local para desenvolvimento de software assistido por
+agentes. Ela combina governança, workflows, execução, providers, artefatos,
+quality gates, persistência, Timeline, métricas e observabilidade.
 
 ## Como funciona
 
@@ -35,6 +37,14 @@ Intake → Discovery → Business Analysis → Architecture → Planning → Des
 
 ## Como iniciar
 
+Para preparar uma máquina limpa, siga o [BOOTSTRAP.md](BOOTSTRAP.md). Para
+continuar o desenvolvimento, consulte o
+[estado atual](project/PROJECT_STATE.md), os
+[próximos passos](project/NEXT_STEPS.md) e o
+[checklist de migração](project/MIGRATION_CHECKLIST.md).
+O estado do candidato está em
+[Release Candidate RC1](docs/releases/ReleaseCandidate_RC1.md).
+
 1. Leia [VISION.md](VISION.md), [AGENTS.md](AGENTS.md) e [core/SYSTEM.md](core/SYSTEM.md).
 2. Copie `clients/_template/` se houver novo cliente.
 3. Copie `projects/_template/` e preencha `project.yaml` e o Project Brief.
@@ -52,11 +62,11 @@ python -m pip install -e ".[test]"
 asep run projects/asep-self-development
 ```
 
-O comando cria um `run_id`, executa o tailoring sequencial aprovado, persiste
-estado e logs e aciona o Business Analyst determinístico. Artefatos ficam em
+O comando cria um `run_id`, executa o workflow, persiste
+estado e logs e aciona o runtime configurado. Artefatos ficam em
 `projects/<id>/artifacts/runs/<run_id>/`. Uma execução bloqueada ou com falha pode
-ser retomada entre etapas com `asep resume <run_id>`. Workflows paralelos ou
-condicionais são rejeitados; não há LLM, rede ou execução distribuída.
+ser retomada entre etapas com `asep resume <run_id>`. O núcleo genérico de
+workflow atual é síncrono e sequencial; não há execução distribuída.
 
 ## Como criar um novo agente
 
@@ -72,7 +82,13 @@ Copie `projects/_template/`, atribua ID único em `kebab-case`, escolha `project
 
 ## Navegação complementar
 
-O material anterior útil foi preservado em `docs/`, `prompts/` e nos playbooks por tipo de produto. Use o [índice da documentação ASEP](docs/DocumentationIndex.md) como ponto de entrada. O glossário histórico está em [docs/glossary.md](docs/glossary.md) e os termos de persistência em [docs/glossary/PersistenceGlossary.md](docs/glossary/PersistenceGlossary.md). Decisões humanas abertas estão em [reports/open-decisions.md](reports/open-decisions.md).
+O material anterior útil foi preservado em `docs/`, `prompts/` e nos playbooks por tipo de produto. Use o [índice da documentação ASEP](docs/DocumentationIndex.md) como ponto de entrada. O [inventário de ambiente](project/ENVIRONMENT_INVENTORY.md) registra requisitos não sensíveis. O glossário histórico está em [docs/glossary.md](docs/glossary.md) e os termos de persistência em [docs/glossary/PersistenceGlossary.md](docs/glossary/PersistenceGlossary.md). Decisões humanas abertas estão em [reports/open-decisions.md](reports/open-decisions.md).
+
+Os contratos e o catálogo em memória de agentes da Fase 8 estão documentados
+em [Agent Contracts](docs/workflows/AgentContracts.md) e
+[Agent Registry](docs/workflows/AgentRegistry.md).
+Snapshots completos de execução são descritos em
+[Workflow Persistence](docs/workflows/WorkflowPersistence.md).
 
 ## Contributing
 

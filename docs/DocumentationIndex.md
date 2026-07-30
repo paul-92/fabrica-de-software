@@ -43,6 +43,8 @@ docs/
 
 | Público/objetivo | Comece por | Continue em |
 |---|---|---|
+| Instalar ou migrar | [Bootstrap](../BOOTSTRAP.md) | [Checklist de migração](../project/MIGRATION_CHECKLIST.md) |
+| Continuar o projeto | [Estado atual](../project/PROJECT_STATE.md) | [Próximos passos](../project/NEXT_STEPS.md) |
 | Iniciante | [README](README.md) | [Glossário](glossary/PersistenceGlossary.md) |
 | Entender a Sprint 7.5 | [fotografia](phase-07/Sprint-7.5-SQLite-Repository.md) | [repositórios](persistence/SQLiteRepositories.md) |
 | Arquitetura rápida | [Architecture Map](architecture/ArchitectureMap.md) | [Architecture v1](architecture/ASEP-Architecture-v1.md) |
@@ -50,6 +52,13 @@ docs/
 | Operar/configurar | [SQLite Configuration](persistence/SQLiteConfiguration.md) | [Troubleshooting dos repositories](persistence/SQLiteRepositories.md#possíveis-erros) |
 | Compreender decisões | [ADR-016](adr/ADR-016-sqlite-persistence.md) | [Dependencies](persistence/Dependencies.md) |
 | Compreender evolução | [History](history/HistoryOfASEP.md) | [Phase 07](history/Phase-07.md) |
+| Entender a Sprint 8.1 | [fotografia](phase-08/Sprint-8.1-Workflow-Orchestrator.md) | [Workflow Orchestrator](workflows/WorkflowOrchestrator.md) |
+| Entender a Sprint 8.2 | [fotografia](phase-08/Sprint-8.2-Workflow-Engine.md) | [Workflow Engine](workflows/WorkflowEngine.md) |
+| Entender a Sprint 8.3 | [fotografia](phase-08/Sprint-8.3-Agent-Contracts.md) | [Agent Contracts](workflows/AgentContracts.md) |
+| Entender a Sprint 8.4 | [fotografia](phase-08/Sprint-8.4-Agent-Registry.md) | [Agent Registry](workflows/AgentRegistry.md) |
+| Entender a Sprint 8.5 | [fotografia](phase-08/Sprint-8.5-Workflow-Persistence.md) | [Workflow Persistence](workflows/WorkflowPersistence.md) |
+| Avaliar o RC1 | [Release Candidate](releases/ReleaseCandidate_RC1.md) | [Auditoria arquitetural](audits/ArchitectureAudit.md) |
+| Migrar o ambiente | [Migration Guide](migration/MigrationGuide.md) | [Checklist](../project/MIGRATION_CHECKLIST.md) |
 
 ### Catálogo de arquitetura
 
@@ -91,6 +100,49 @@ O [glossário legado](glossary.md), governança, métricas e catálogo continuam
 acessíveis. ADRs anteriores permanecem em
 [`architecture/decisions`](architecture/decisions/ADR-001-core-domain-boundaries.md);
 novos ADRs documentais usam `docs/adr/` até decisão de consolidação.
+
+### Catálogo da Sprint 8.1
+
+- [Sprint 8.1](phase-08/Sprint-8.1-Workflow-Orchestrator.md): fotografia;
+- [Workflow Orchestrator](workflows/WorkflowOrchestrator.md): modelo e fluxo;
+- [Dependencies](workflows/Dependencies.md): fronteiras;
+- [Phase 08](history/Phase-08.md): história da fase;
+- [ADR-017](adr/ADR-017-workflow-orchestrator-boundary.md): decisão.
+- [Sprint 8.2](phase-08/Sprint-8.2-Workflow-Engine.md): fotografia;
+- [Workflow Engine](workflows/WorkflowEngine.md): interpretação e execução;
+- [ADR-018](adr/ADR-018-workflow-engine-separation.md): separação.
+- [Sprint 8.3](phase-08/Sprint-8.3-Agent-Contracts.md): fotografia;
+- [Agent Contracts](workflows/AgentContracts.md): API e integração;
+- [ADR-019](adr/ADR-019-agent-contract-boundary.md): fronteira.
+- [Sprint 8.4](phase-08/Sprint-8.4-Agent-Registry.md): fotografia;
+- [Agent Registry](workflows/AgentRegistry.md): contrato e políticas;
+- [ADR-020](adr/ADR-020-in-memory-agent-registry.md): decisão.
+- [Sprint 8.5](phase-08/Sprint-8.5-Workflow-Persistence.md): fotografia;
+- [Workflow Persistence](workflows/WorkflowPersistence.md): modelo e fluxo;
+- [ADR-021](adr/ADR-021-workflow-snapshot-persistence.md): decisão.
+- [Sprint 8.6](phase-08/Sprint-8.6-Architecture-Hardening-RC1.md): hardening;
+- [Release Candidate RC1](releases/ReleaseCandidate_RC1.md): gate consolidado.
+
+### Auditorias RC1
+
+- [Architecture Audit](audits/ArchitectureAudit.md);
+- [Code Audit](audits/CodeAudit.md);
+- [Test Audit](audits/TestAudit.md);
+- [Dependency Audit](audits/DependencyAudit.md);
+- [Security Audit](audits/SecurityAudit.md);
+- [Git Audit](audits/GitAudit.md).
+
+### Continuidade e prompts oficiais
+
+- [Bootstrap](../BOOTSTRAP.md): instalação em máquina limpa;
+- [Estado atual](../project/PROJECT_STATE.md): fotografia comprovada;
+- [Próximos passos](../project/NEXT_STEPS.md): handoff operacional;
+- [Checklist de migração](../project/MIGRATION_CHECKLIST.md): antes, durante e depois;
+- [Inventário de ambiente](../project/ENVIRONMENT_INVENTORY.md): requisitos não sensíveis;
+- [Padrão documental](../prompts/DocumentationStandard.md);
+- [Prompt documental](../prompts/DocumentationPrompt.md);
+- [Modelo de Sprint](../prompts/SprintPromptTemplate.md);
+- [Prompt da Sprint atual](../prompts/CurrentSprintPrompt.md).
 
 ## Componentes envolvidos
 

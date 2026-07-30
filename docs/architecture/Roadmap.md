@@ -5,6 +5,12 @@
 O roadmap registra intenção, não compromisso nem comportamento implementado.
 Mudanças de contrato exigem decisão arquitetural e testes.
 
+O estado operacional, inclusive diferenças entre trabalho local e remoto, está
+em [PROJECT_STATE](../../project/PROJECT_STATE.md). A próxima Sprint só deve ser
+iniciada após o handoff descrito em
+[NEXT_STEPS](../../project/NEXT_STEPS.md); esta fotografia não atribui número
+novo aos itens futuros.
+
 ```mermaid
 timeline
     title Evolução planejada da ASEP
@@ -20,7 +26,13 @@ timeline
          : Repository Factory concluída
          : Configuration System concluído
          : SQLite Repository concluído
-    v0.8 : Parallel Execution
+    v0.8 : Workflow Orchestrator sequencial concluído
+         : Workflow Engine separado concluído
+         : Agent Contracts concluídos
+         : Agent Registry concluído
+         : Workflow Persistence concluída
+         : Architecture Hardening RC1 concluído localmente
+         : Parallel Execution
          : Retry
          : Cancellation
          : Dashboard MVP
@@ -45,6 +57,15 @@ timeline
 
 ## v0.8
 
+- 8.1 Workflow Orchestrator sequencial e simulável — implementado;
+- 8.2 Workflow Engine separado — implementado;
+- 8.3 Agent Contracts e adapter de Step — implementado;
+- 8.4 Agent Registry em memória — implementado;
+- 8.5 Workflow Persistence — implementado;
+- 8.6 Architecture Hardening & RC1 — concluído localmente;
+
+A Fase 9 não foi iniciada ou aprovada.
+- 8.2 Workflow Engine, Validator e Executor — implementados;
 - execução paralela real;
 - política de retry;
 - cancelamento coordenado;
