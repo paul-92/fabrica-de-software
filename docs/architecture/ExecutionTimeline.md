@@ -73,7 +73,13 @@ paginação.
 
 `FileTimelineRepository(path)` implementa o mesmo Protocol e pode ser injetado
 sem alterações no `TimelineRecorder` ou `RunQueryService`. A aplicação padrão
-continua usando memória; não existe Repository Factory nesta versão.
+continua usando memória, selecionada pela `RepositoryFactory`; o backend
+`file` pode ser escolhido por configuração interna.
+
+`SQLiteTimelineRepository(path)` oferece o mesmo contrato append-only em
+SQLite. IDs são chave primária global, consultas usam índice por `run_id` e o
+payload reutiliza `TimelineEventCodec`. O banco e o schema são criados
+automaticamente.
 
 O arquivo configurável usa o envelope:
 
@@ -130,9 +136,9 @@ anterior permanece intacto. Essa estratégia é compatível com Windows.
 - o documento inteiro é carregado e reescrito, sendo inadequado para alto
   volume;
 - não há índice, paginação, compactação, rotação, backup ou recovery;
-- o `FileRunRepository` esperado da Sprint 7.1 não está presente no HEAD
-  avaliado, portanto não houve reutilização de codec, writer ou erros daquela
-  implementação.
+- `FileRunRepository` e `FileTimelineRepository` possuem codecs específicos e
+  a mesma estratégia atômica; ainda não existe utility genérico porque isso
+  exigiria uma abstração compartilhada posterior.
 
 Exemplo:
 

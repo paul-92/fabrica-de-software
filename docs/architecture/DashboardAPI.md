@@ -10,7 +10,10 @@ futuro sem mover regras de consulta ou métricas para a camada HTTP.
 
 ```mermaid
 flowchart LR
-    REPOS["Repositories"] --> QUERY["RunQueryService"]
+    APP["Application"] --> FACTORY["RepositoryFactory"]
+    FACTORY --> PORTS["Repository interfaces"]
+    PORTS --> REPOS["memory / file"]
+    PORTS --> QUERY["RunQueryService"]
     QUERY --> HISTORY["History CLI"]
     QUERY --> METRICS["MetricsService"]
     QUERY --> API["Dashboard API"]
@@ -24,8 +27,11 @@ flowchart LR
 isolada, registra routers e handlers, e guarda as dependências injetadas em
 `app.state`. As rotas recebem os serviços por closure e não os constroem.
 
-`asep.api.create_default_app()` é o composition root local. Somente esse módulo
-conhece `InMemoryRunRepository` e `InMemoryTimelineRepository`. Cada chamada
+`asep.api.create_default_app()` é o composition root local. Ele recebe
+opcionalmente `ApplicationSettings`; na ausência, usa `Configuration.load()`
+para aplicar defaults e variáveis de ambiente. Toda seleção e criação de
+repositories é delegada à `RepositoryFactory`. O módulo depende dos
+protocolos; somente a Factory conhece implementações concretas. Cada chamada
 cria repositories e serviços novos; não há singleton global compartilhado.
 
 ## Endpoints v1

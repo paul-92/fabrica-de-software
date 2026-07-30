@@ -15,11 +15,11 @@ timeline
          : Metrics Service concluído
          : Dashboard API interna concluída
          : Claude Provider
-    v0.7 : FileRunRepository não localizado
+    v0.7 : FileRunRepository concluído
          : FileTimelineRepository concluído
-         : Repository Factory próxima
-         : Configuration System futura
-         : SQLite Repository futura
+         : Repository Factory concluída
+         : Configuration System concluído
+         : SQLite Repository concluído
     v0.8 : Parallel Execution
          : Retry
          : Cancellation
@@ -52,15 +52,30 @@ timeline
 
 ## v0.7
 
-- 7.1 FileRunRepository — não localizado no HEAD `b949a6c`; inconsistência de
-  pré-condição registrada;
+- 7.1 FileRunRepository — implementado;
 - 7.2 FileTimelineRepository — implementado;
-- 7.3 Repository Factory — próximo, não iniciado;
-- 7.4 Configuration System — futuro;
-- 7.5 SQLite Repository — futuro.
+- 7.3 Repository Factory — implementada;
+- 7.4 Configuration System — implementado;
+- 7.5 SQLite Repository — implementado.
 
-A aplicação padrão continua usando repositories em memória. A implementação em
-arquivo exige injeção explícita até uma decisão futura de composição.
+Entregas da fase de persistência v0.7:
+
+- portas `RunRepository` e `TimelineRepository` preservadas;
+- backends `memory`, `file` e `sqlite` substituíveis;
+- criação centralizada pela `RepositoryFactory`;
+- configuração imutável por defaults e variáveis `ASEP_*`;
+- schema SQLite automático para Runs e Timeline;
+- testes de contrato compartilhados entre os três backends;
+- documentação de repositories, schema, arquitetura e configuração em
+  [`docs/persistence`](../persistence/SQLiteRepositories.md).
+
+A aplicação padrão continua usando repositories em memória. O sistema
+`Configuration` centraliza defaults e overrides pelas variáveis `ASEP_*`,
+produzindo um `ApplicationSettings` imutável consumido pela
+`RepositoryFactory`. O backend `sqlite` compartilha um banco entre Runs e
+Timeline, selecionável por `ASEP_STORAGE_BACKEND=sqlite` e
+`ASEP_SQLITE_DATABASE`. YAML, TOML, JSON e configuração por CLI permanecem fora
+do escopo.
 
 ## v1.0
 

@@ -6,17 +6,20 @@ from fastapi import FastAPI
 
 from asep.api.app import create_app
 from asep.application import RunQueryService
+from asep.configuration import ApplicationSettings, Configuration
 from asep.metrics import MetricsService
-from asep.runs import InMemoryRunRepository
-from asep.timeline import InMemoryTimelineRepository
+from asep.repositories import RepositoryFactory
 
 
-def create_default_app() -> FastAPI:
-    run_repository = InMemoryRunRepository()
-    timeline_repository = InMemoryTimelineRepository()
+def create_default_app(
+    repository_settings: ApplicationSettings | None = None,
+) -> FastAPI:
+    repositories = RepositoryFactory(
+        repository_settings or Configuration.load()
+    ).create()
     query_service = RunQueryService(
-        run_repository,
-        timeline_repository,
+        repositories.run_repository,
+        repositories.timeline_repository,
     )
     metrics_service = MetricsService(query_service)
     return create_app(query_service, metrics_service)

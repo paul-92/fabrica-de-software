@@ -13,6 +13,7 @@ from asep.timeline import (
     TimelineEvent,
     TimelineEventType,
     TimelineRepository,
+    SQLiteTimelineRepository,
 )
 
 NOW = datetime(2026, 7, 29, 17, 0, tzinfo=UTC)
@@ -34,7 +35,7 @@ def event(
     )
 
 
-@pytest.fixture(params=["memory", "file"])
+@pytest.fixture(params=["memory", "file", "sqlite"])
 def repository(
     request: pytest.FixtureRequest,
     tmp_path: Path,
@@ -43,6 +44,9 @@ def repository(
         "memory": InMemoryTimelineRepository,
         "file": lambda: FileTimelineRepository(
             tmp_path / "timeline-events.json"
+        ),
+        "sqlite": lambda: SQLiteTimelineRepository(
+            tmp_path / "asep.db"
         ),
     }
     return factories[request.param]()

@@ -338,6 +338,7 @@ def test_public_exports_are_intentional() -> None:
         "TimelineStorageError",
         "TimelineStorageReadError",
         "TimelineStorageWriteError",
+        "SQLiteTimelineRepository",
     }
 
 

@@ -60,9 +60,11 @@ inválido é erro de uso do Typer com exit code 2.
 
 ## Composição e limitação
 
-`application.query_composition` mantém uma instância compartilhada de cada
-repository e do serviço durante a vida do processo. A CLI depende apenas da
-função de composição, substituível em testes.
+`application.query_composition` carrega `ApplicationSettings` por
+`Configuration`, solicita à `RepositoryFactory` uma instância compartilhada de
+cada repository e mantém o serviço durante a vida do processo. A configuração
+padrão seleciona memória. A CLI depende apenas da função de composição,
+substituível em testes.
 
 Essa composição **não é histórico durável**:
 

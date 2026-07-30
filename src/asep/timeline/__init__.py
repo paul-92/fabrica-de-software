@@ -12,6 +12,7 @@ from asep.timeline.in_memory import InMemoryTimelineRepository
 from asep.timeline.models import TimelineEvent, TimelineEventType
 from asep.timeline.recorder import TimelineRecorder
 from asep.timeline.repository import TimelineRepository
+from asep.timeline.sqlite_repository import SQLiteTimelineRepository
 
 __all__ = [
     "DuplicateTimelineEventError",
@@ -25,4 +26,5 @@ __all__ = [
     "TimelineStorageError",
     "TimelineStorageReadError",
     "TimelineStorageWriteError",
+    "SQLiteTimelineRepository",
 ]

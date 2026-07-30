@@ -249,9 +249,15 @@ def test_public_exports_are_intentional() -> None:
     import asep.runs as runs
 
     assert set(runs.__all__) == {
+        "FileRunRepository",
         "InMemoryRunRepository",
+        "InvalidRunStorageFormatError",
         "Run",
         "RunError",
         "RunRepository",
         "RunStatus",
+        "RunStorageError",
+        "RunStorageReadError",
+        "RunStorageWriteError",
+        "SQLiteRunRepository",
     }

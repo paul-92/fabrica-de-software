@@ -72,7 +72,7 @@ Copie `projects/_template/`, atribua ID único em `kebab-case`, escolha `project
 
 ## Navegação complementar
 
-O material anterior útil foi preservado em `docs/`, `prompts/` e nos playbooks por tipo de produto. O glossário canônico está em [docs/glossary.md](docs/glossary.md). Decisões humanas abertas estão em [reports/open-decisions.md](reports/open-decisions.md).
+O material anterior útil foi preservado em `docs/`, `prompts/` e nos playbooks por tipo de produto. Use o [índice da documentação ASEP](docs/DocumentationIndex.md) como ponto de entrada. O glossário histórico está em [docs/glossary.md](docs/glossary.md) e os termos de persistência em [docs/glossary/PersistenceGlossary.md](docs/glossary/PersistenceGlossary.md). Decisões humanas abertas estão em [reports/open-decisions.md](reports/open-decisions.md).
 
 ## Contributing
 

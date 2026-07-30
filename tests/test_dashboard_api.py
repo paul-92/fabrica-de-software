@@ -456,7 +456,7 @@ def test_routes_do_not_import_storage_or_recalculate_metrics() -> None:
     assert "average_seconds =" not in source
 
 
-def test_only_composition_root_imports_concrete_repositories() -> None:
+def test_api_composition_uses_repository_factory() -> None:
     import asep.api.app as app_module
     import asep.api.composition as composition
     import asep.api.errors as errors
@@ -468,8 +468,9 @@ def test_only_composition_root_imports_concrete_repositories() -> None:
         assert "InMemoryRunRepository" not in source
         assert "InMemoryTimelineRepository" not in source
     composition_source = inspect.getsource(composition)
-    assert "InMemoryRunRepository" in composition_source
-    assert "InMemoryTimelineRepository" in composition_source
+    assert "RepositoryFactory" in composition_source
+    assert "InMemoryRunRepository" not in composition_source
+    assert "InMemoryTimelineRepository" not in composition_source
 
 
 def test_domain_and_services_do_not_import_fastapi() -> None:

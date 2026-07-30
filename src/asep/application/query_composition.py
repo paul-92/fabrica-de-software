@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 from asep.application.run_query import RunQueryService
-from asep.runs import InMemoryRunRepository
-from asep.timeline import InMemoryTimelineRepository
+from asep.configuration import Configuration
+from asep.repositories import RepositoryFactory
 
-_run_repository = InMemoryRunRepository()
-_timeline_repository = InMemoryTimelineRepository()
+_repositories = RepositoryFactory(Configuration.load()).create()
 _run_query_service = RunQueryService(
-    _run_repository,
-    _timeline_repository,
+    _repositories.run_repository,
+    _repositories.timeline_repository,
 )
 
 

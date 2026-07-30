@@ -3,7 +3,7 @@
 **Público:** pessoas desenvolvedoras e mantenedoras  
 **Dono:** Engenharia ASEP  
 **Versão:** 1.0  
-**Status:** vigente em 2026-07-29
+**Status:** vigente em 2026-07-30
 
 ## Objetivo
 
@@ -58,12 +58,26 @@ flowchart LR
     GRAPH --> JSON["ExecutionGraphSerializer"]
     GRAPH --> MERMAID["MermaidExporter"]
     GRAPH --> BPMN["BpmnExporter"]
-    RUNMODEL["Run"] --> RUNREPO["RunRepository"]
+    ENV["Defaults + ASEP_* environment"] --> CONFIG["Configuration"]
+    CONFIG --> SETTINGS["ApplicationSettings imutável"]
+    APPLICATION["Application composition"] --> CONFIG
+    SETTINGS --> REPOFACTORY["RepositoryFactory"]
+    REPOFACTORY --> RUNREPO["RunRepository"]
+    REPOFACTORY --> TIMELINEREPO["TimelineRepository"]
+    RUNMODEL["Run"] --> RUNREPO
     RUNREPO --> MEMORY["InMemoryRunRepository"]
+    RUNREPO --> FILERUN["FileRunRepository"]
+    RUNREPO --> SQLITERUN["SQLiteRunRepository"]
+    FILERUN --> RUNJSON["runs.json"]
     RUNMODEL -. run_id .-> TIMELINE["TimelineEvent"]
     RECORDER["TimelineRecorder"] --> TIMELINE
-    TIMELINE --> FILETIMELINE["FileTimelineRepository"]
+    TIMELINE --> TIMELINEREPO
+    TIMELINEREPO --> MEMORYTIMELINE["InMemoryTimelineRepository"]
+    TIMELINEREPO --> FILETIMELINE["FileTimelineRepository"]
+    TIMELINEREPO --> SQLITETIMELINE["SQLiteTimelineRepository"]
     FILETIMELINE --> TIMELINEJSON["timeline-events.json"]
+    SQLITERUN --> SQLITEDB["asep.db"]
+    SQLITETIMELINE --> SQLITEDB
     RUNREPO --> QUERY["RunQueryService"]
     TIMELINE --> QUERY
     QUERY --> HISTORY["CLI: runs / run show / run timeline"]
@@ -91,6 +105,8 @@ uma projeção estática do workflow; ele não lê um run nem relatórios de eta
 | `providers` | `ExecutionPackage`, contrato e infraestrutura de processo | workflow engine, orchestrator e quality gates |
 | `execution_graph` | workflow/estado/resultados necessários à projeção | CLI e exporters |
 | `exporters` | `ExecutionGraph`, erros e bibliotecas de formato | workflow engine, orchestrator, providers concretos |
+| `configuration` | biblioteca padrão e seus modelos imutáveis | repositories concretos, serviços e API HTTP |
+| `repositories` | portas e implementações concretas de persistência | serviços consumidores e API HTTP |
 | `cli` | casos de uso, loaders, builder e exporters públicos | detalhes internos de subprocess/layout |
 
 Regras confirmadas no código:
@@ -99,9 +115,70 @@ Regras confirmadas no código:
 - `ExecutionPackage` não depende de provider concreto;
 - `PromptBuilder` não executa providers;
 - `StageExecutionService` usa o protocolo `AgentProvider`, não `CodexProvider`;
+- serviços de consulta, métricas e Dashboard API recebem somente os protocolos
+  `RunRepository` e `TimelineRepository`;
+- composition roots carregam um único `ApplicationSettings` validado por
+  `Configuration`;
+- `RepositoryFactory` é o único ponto de seleção e criação das implementações
+  concretas de repositories e depende somente de `ApplicationSettings`;
 - integrações externas são adaptadores (`CodexProvider`, `ProcessRunner`,
   exporters e loaders);
 - Mermaid e BPMN recebem somente `ExecutionGraph`.
+
+## Configuração
+
+`Configuration.load()` cria um snapshot `ApplicationSettings` imutável. Os
+valores padrão são usados quando a variável correspondente não existe; não há
+leitura de YAML, TOML, JSON ou argumentos de CLI.
+
+| Variável | Default | Regra |
+|---|---|---|
+| `ASEP_STORAGE_BACKEND` | `memory` | `memory`, `file` ou `sqlite` |
+| `ASEP_STORAGE_DIRECTORY` | `storage` | caminho não vazio |
+| `ASEP_RUNS_FILENAME` | `runs.json` | nome simples, sem diretórios |
+| `ASEP_TIMELINE_FILENAME` | `timeline-events.json` | nome simples, sem diretórios |
+| `ASEP_SQLITE_DATABASE` | `storage/asep.db` | caminho não vazio do banco |
+
+```mermaid
+flowchart TD
+    DEFAULTS["Defaults da aplicação"] --> CONFIG["Configuration"]
+    ENV["Variáveis ASEP_* opcionais"] --> CONFIG
+    CONFIG --> SETTINGS["ApplicationSettings (frozen)"]
+    SETTINGS --> FACTORY["RepositoryFactory"]
+    FACTORY --> PORTS["Repository interfaces"]
+    PORTS --> MEMORY["Implementações memory"]
+    PORTS --> FILE["Implementações file"]
+    PORTS --> SQLITE["Implementações SQLite"]
+```
+
+## Persistência SQLite
+
+O backend `sqlite` usa exclusivamente `sqlite3` da biblioteca padrão.
+`SQLiteDatabase` cria o diretório, o banco, as tabelas e o índice na primeira
+abertura, valida as colunas esperadas e fornece conexões transacionais curtas.
+Não há ORM, pool ou migrations versionadas.
+
+```sql
+CREATE TABLE runs (
+    id TEXT PRIMARY KEY,
+    started_at TEXT NOT NULL,
+    payload TEXT NOT NULL
+);
+
+CREATE TABLE timeline_events (
+    id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL,
+    timestamp TEXT NOT NULL,
+    payload TEXT NOT NULL
+);
+
+CREATE INDEX idx_timeline_events_run
+    ON timeline_events (run_id);
+```
+
+Os payloads reutilizam `RunCodec` e `TimelineEventCodec`; portanto todos os
+campos, metadata e timestamps com timezone seguem os mesmos contratos dos
+backends em memória e arquivo.
 
 Exceção conhecida: `execution_graph.models` e `execution_graph.builder`
 importam `AgentExecutionStatus` de `asep.providers.models`. Portanto, a regra
@@ -140,6 +217,9 @@ documentais encontradas:
 
 ## Documentos
 
+- [Índice geral](../DocumentationIndex.md)
+- [Mapa da arquitetura](ArchitectureMap.md)
+- [Fotografia da Sprint 7.5](../phase-07/Sprint-7.5-SQLite-Repository.md)
 - [Core Domain](Core-Domain.md)
 - [Execution](Execution.md)
 - [Execution Package](ExecutionPackage.md)
@@ -153,6 +233,14 @@ documentais encontradas:
 - [Run Query Service](RunQueryService.md)
 - [Metrics Service](MetricsService.md)
 - [Dashboard API](DashboardAPI.md)
+- [Repositórios SQLite](../persistence/SQLiteRepositories.md)
+- [Schema SQLite](../persistence/DatabaseSchema.md)
+- [Arquitetura SQLite detalhada](../persistence/SQLiteArchitecture.md)
+- [Configuração SQLite](../persistence/SQLiteConfiguration.md)
+- [Dependências SQLite](../persistence/Dependencies.md)
+- [ADR-016 — persistência SQLite](../adr/ADR-016-sqlite-persistence.md)
+- [História da Fase 07](../history/Phase-07.md)
+- [Glossário de persistência](../glossary/PersistenceGlossary.md)
 - [Revisão de consistência arquitetural](Architectural-Consistency-Review.md)
 - [ADR-015 proposto](decisions/ADR-015-provider-boundaries-and-execution-graph-isolation.md)
 - [Plano de refatoração proposto](Provider-Graph-Refactoring-Plan.md)
