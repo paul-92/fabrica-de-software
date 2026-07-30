@@ -27,10 +27,32 @@ class SQLiteDatabase:
         );
         CREATE INDEX IF NOT EXISTS idx_timeline_events_run
             ON timeline_events (run_id);
+        CREATE TABLE IF NOT EXISTS workflow_snapshots (
+            id TEXT PRIMARY KEY,
+            workflow_id TEXT NOT NULL,
+            run_id TEXT NOT NULL,
+            status TEXT NOT NULL,
+            started_at TEXT NOT NULL,
+            payload TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_workflow_snapshots_workflow
+            ON workflow_snapshots (workflow_id);
+        CREATE INDEX IF NOT EXISTS idx_workflow_snapshots_run
+            ON workflow_snapshots (run_id);
+        CREATE INDEX IF NOT EXISTS idx_workflow_snapshots_status
+            ON workflow_snapshots (status);
     """
     _EXPECTED_COLUMNS = {
         "runs": {"id", "started_at", "payload"},
         "timeline_events": {"id", "run_id", "timestamp", "payload"},
+        "workflow_snapshots": {
+            "id",
+            "workflow_id",
+            "run_id",
+            "status",
+            "started_at",
+            "payload",
+        },
     }
 
     def __init__(self, path: Path) -> None:

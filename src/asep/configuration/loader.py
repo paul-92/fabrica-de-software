@@ -16,6 +16,7 @@ class Configuration:
         "ASEP_STORAGE_DIRECTORY": "storage_directory",
         "ASEP_RUNS_FILENAME": "runs_filename",
         "ASEP_TIMELINE_FILENAME": "timeline_filename",
+        "ASEP_WORKFLOWS_FILENAME": "workflows_filename",
         "ASEP_SQLITE_DATABASE": "sqlite_database",
     }
 

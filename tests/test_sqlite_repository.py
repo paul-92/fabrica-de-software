@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+from contextlib import closing
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -92,7 +93,7 @@ def test_sqlite_initializes_shared_schema(tmp_path: Path) -> None:
     database = tmp_path / "asep.db"
     SQLiteRunRepository(database)
 
-    with sqlite3.connect(database) as connection:
+    with closing(sqlite3.connect(database)) as connection, connection:
         tables = {
             row[0]
             for row in connection.execute(
@@ -108,7 +109,7 @@ def test_sqlite_initializes_shared_schema(tmp_path: Path) -> None:
 
 def test_sqlite_rejects_incompatible_schema(tmp_path: Path) -> None:
     database = tmp_path / "invalid.db"
-    with sqlite3.connect(database) as connection:
+    with closing(sqlite3.connect(database)) as connection, connection:
         connection.execute("CREATE TABLE runs (wrong TEXT)")
 
     with pytest.raises(SQLiteSchemaError, match="runs"):
@@ -126,7 +127,7 @@ def test_sqlite_reports_invalid_stored_run(tmp_path: Path) -> None:
     database = tmp_path / "asep.db"
     repository = SQLiteRunRepository(database)
     repository.save(make_run())
-    with sqlite3.connect(database) as connection:
+    with closing(sqlite3.connect(database)) as connection, connection:
         connection.execute(
             "UPDATE runs SET payload = ? WHERE id = ?",
             ("not-json", "run"),

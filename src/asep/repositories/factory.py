@@ -19,6 +19,12 @@ from asep.timeline import (
     SQLiteTimelineRepository,
     TimelineRepository,
 )
+from asep.workflow_persistence import (
+    FileWorkflowRepository,
+    InMemoryWorkflowRepository,
+    SQLiteWorkflowRepository,
+    WorkflowRepository,
+)
 
 
 RepositorySettings = ApplicationSettings
@@ -28,6 +34,7 @@ RepositorySettings = ApplicationSettings
 class RepositoryBundle:
     run_repository: RunRepository
     timeline_repository: TimelineRepository
+    workflow_repository: WorkflowRepository
 
 
 class RepositoryFactory:
@@ -58,6 +65,7 @@ class RepositoryFactory:
         return RepositoryBundle(
             run_repository=InMemoryRunRepository(),
             timeline_repository=InMemoryTimelineRepository(),
+            workflow_repository=InMemoryWorkflowRepository(),
         )
 
     def _create_file(self) -> RepositoryBundle:
@@ -69,6 +77,9 @@ class RepositoryFactory:
             timeline_repository=FileTimelineRepository(
                 storage_directory / self._configuration.timeline_filename
             ),
+            workflow_repository=FileWorkflowRepository(
+                storage_directory / self._configuration.workflows_filename
+            ),
         )
 
     def _create_sqlite(self) -> RepositoryBundle:
@@ -76,4 +87,5 @@ class RepositoryFactory:
         return RepositoryBundle(
             run_repository=SQLiteRunRepository(database),
             timeline_repository=SQLiteTimelineRepository(database),
+            workflow_repository=SQLiteWorkflowRepository(database),
         )

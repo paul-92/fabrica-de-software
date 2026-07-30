@@ -28,6 +28,7 @@ class ApplicationSettings:
     storage_directory: Path | str | None = _DEFAULT_STORAGE_DIRECTORY
     runs_filename: str = "runs.json"
     timeline_filename: str = "timeline-events.json"
+    workflows_filename: str = "workflow-snapshots.json"
     sqlite_database: Path | str = _DEFAULT_SQLITE_DATABASE
 
     def __post_init__(self) -> None:
@@ -45,6 +46,10 @@ class ApplicationSettings:
         self._validate_filename(
             "timeline_filename",
             self.timeline_filename,
+        )
+        self._validate_filename(
+            "workflows_filename",
+            self.workflows_filename,
         )
         object.__setattr__(
             self,
