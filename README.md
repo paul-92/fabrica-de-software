@@ -1,7 +1,7 @@
 # AI Software Engineering Platform — ASEP
 
 **Versão documental:** 0.1.0
-**Status:** Fases 6–9 concluídas localmente; RC2 tecnicamente validado
+**Status:** Fases 6–9 concluídas localmente; Sprint 10.1 implementada
 **Dono:** Product Manager da ASEP
 
 A ASEP é uma plataforma local para desenvolvimento de software assistido por
@@ -84,6 +84,20 @@ print(result.summary)
 O pipeline integra Workflow, Planning, Coordination, Supervisor, Runtime,
 Tools, Memory, Timeline e métricas. Veja o
 [Getting Started](docs/examples/GettingStarted.md).
+
+### Analisar um projeto deterministicamente
+
+```python
+from pathlib import Path
+from asep.project_analysis import ProjectAnalyzer
+
+analysis = ProjectAnalyzer().analyze(Path("."))
+print(analysis.languages)
+```
+
+O [Project Analyzer](docs/project-analysis/Overview.md) identifica estrutura,
+tecnologias, dependências, arquitetura e estatísticas sem IA ou integração com
+o Agent Runtime.
 
 ## Como criar um novo agente
 

@@ -30,6 +30,8 @@ persistência.
 - Sprint 9.7: End-to-End Execution Pipeline implementado localmente.
 - Sprint 9.8: Platform Hardening concluído e RC2 tecnicamente validado;
   revisão humana e publicação pendentes.
+- Sprint 10.1: Project Analyzer determinístico implementado localmente;
+  integração com Runtime permanece fora do escopo.
 
 O commit base avaliado é
 `f6ed7a1328acf32b0b4d0f530e91005725111e0b`. A árvore possui mudanças locais
@@ -64,6 +66,8 @@ O pacote `runtime.recovery` fornece Supervisor compatível com AgentRuntime,
 máquina de estados, classificação, retry, backoff, fallback e observabilidade.
 O pacote `pipeline` fornece ASEPEngine, composição padrão e GoalResult,
 integrando o fluxo completo por `asep.execute`.
+O pacote `project_analysis` fornece Scanner, detectores heurísticos,
+estatísticas e `ProjectAnalysis` imutável, sem depender do pipeline.
 
 Persistência: memory, file JSON e SQLite. Integrações: Codex por subprocess,
 CLI Typer, FastAPI, Mermaid, BPMN e JSON.
@@ -115,9 +119,10 @@ statements, 416 não cobertos). `compileall`, exemplos, `pip check` e
 
 ## Decisões essenciais
 
-ADRs 016–028: SQLite; Orchestrator; Engine; Agents; Workflow Persistence;
+ADRs 016–029: SQLite; Orchestrator; Engine; Agents; Workflow Persistence;
 Intelligent Agent Runtime; Tool Registry; Agent Memory; Planning Engine;
 Multi-Agent Coordination; Execution Recovery; End-to-End Pipeline.
+O ADR-029 define o Project Analyzer determinístico e isolado.
 Sprint 8.6 não criou ADR por não alterar decisão arquitetural.
 
 ## Leitura essencial

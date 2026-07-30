@@ -1,25 +1,25 @@
 # Próximos passos
 
-**Estado:** Sprint 9.8 validada tecnicamente; RC2 pendente de aceite operacional
+**Estado:** Sprint 10.1 implementada; validação final e publicação pendentes
 
 ## Sprint atual
 
-Sprint 9.8 — Platform Hardening & Release Candidate 2: auditoria, consolidação
-documental e gates técnicos concluídos localmente.
+Sprint 10.1 — Project Analyzer: análise determinística de estrutura,
+tecnologias, arquitetura, dependências e estatísticas.
 
 ## Objetivo e escopo concluídos
 
-Arquitetura da Fase 9 auditada sem ciclos; código, dependências, segurança,
-persistência, observabilidade, API e exemplos revisados. Release Notes,
-Migration Guide e diagrama oficial do RC2 foram produzidos.
+Módulo `asep.project_analysis` isolado do Runtime, com fachada pública,
+detectores heurísticos, modelos imutáveis, testes e documentação.
 
 ## Critérios já atendidos
 
-- 794 testes aprovados com 95% de cobertura;
-- 179 módulos e zero ciclos internos de import;
-- três exemplos aprovados;
-- `compileall`, `pip check` e `git diff --check` aprovados;
-- documentação principal alinhada ao RC2.
+- fachada `ProjectAnalyzer` e modelo `ProjectAnalysis`;
+- scanner configurável e caminhos relativos;
+- dez linguagens e nove frameworks;
+- package managers, entrypoints e dependências diretas;
+- arquitetura heurística e estatísticas;
+- cobertura específica do módulo superior a 95%.
 
 ## Pendências imediatas
 
@@ -34,9 +34,9 @@ Migration Guide e diagrama oficial do RC2 foram produzidos.
 
 ## Próximo planejamento
 
-Não iniciar a Fase 10 sem autorização explícita. CLI/REST/Web específicos do
-pipeline, LLM, persistência do pipeline, paralelismo e scheduler exigem
-requisito e decisão próprios.
+Não iniciar a Sprint 10.2 sem autorização explícita. Integração do Analyzer com
+Runtime, LLM, embeddings, geração, revisão e refatoração automáticas permanecem
+fora do escopo.
 
 ## Validação
 

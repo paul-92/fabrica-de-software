@@ -41,6 +41,7 @@ timeline
          : End-to-End Execution Pipeline concluído localmente
          : Platform Hardening RC2 validado tecnicamente
     v1.0 : Blueprint
+         : Project Analyzer determinístico concluído localmente
          : API
          : Dashboard
          : Packaging
@@ -120,6 +121,7 @@ do escopo.
 
 ## v1.0
 
+- 10.1 Project Analyzer determinístico — implementado localmente;
 - Blueprint;
 - API;
 - Dashboard;

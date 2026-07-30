@@ -65,6 +65,7 @@ docs/
 | Entender a Sprint 9.6 | [fotografia](phase-09/Sprint-9.6-Execution-Recovery.md) | [Execution Supervisor](runtime/ExecutionSupervisor.md) |
 | Entender a Sprint 9.7 | [fotografia](phase-09/Sprint-9.7-EndToEnd.md) | [ASEP Engine](runtime/ASEPEngine.md) |
 | Avaliar a Sprint 9.8/RC2 | [fotografia](phase-09/Sprint-9.8-Platform-Hardening-RC2.md) | [Release Candidate 2](releases/ReleaseCandidate2.md) |
+| Usar o Project Analyzer | [Overview](project-analysis/Overview.md) | [ProjectAnalyzer](project-analysis/ProjectAnalyzer.md) |
 | Avaliar o RC1 | [Release Candidate](releases/ReleaseCandidate_RC1.md) | [Auditoria arquitetural](audits/ArchitectureAudit.md) |
 | Migrar para RC2 | [Migration Guide RC2](migration/MigrationGuide-RC2.md) | [Checklist](../project/MIGRATION_CHECKLIST.md) |
 
@@ -184,9 +185,20 @@ novos ADRs documentais usam `docs/adr/` até decisão de consolidação.
 - [ADR-026](adr/ADR-026-multi-agent-coordination.md): coordenação;
 - [ADR-027](adr/ADR-027-execution-recovery.md): recovery;
 - [ADR-028](adr/ADR-028-end-to-end-pipeline.md): pipeline E2E.
+- [ADR-029](adr/ADR-029-project-analyzer.md): análise determinística de projetos.
 
 ADRs legados 001 e 015 permanecem em `architecture/decisions`. A Sprint 9.8
 não alterou decisão arquitetural e não criou ADR.
+
+### Project Analysis — Sprint 10.1
+
+- [Overview](project-analysis/Overview.md): arquitetura e API;
+- [ProjectAnalyzer](project-analysis/ProjectAnalyzer.md): fachada e modelos;
+- [Scanner](project-analysis/Scanner.md): percurso e exclusões;
+- [Framework Detection](project-analysis/FrameworkDetection.md): frameworks;
+- [Architecture Detection](project-analysis/ArchitectureDetection.md): estilos;
+- [Heuristics](project-analysis/Heuristics.md): regras e limitações;
+- [ADR-029](adr/ADR-029-project-analyzer.md): decisão arquitetural.
 
 ### Auditorias RC1
 

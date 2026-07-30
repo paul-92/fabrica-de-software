@@ -1,6 +1,6 @@
 # Mapa da arquitetura ASEP
 
-**Dono:** Engenharia ASEP | **Versão:** 2.0 | **Status:** consolidado no RC2
+**Dono:** Engenharia ASEP | **Versão:** 2.1 | **Status:** Sprint 10.1
 
 ## Visão Geral
 
@@ -241,6 +241,21 @@ flowchart TD
 O fluxo vertical representa coordenação. As setas transversais representam
 dependências observadas: Recovery envolve Supervisor/Runtime; Memory, Timeline,
 Metrics e Persistence não são etapas lineares executadas uma única vez.
+
+### Software Engineering Intelligence
+
+```text
+Project Path -> ProjectScanner -> Deterministic Detectors
+                                      |
+                     languages/frameworks/dependencies/
+                     entrypoints/architecture/statistics
+                                      |
+                                      v
+                              ProjectAnalysis
+```
+
+`project_analysis` é independente do pipeline. A Sprint 10.1 não o integra a
+Runtime, Workflow, agentes, providers ou persistência.
 
 ## Componentes envolvidos
 
