@@ -110,6 +110,51 @@ aprendizado foi tratar segurança e correlação como parte da fronteira desde o
 início, mantendo input/output fora dos eventos. Autonomia, concorrência e
 controle distribuído permaneceram deliberadamente fora.
 
+Na Sprint 9.2, capacidades externas ao agente ganharam fronteira própria.
+Filesystem, documentação e pytest deixaram de ser dependências implícitas:
+contratos, Registry e um serviço de execução passaram a aplicar contenção,
+política e observabilidade. A primeira coleção de Tools privilegiou leitura e
+diagnóstico; escrita e shell genérico foram excluídos por segurança.
+
+Na Sprint 9.3, a continuidade entre execuções deixou de depender de estado
+implícito. MemoryStore separou persistência, MemoryService concentrou retenção e
+segurança, e ContextBuilder preparou o input do agente sem acoplar o Runtime ao
+SQLite. A solução permaneceu lexical e operacional; busca vetorial foi
+preparada por portas substituíveis, não simulada.
+
+Na Sprint 9.4, a intenção passou a ser explicitada antes da ação. Um Planning
+Engine determinístico combinou objetivo, contexto, memória, Tools e workflow
+em um ExecutionPlan validado. A integração permaneceu opcional e por porta,
+preservando o Workflow Engine e o Agent Runtime, enquanto Timeline e métricas
+separaram claramente planejamento de execução. Nenhuma autonomia ou LLM foi
+introduzida.
+
+Na Sprint 9.5, planos passaram a ser distribuídos entre agentes registrados
+sem transformar Planning ou Runtime em coordenadores. Assignment tornou
+rastreável a ligação entre etapa, capability e agente; uma fila sequencial
+respeitou dependências, e o agregador devolveu resultado consolidado. A
+separação preservou contratos para futura fila paralela, sem afirmar
+distribuição que ainda não existe.
+
+Na Sprint 9.6, o Runtime ganhou uma camada externa de supervisão. Falhas
+passaram a ser classificadas antes de retry ou fallback, e uma máquina de
+estados tornou explícita a terminação. O Supervisor preservou a porta do
+Runtime, permitindo ao Coordinator adotar resiliência por composição. Rollback
+foi representado como estado futuro, não simulado como comportamento existente.
+
+Na Sprint 9.7, as fronteiras da Fase 9 foram conectadas por uma fachada única.
+Um objetivo passou pelo Workflow, planejamento, coordenação, supervisão,
+Runtime, Tools e memória, retornando um GoalResult observável. O Pipeline não
+substituiu nenhum mecanismo: apenas tornou a composição utilizável e preparou
+entradas futuras sem implementar CLI, REST, Web ou LLM.
+
+Na Sprint 9.8, a Fase 9 foi congelada para auditoria. A revisão confirmou zero
+ciclos internos, executou 794 testes, mediu 95% de cobertura e validou os
+exemplos. Inconsistências entre estado, roadmap e índices foram corrigidas sem
+alterar comportamento de produção. O RC2 foi declarado tecnicamente validado,
+mas publicação, CI multiplataforma, scanner de histórico e revisão humana
+permaneceram gates operacionais separados.
+
 ## Testes
 
 A história é conferida contra testes de contrato, testes SQLite e imports
@@ -136,7 +181,21 @@ para evidências.
 [Sprint 8.4](../phase-08/Sprint-8.4-Agent-Registry.md) e
 [ADR-020](../adr/ADR-020-in-memory-agent-registry.md).
 Fase 9: [Sprint 9.1](../phase-09/Sprint-9.1-Intelligent-Agent-Runtime.md) e
-[ADR-022](../adr/ADR-022-intelligent-agent-runtime.md).
+[ADR-022](../adr/ADR-022-intelligent-agent-runtime.md);
+[Sprint 9.2](../phase-09/Sprint-9.2-Tool-Registry.md) e
+[ADR-023](../adr/ADR-023-tool-registry.md);
+[Sprint 9.3](../phase-09/Sprint-9.3-Agent-Memory.md) e
+[ADR-024](../adr/ADR-024-agent-memory.md);
+[Sprint 9.4](../phase-09/Sprint-9.4-Planning-Engine.md) e
+[ADR-025](../adr/ADR-025-planning-engine.md);
+[Sprint 9.5](../phase-09/Sprint-9.5-Multi-Agent-Coordination.md) e
+[ADR-026](../adr/ADR-026-multi-agent-coordination.md);
+[Sprint 9.6](../phase-09/Sprint-9.6-Execution-Recovery.md) e
+[ADR-027](../adr/ADR-027-execution-recovery.md);
+[Sprint 9.7](../phase-09/Sprint-9.7-EndToEnd.md) e
+[ADR-028](../adr/ADR-028-end-to-end-pipeline.md);
+[Sprint 9.8](../phase-09/Sprint-9.8-Platform-Hardening-RC2.md) e
+[Release Candidate 2](../releases/ReleaseCandidate2.md).
 
 ## Relacionado a
 

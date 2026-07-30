@@ -41,6 +41,20 @@ class SQLiteDatabase:
             ON workflow_snapshots (run_id);
         CREATE INDEX IF NOT EXISTS idx_workflow_snapshots_status
             ON workflow_snapshots (status);
+        CREATE TABLE IF NOT EXISTS memory_entries (
+            id TEXT PRIMARY KEY,
+            agent_id TEXT NOT NULL,
+            execution_id TEXT NOT NULL,
+            workflow_execution_id TEXT,
+            created_at TEXT NOT NULL,
+            payload TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_memory_entries_agent
+            ON memory_entries (agent_id);
+        CREATE INDEX IF NOT EXISTS idx_memory_entries_execution
+            ON memory_entries (execution_id);
+        CREATE INDEX IF NOT EXISTS idx_memory_entries_workflow
+            ON memory_entries (workflow_execution_id);
     """
     _EXPECTED_COLUMNS = {
         "runs": {"id", "started_at", "payload"},
@@ -51,6 +65,14 @@ class SQLiteDatabase:
             "run_id",
             "status",
             "started_at",
+            "payload",
+        },
+        "memory_entries": {
+            "id",
+            "agent_id",
+            "execution_id",
+            "workflow_execution_id",
+            "created_at",
             "payload",
         },
     }

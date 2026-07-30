@@ -20,7 +20,7 @@ timeline
          : Run Query Service e CLI history concluídos
          : Metrics Service concluído
          : Dashboard API interna concluída
-         : Claude Provider
+         : AgentProvider e CodexProvider concluídos
     v0.7 : FileRunRepository concluído
          : FileTimelineRepository concluído
          : Repository Factory concluída
@@ -33,6 +33,13 @@ timeline
          : Workflow Persistence concluída
          : Architecture Hardening RC1 concluído localmente
     v0.9 : Intelligent Agent Runtime concluído localmente
+         : Tool Contracts e Tool Registry concluídos localmente
+         : Agent Memory e Context Management concluídos localmente
+         : Planning Engine concluído localmente
+         : Multi-Agent Coordination concluída localmente
+         : Intelligent Execution & Recovery concluída localmente
+         : End-to-End Execution Pipeline concluído localmente
+         : Platform Hardening RC2 validado tecnicamente
     v1.0 : Blueprint
          : API
          : Dashboard
@@ -50,7 +57,7 @@ timeline
 - integração da Timeline ao lifecycle e persistência durável — planejadas;
 - Metrics Service somente leitura — implementado;
 - Dashboard API interna e somente leitura — implementada;
-- Claude Provider por `AgentProvider`.
+- provider Codex por `AgentProvider`; Claude não está implementado.
 
 ## v0.8
 
@@ -64,7 +71,15 @@ timeline
 ## v0.9
 
 - 9.1 Intelligent Agent Runtime — implementado localmente;
-- próxima Sprint da Fase 9 — não iniciada.
+- 9.2 Tool Contracts & Tool Registry — implementada localmente;
+- 9.3 Agent Memory & Context Management — implementada localmente;
+- 9.4 Planning Engine — implementada localmente.
+- 9.5 Multi-Agent Coordination — implementada localmente.
+- 9.6 Intelligent Execution & Recovery — implementada localmente.
+- 9.7 End-to-End Execution Pipeline — implementada localmente; fachada pública
+  Python disponível.
+- 9.8 Platform Hardening & Release Candidate 2 — validada tecnicamente;
+  publicação depende de gates operacionais.
 
 O runtime é síncrono, resolve agentes pelo Registry e integra Timeline e
 métricas. Paralelismo, agentes autônomos, memória semântica e infraestrutura
@@ -114,9 +129,8 @@ do escopo.
 
 ## Pré-condições arquiteturais
 
-- remover ou aceitar formalmente o acoplamento ExecutionGraph → provider model;
-- superseder o ADR-013 para reconhecer providers externos;
+- preservar o isolamento ExecutionGraph/exporters confirmado pelo ADR-015;
 - definir concorrência e locking antes de Run Repository/paralelismo;
 - definir fluxo humano antes de retomar `awaiting_approval`;
-- alinhar a versão mínima de Python;
+- preservar Python mínimo `>=3.12` em código, pacote e documentação;
 - versionar contratos públicos antes da estabilidade v1.0.

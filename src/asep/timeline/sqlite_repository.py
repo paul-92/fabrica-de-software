@@ -63,6 +63,7 @@ class SQLiteTimelineRepository:
                     SELECT payload
                     FROM timeline_events
                     WHERE run_id = ?
+                    ORDER BY timestamp ASC, rowid ASC
                     """,
                     (run_id,),
                 ).fetchall()
@@ -73,9 +74,8 @@ class SQLiteTimelineRepository:
                 "Falha ao consultar Timeline no SQLite.",
                 path=self._database.path,
             ) from exc
-        events = tuple(self._deserialize(row["payload"]) for row in rows)
         return tuple(
-            sorted(events, key=lambda item: (item.timestamp, item.id))
+            self._deserialize(row["payload"]) for row in rows
         )
 
     def _serialize(self, event: TimelineEvent) -> str:

@@ -58,8 +58,15 @@ docs/
 | Entender a Sprint 8.4 | [fotografia](phase-08/Sprint-8.4-Agent-Registry.md) | [Agent Registry](workflows/AgentRegistry.md) |
 | Entender a Sprint 8.5 | [fotografia](phase-08/Sprint-8.5-Workflow-Persistence.md) | [Workflow Persistence](workflows/WorkflowPersistence.md) |
 | Entender a Sprint 9.1 | [fotografia](phase-09/Sprint-9.1-Intelligent-Agent-Runtime.md) | [Agent Runtime](agents/AgentRuntime.md) |
+| Entender a Sprint 9.2 | [fotografia](phase-09/Sprint-9.2-Tool-Registry.md) | [Tool Architecture](tools/ToolArchitecture.md) |
+| Entender a Sprint 9.3 | [fotografia](phase-09/Sprint-9.3-Agent-Memory.md) | [Agent Memory](agents/AgentMemory.md) |
+| Entender a Sprint 9.4 | [fotografia](phase-09/Sprint-9.4-Planning-Engine.md) | [Planning Engine](planning/PlanningEngine.md) |
+| Entender a Sprint 9.5 | [fotografia](phase-09/Sprint-9.5-Multi-Agent-Coordination.md) | [Agent Coordinator](agents/AgentCoordinator.md) |
+| Entender a Sprint 9.6 | [fotografia](phase-09/Sprint-9.6-Execution-Recovery.md) | [Execution Supervisor](runtime/ExecutionSupervisor.md) |
+| Entender a Sprint 9.7 | [fotografia](phase-09/Sprint-9.7-EndToEnd.md) | [ASEP Engine](runtime/ASEPEngine.md) |
+| Avaliar a Sprint 9.8/RC2 | [fotografia](phase-09/Sprint-9.8-Platform-Hardening-RC2.md) | [Release Candidate 2](releases/ReleaseCandidate2.md) |
 | Avaliar o RC1 | [Release Candidate](releases/ReleaseCandidate_RC1.md) | [Auditoria arquitetural](audits/ArchitectureAudit.md) |
-| Migrar o ambiente | [Migration Guide](migration/MigrationGuide.md) | [Checklist](../project/MIGRATION_CHECKLIST.md) |
+| Migrar para RC2 | [Migration Guide RC2](migration/MigrationGuide-RC2.md) | [Checklist](../project/MIGRATION_CHECKLIST.md) |
 
 ### Catálogo de arquitetura
 
@@ -129,6 +136,57 @@ novos ADRs documentais usam `docs/adr/` até decisão de consolidação.
 - [Sprint 9.1](phase-09/Sprint-9.1-Intelligent-Agent-Runtime.md): fotografia;
 - [Agent Runtime](agents/AgentRuntime.md): contratos, lifecycle e operação;
 - [ADR-022](adr/ADR-022-intelligent-agent-runtime.md): fronteira do runtime.
+- [Sprint 9.2](phase-09/Sprint-9.2-Tool-Registry.md): fotografia;
+- [Tool Architecture](tools/ToolArchitecture.md): contratos e segurança;
+- [ReadFileTool](tools/ReadFileTool.md), [SearchFilesTool](tools/SearchFilesTool.md),
+  [ListDirectoryTool](tools/ListDirectoryTool.md) e
+  [ReadDocumentationTool](tools/ReadDocumentationTool.md) e
+  [RunTestsTool](tools/RunTestsTool.md): Tools iniciais;
+- [ADR-023](adr/ADR-023-tool-registry.md): mediação pelo Registry.
+- [Sprint 9.3](phase-09/Sprint-9.3-Agent-Memory.md): fotografia;
+- [Agent Memory](agents/AgentMemory.md): contratos, stores e retenção;
+- [ContextBuilder](agents/ContextBuilder.md): composição do contexto;
+- [ADR-024](adr/ADR-024-agent-memory.md): fronteira de memória.
+- [Sprint 9.4](phase-09/Sprint-9.4-Planning-Engine.md): fotografia;
+- [Planning Engine](planning/PlanningEngine.md): fluxo e integração;
+- [ExecutionPlan](planning/ExecutionPlan.md): contrato canônico;
+- [ADR-025](adr/ADR-025-planning-engine.md): decisão de planejamento.
+- [Sprint 9.5](phase-09/Sprint-9.5-Multi-Agent-Coordination.md): fotografia;
+- [Agent Coordinator](agents/AgentCoordinator.md): fluxo e contratos;
+- [Coordination Policies](agents/CoordinationPolicies.md): regras de seleção;
+- [ADR-026](adr/ADR-026-multi-agent-coordination.md): separação da coordenação.
+- [Sprint 9.6](phase-09/Sprint-9.6-Execution-Recovery.md): fotografia;
+- [Execution Supervisor](runtime/ExecutionSupervisor.md): composição;
+- [Recovery Policies](runtime/RecoveryPolicies.md): retry e fallback;
+- [Execution State Machine](runtime/ExecutionStateMachine.md): estados;
+- [ADR-027](adr/ADR-027-execution-recovery.md): decisão de recuperação.
+- [Sprint 9.7](phase-09/Sprint-9.7-EndToEnd.md): fotografia;
+- [ASEP Engine](runtime/ASEPEngine.md): fachada pública;
+- [Execution Pipeline](runtime/ExecutionPipeline.md): fluxo completo;
+- [Getting Started](examples/GettingStarted.md): exemplo inicial;
+- [ADR-028](adr/ADR-028-end-to-end-pipeline.md): decisão da fachada.
+- [Sprint 9.8](phase-09/Sprint-9.8-Platform-Hardening-RC2.md): auditoria e gates;
+- [Release Candidate 2](releases/ReleaseCandidate2.md): estado do candidato;
+- [Migration Guide RC2](migration/MigrationGuide-RC2.md): atualização segura.
+
+### ADR Index vigente
+
+- [ADR-016](adr/ADR-016-sqlite-persistence.md): persistência SQLite;
+- [ADR-017](adr/ADR-017-workflow-orchestrator-boundary.md): Orchestrator;
+- [ADR-018](adr/ADR-018-workflow-engine-separation.md): Workflow Engine;
+- [ADR-019](adr/ADR-019-agent-contract-boundary.md): contratos de agentes;
+- [ADR-020](adr/ADR-020-in-memory-agent-registry.md): Agent Registry;
+- [ADR-021](adr/ADR-021-workflow-snapshot-persistence.md): snapshots;
+- [ADR-022](adr/ADR-022-intelligent-agent-runtime.md): Agent Runtime;
+- [ADR-023](adr/ADR-023-tool-registry.md): Tool Registry;
+- [ADR-024](adr/ADR-024-agent-memory.md): Agent Memory;
+- [ADR-025](adr/ADR-025-planning-engine.md): Planning Engine;
+- [ADR-026](adr/ADR-026-multi-agent-coordination.md): coordenação;
+- [ADR-027](adr/ADR-027-execution-recovery.md): recovery;
+- [ADR-028](adr/ADR-028-end-to-end-pipeline.md): pipeline E2E.
+
+ADRs legados 001 e 015 permanecem em `architecture/decisions`. A Sprint 9.8
+não alterou decisão arquitetural e não criou ADR.
 
 ### Auditorias RC1
 

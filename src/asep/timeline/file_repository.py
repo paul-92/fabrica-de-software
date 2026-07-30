@@ -35,7 +35,6 @@ class FileTimelineRepository:
         events.append(
             TimelineEvent.model_validate(event.model_dump(mode="json"))
         )
-        events.sort(key=lambda item: (item.timestamp, item.id))
         self._write_events(tuple(events))
 
     def list_by_run(self, run_id: str) -> tuple[TimelineEvent, ...]:
@@ -49,7 +48,7 @@ class FileTimelineRepository:
                     for event in self._read_events()
                     if event.run_id == run_id
                 ),
-                key=lambda item: (item.timestamp, item.id),
+                key=lambda item: item.timestamp,
             )
         )
 

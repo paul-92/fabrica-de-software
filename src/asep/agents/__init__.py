@@ -26,7 +26,6 @@ from asep.agents.exceptions import (
     AgentValidationException,
 )
 from asep.agents.execution_service import AgentExecutionService
-from asep.agents.step_adapter import AgentStepAdapter
 from asep.agents.registry import (
     AgentAlreadyRegisteredException,
     AgentNotFoundException,
@@ -91,3 +90,11 @@ __all__ = [
     "InMemoryAgentExecutionMetrics",
     "InvalidAgentRegistrationException",
 ]
+
+
+def __getattr__(name: str):
+    if name == "AgentStepAdapter":
+        from asep.agents.step_adapter import AgentStepAdapter
+
+        return AgentStepAdapter
+    raise AttributeError(name)

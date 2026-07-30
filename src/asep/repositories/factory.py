@@ -3,10 +3,15 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from asep.configuration import ApplicationSettings, StorageBackend
 from asep.repositories.errors import RepositoryConfigurationError
+from asep.memory import (
+    InMemoryMemoryStore,
+    MemoryStore,
+    SQLiteMemoryStore,
+)
 from asep.runs import (
     FileRunRepository,
     InMemoryRunRepository,
@@ -35,6 +40,7 @@ class RepositoryBundle:
     run_repository: RunRepository
     timeline_repository: TimelineRepository
     workflow_repository: WorkflowRepository
+    memory_store: MemoryStore = field(default_factory=InMemoryMemoryStore)
 
 
 class RepositoryFactory:
@@ -66,6 +72,7 @@ class RepositoryFactory:
             run_repository=InMemoryRunRepository(),
             timeline_repository=InMemoryTimelineRepository(),
             workflow_repository=InMemoryWorkflowRepository(),
+            memory_store=InMemoryMemoryStore(),
         )
 
     def _create_file(self) -> RepositoryBundle:
@@ -80,6 +87,7 @@ class RepositoryFactory:
             workflow_repository=FileWorkflowRepository(
                 storage_directory / self._configuration.workflows_filename
             ),
+            memory_store=InMemoryMemoryStore(),
         )
 
     def _create_sqlite(self) -> RepositoryBundle:
@@ -88,4 +96,5 @@ class RepositoryFactory:
             run_repository=SQLiteRunRepository(database),
             timeline_repository=SQLiteTimelineRepository(database),
             workflow_repository=SQLiteWorkflowRepository(database),
+            memory_store=SQLiteMemoryStore(database),
         )

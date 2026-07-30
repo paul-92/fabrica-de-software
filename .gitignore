@@ -48,6 +48,7 @@ qa-evidence-temp/
 
 # Cache temporário do pytest
 pytest-cache-files-*/
+.pytest-tmp-*/
 
 # Runtime da ASEP
 projects/*/.asep/

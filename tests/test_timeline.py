@@ -117,7 +117,7 @@ def test_events_are_ordered_by_timestamp() -> None:
     ) == ("first", "last")
 
 
-def test_equal_timestamps_are_ordered_by_event_id() -> None:
+def test_equal_timestamps_preserve_insertion_order() -> None:
     repository = InMemoryTimelineRepository()
     repository.append(event("z"))
     repository.append(event("a"))
@@ -125,7 +125,7 @@ def test_equal_timestamps_are_ordered_by_event_id() -> None:
 
     assert tuple(
         item.id for item in repository.list_by_run("run-1")
-    ) == ("a", "middle", "z")
+    ) == ("z", "a", "middle")
 
 
 def test_duplicate_event_id_is_rejected_globally() -> None:

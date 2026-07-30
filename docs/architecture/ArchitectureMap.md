@@ -1,6 +1,6 @@
 # Mapa da arquitetura ASEP
 
-**Dono:** Engenharia ASEP | **Versão:** 1.3 | **Status:** atualizado na Sprint 9.1
+**Dono:** Engenharia ASEP | **Versão:** 2.0 | **Status:** consolidado no RC2
 
 ## Visão Geral
 
@@ -128,6 +128,120 @@ WorkflowEngine -> AgentStepAdapter -> AgentRuntime -> AgentExecutionService
 O Engine continua sem resolver agentes. O runtime aplica validação, política,
 correlação, segurança e observabilidade sem conhecer providers concretos.
 
+### Tools
+
+```text
+Agent Runtime -> ToolExecutor -> ToolExecutionService
+                                  /       |       \
+                            ToolRegistry Timeline Metrics
+                                  |
+             read/list/search/docs/run-tests Tools
+```
+
+Filesystem e subprocesso ficam atrás de Tools restritas ao workspace.
+
+### Memória operacional
+
+```text
+Agent Runtime -> ContextProvider -> ContextBuilder -> MemoryService
+                                                   -> MemoryStore
+                                                      /       \
+                                                 memory      sqlite
+```
+
+O Runtime não conhece Store concreto; o Workflow alcança memória somente pelo
+Runtime e adapter já existentes.
+
+### Planejamento
+
+```text
+Workflow/Agent Runtime -> Planner -> PlanningEngine
+                                    /      |       \
+                              Strategy  Validator  Timeline/Metrics
+                                    |
+                    Memory + ToolRegistry + Workflow
+```
+
+O plano é solicitado antes da execução. O Planning Engine descreve e valida o
+trabalho, mas não executa Agent, Tool ou WorkflowStep.
+
+### Coordenação multiagente
+
+```text
+ExecutionPlan -> AgentCoordinator -> CapabilityResolver -> Assignments
+                                      |
+                                      v
+                              Sequential Queue
+                                      |
+                                      v
+                                AgentRuntime
+                                      |
+                                      v
+                              ResultAggregator
+```
+
+O Coordinator depende de contratos e do AgentRegistry. Ele nunca executa Tool
+diretamente; paralelismo e distribuição permanecem fora da implementação.
+
+### Supervisão e recuperação
+
+```text
+AgentCoordinator -> ExecutionSupervisor -> AgentRuntime
+                           |
+                           v
+              StateMachine + RecoveryService
+                     /              \
+              Retry/Backoff        Fallback
+```
+
+Supervisor implementa a porta do Runtime. Planning, Workflow e Coordinator não
+conhecem políticas internas de recuperação.
+
+### Pipeline ponta a ponta
+
+```text
+asep.execute -> ASEPEngine -> ExecutionPipeline -> Workflow
+                                      |
+                     Planning -> Coordination -> Supervisor
+                                      |
+                         Runtime -> Agent -> Tools
+                                      |
+                         Memory + Timeline + Metrics
+                                      |
+                                  GoalResult
+```
+
+PipelineBuilder é a composition root. A fachada não expõe as dependências ao
+consumidor.
+
+### Diagrama oficial do RC2
+
+```mermaid
+flowchart TD
+    Goal --> ASEPEngine
+    ASEPEngine --> Workflow
+    Workflow --> Planning
+    Planning --> Coordinator
+    Coordinator --> Supervisor
+    Supervisor --> Runtime
+    Runtime --> ToolRegistry[Tool Registry]
+    ToolRegistry --> Tools
+    Supervisor --> Recovery
+    Runtime --> Memory
+    Planning --> Memory
+    Tools --> Timeline
+    Runtime --> Timeline
+    Recovery --> Timeline
+    Timeline --> Metrics
+    Memory --> Persistence
+    Timeline --> Persistence
+    Metrics --> Persistence
+```
+
+O fluxo vertical representa coordenação. As setas transversais representam
+dependências observadas: Recovery envolve Supervisor/Runtime; Memory, Timeline,
+Metrics e Persistence não são etapas lineares executadas uma única vez.
+
 ## Componentes envolvidos
 
 CLI/API, application, execution, workflow, agents, providers, artifacts,
@@ -177,5 +291,5 @@ Atualizar níveis afetados somente após mudanças implementadas.
 
 ## Relacionado a
 
-Sprints 7.5, 8.4 e 9.1; Fases 07–09; ADRs 016, 020 e 022; módulos; testes;
-Roadmap.
+Sprints 7.5, 8.4 e 9.1–9.8; Fases 07–09; ADRs 016, 020 e 022–028; módulos; testes;
+Roadmap; RC2.

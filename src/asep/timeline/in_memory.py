@@ -33,7 +33,7 @@ class InMemoryTimelineRepository:
             self._copy(event)
             for event in sorted(
                 events,
-                key=lambda item: (item.timestamp, item.id),
+                key=lambda item: item.timestamp,
             )
         )
 

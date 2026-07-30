@@ -5,10 +5,11 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from datetime import UTC, datetime, timedelta
 from threading import RLock
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import ValidationError
 
+from asep._json_values import json_value
 from asep.agents.contracts import (
     AgentError,
     AgentRequest,
@@ -33,6 +34,12 @@ from asep.agents.runtime_models import (
 from asep.agents.validator import AgentExecutionValidator
 from asep.execution.models import AgentContext
 from asep.timeline import TimelineEventType, TimelineRecorder
+from asep.tools.contracts import ToolExecutor
+from asep.tools.models import ToolRequest, ToolResult
+if TYPE_CHECKING:
+    from asep.memory.contracts import ContextProvider
+    from asep.planning.contracts import Planner
+    from asep.planning.models import PlanningRequest
 
 Clock = Callable[[], datetime]
 _SENSITIVE_KEYS = {
@@ -71,6 +78,9 @@ class AgentExecutionService:
         validator: AgentExecutionValidator | None = None,
         policy: AgentExecutionPolicy | None = None,
         clock: Clock | None = None,
+        tool_executor: ToolExecutor | None = None,
+        context_provider: ContextProvider | None = None,
+        planner: Planner | None = None,
     ) -> None:
         self._registry = registry
         self._timeline = timeline
@@ -78,9 +88,20 @@ class AgentExecutionService:
         self._validator = validator or AgentExecutionValidator()
         self._policy = policy or AgentExecutionPolicy()
         self._clock = clock or _utc_now
+        self._tool_executor = tool_executor
+        self._context_provider = context_provider
+        self._planner = planner
         self._results: dict[str, AgentExecutionResult] = {}
         self._in_progress: set[str] = set()
         self._lock = RLock()
+
+    def execute_tool(self, request: ToolRequest) -> ToolResult:
+        """Delega Tools exclusivamente pela porta injetada."""
+        if self._tool_executor is None:
+            raise AgentExecutionValidationError(
+                "ToolExecutor não foi configurado para este runtime."
+            )
+        return self._tool_executor.execute(request)
 
     def execute(
         self,
@@ -163,6 +184,10 @@ class AgentExecutionService:
             metadata=safe_metadata,
         )
         last_error: AgentExecutionFailedError | None = None
+        memory_context: Mapping[str, Any] = {}
+        execution_plan: Mapping[str, Any] | None = None
+        context_ready = False
+        plan_ready = False
         for attempt in range(1, self._policy.max_attempts + 1):
             runtime_context = self._runtime_context(
                 request,
@@ -175,9 +200,37 @@ class AgentExecutionService:
                 metadata={**safe_metadata, "attempt": attempt},
             )
             try:
+                if self._context_provider is not None and not context_ready:
+                    from asep.memory.models import ContextBuildRequest
+
+                    built_context = self._context_provider.build(
+                        ContextBuildRequest(
+                            agent_id=request.agent_id,
+                            execution_id=request.execution_id,
+                            workflow_execution_id=(
+                                request.workflow_execution_id
+                            ),
+                            workflow_context=request.context,
+                            metadata=request.metadata,
+                        )
+                    )
+                    memory_context = built_context.context
+                    context_ready = True
+                if self._planner is not None and not plan_ready:
+                    planning_result = self._planner.plan(
+                        self._planning_request(request)
+                    )
+                    execution_plan = planning_result.plan.model_dump(
+                        mode="json"
+                    )
+                    plan_ready = True
                 agent_result = AgentResult.model_validate(
                     agent.execute(
-                        self._agent_request(request),
+                        self._agent_request(
+                            request,
+                            memory_context,
+                            execution_plan,
+                        ),
                         self._agent_context(request, runtime_context),
                     )
                 )
@@ -395,6 +448,8 @@ class AgentExecutionService:
     @staticmethod
     def _agent_request(
         request: AgentExecutionRequest,
+        memory_context: Mapping[str, Any] | None = None,
+        execution_plan: Mapping[str, Any] | None = None,
     ) -> AgentRequest:
         objective = request.context.get("objective", request.capability.id)
         if not isinstance(objective, str) or not objective.strip():
@@ -402,7 +457,65 @@ class AgentExecutionService:
         return AgentRequest(
             request_id=request.execution_id,
             objective=objective,
-            inputs=request.input,
+            inputs={
+                **request.input,
+                **(
+                    {"memory_context": json_value(memory_context)}
+                    if memory_context
+                    else {}
+                ),
+                **(
+                    {"execution_plan": json_value(execution_plan)}
+                    if execution_plan
+                    else {}
+                ),
+            },
+            metadata=request.metadata,
+        )
+
+    @staticmethod
+    def _planning_request(
+        request: AgentExecutionRequest,
+    ) -> PlanningRequest:
+        from asep.planning.models import PlanningContext, PlanningRequest
+
+        objective = request.context.get(
+            "objective", request.capability.id
+        )
+        if not isinstance(objective, str) or not objective.strip():
+            objective = request.capability.id
+        step_id = request.workflow_step_id or "agent-execution"
+        workflow = {
+            "id": request.context.get(
+                "workflow_id", "standalone-agent-execution"
+            ),
+            "steps": [
+                {
+                    "id": step_id,
+                    "description": objective,
+                    "required_capability": request.capability.id,
+                    "agent": request.agent_id.value,
+                    "dependencies": [],
+                }
+            ],
+        }
+        return PlanningRequest(
+            goal=objective,
+            context=PlanningContext(
+                objective=objective,
+                workflow=workflow,
+                metadata=request.metadata,
+                constraints=tuple(
+                    item
+                    for item in request.context.get("constraints", ())
+                    if isinstance(item, str)
+                ),
+                available_capabilities=(request.capability.id,),
+            ),
+            workflow_execution_id=(
+                request.workflow_execution_id or request.execution_id
+            ),
+            agent_id=request.agent_id,
             metadata=request.metadata,
         )
 

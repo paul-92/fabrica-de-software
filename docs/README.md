@@ -67,6 +67,25 @@ Agentes inteligentes:
 - [Sprint 9.1](phase-09/Sprint-9.1-Intelligent-Agent-Runtime.md);
 - [Agent Runtime](agents/AgentRuntime.md);
 - [ADR-022](adr/ADR-022-intelligent-agent-runtime.md).
+- [Sprint 9.2](phase-09/Sprint-9.2-Tool-Registry.md);
+- [Tool Architecture](tools/ToolArchitecture.md);
+- [ADR-023](adr/ADR-023-tool-registry.md).
+- [Sprint 9.3](phase-09/Sprint-9.3-Agent-Memory.md);
+- [Agent Memory](agents/AgentMemory.md);
+- [ContextBuilder](agents/ContextBuilder.md);
+- [ADR-024](adr/ADR-024-agent-memory.md).
+- [Sprint 9.4](phase-09/Sprint-9.4-Planning-Engine.md);
+- [Planning Engine](planning/PlanningEngine.md);
+- [ADR-025](adr/ADR-025-planning-engine.md).
+- [Sprint 9.5](phase-09/Sprint-9.5-Multi-Agent-Coordination.md);
+- [Agent Coordinator](agents/AgentCoordinator.md);
+- [ADR-026](adr/ADR-026-multi-agent-coordination.md).
+- [Sprint 9.6](phase-09/Sprint-9.6-Execution-Recovery.md);
+- [Execution Supervisor](runtime/ExecutionSupervisor.md);
+- [ADR-027](adr/ADR-027-execution-recovery.md).
+- [Sprint 9.7](phase-09/Sprint-9.7-EndToEnd.md);
+- [ASEP Engine](runtime/ASEPEngine.md);
+- [ADR-028](adr/ADR-028-end-to-end-pipeline.md).
 
 ## Release Candidate
 
@@ -74,3 +93,7 @@ Agentes inteligentes:
 - [RC1](releases/ReleaseCandidate_RC1.md);
 - [auditorias](audits/ArchitectureAudit.md);
 - [guia de migração](migration/MigrationGuide.md).
+- [Sprint 9.8](phase-09/Sprint-9.8-Platform-Hardening-RC2.md);
+- [RC2](releases/ReleaseCandidate2.md);
+- [guia de migração RC2](migration/MigrationGuide-RC2.md);
+- [diagrama oficial](architecture/ArchitectureMap.md#diagrama-oficial-do-rc2).

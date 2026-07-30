@@ -39,16 +39,16 @@ credenciais no Git.
 
 ### Bloqueios concretos desta fotografia
 
-- [ ] Publicar o commit local `863766f`, ausente no remote tracking branch.
-- [ ] Revisar, versionar e publicar as mudanças locais da Fase 8.
+- [ ] Revisar e publicar os commits locais autorizados ainda ausentes no
+  remote tracking branch.
+- [ ] Revisar, versionar e publicar as mudanças locais das Fases 8 e 9.
 - [ ] Não considerar o remoto como backup completo até concluir os dois itens.
 
 ## Na máquina nova
 
 - [ ] Instalar Git.
 - [ ] Instalar CPython 3.12 ou superior.
-- [ ] Clonar o repositório e executar
-  `git switch feature/sprint-3-core-architecture`, salvo mudança registrada em
+- [ ] Clonar o repositório e selecionar a branch registrada em
   [PROJECT_STATE.md](PROJECT_STATE.md).
 - [ ] Criar e ativar `.venv` conforme [BOOTSTRAP.md](../BOOTSTRAP.md).
 - [ ] Executar `python -m pip install -e ".[test]"`.
@@ -84,4 +84,3 @@ credenciais no Git.
 | `logs/runs/` | logs locais | copiar somente se necessários e autorizados |
 | bancos de testes | fixtures temporárias/descartáveis | recriar pela suíte |
 | código, docs, ADRs e prompts | fonte versionada | preservar por commit e push |
-

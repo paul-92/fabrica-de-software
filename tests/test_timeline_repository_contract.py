@@ -80,18 +80,71 @@ def test_contract_separates_runs(repository: TimelineRepository) -> None:
     ) == ("b",)
 
 
-def test_contract_orders_by_timestamp_then_id(
+def test_contract_orders_distinct_timestamps_chronologically(
     repository: TimelineRepository,
 ) -> None:
     repository.append(
-        event("last", timestamp=NOW + timedelta(seconds=1))
+        event("second", timestamp=NOW + timedelta(seconds=1))
     )
-    repository.append(event("z"))
-    repository.append(event("a"))
+    repository.append(event("first"))
 
     assert tuple(
         item.id for item in repository.list_by_run("run")
-    ) == ("a", "z", "last")
+    ) == ("first", "second")
+
+
+def test_contract_preserves_insertion_order_for_equal_timestamps(
+    repository: TimelineRepository,
+) -> None:
+    repository.append(event("z"))
+    repository.append(event("a"))
+    repository.append(event("middle"))
+
+    assert tuple(
+        item.id for item in repository.list_by_run("run")
+    ) == ("z", "a", "middle")
+
+
+def test_contract_equal_timestamps_remain_isolated_by_run(
+    repository: TimelineRepository,
+) -> None:
+    repository.append(event("run-a-first", run_id="run-a"))
+    repository.append(event("run-b-first", run_id="run-b"))
+    repository.append(event("run-a-second", run_id="run-a"))
+    repository.append(event("run-b-second", run_id="run-b"))
+
+    assert tuple(
+        item.id for item in repository.list_by_run("run-a")
+    ) == ("run-a-first", "run-a-second")
+    assert tuple(
+        item.id for item in repository.list_by_run("run-b")
+    ) == ("run-b-first", "run-b-second")
+
+
+def test_contract_backends_have_ordering_parity(tmp_path: Path) -> None:
+    repositories: tuple[TimelineRepository, ...] = (
+        InMemoryTimelineRepository(),
+        FileTimelineRepository(tmp_path / "parity.json"),
+        SQLiteTimelineRepository(tmp_path / "parity.db"),
+    )
+
+    for current in repositories:
+        current.append(event("z"))
+        current.append(event("a"))
+        current.append(
+            event("later", timestamp=NOW + timedelta(seconds=1))
+        )
+
+    sequences = tuple(
+        tuple(item.id for item in current.list_by_run("run"))
+        for current in repositories
+    )
+
+    assert sequences == (
+        ("z", "a", "later"),
+        ("z", "a", "later"),
+        ("z", "a", "later"),
+    )
 
 
 def test_contract_allows_equal_content_with_distinct_ids(
