@@ -293,3 +293,129 @@ def test_project_blueprint_is_immutable() -> None:
 
     with pytest.raises(ValidationError):
         blueprint.project_name = "Marketplace"        
+
+import pytest
+from pydantic import ValidationError
+
+from asep.business_engineering.models import (
+    BusinessRule,
+    Constraint,
+    Entity,
+    ProjectBlueprint,
+    TechnologyPreference,
+)
+
+
+@pytest.mark.parametrize(
+    ("model", "kwargs"),
+    [
+        (
+            BusinessRule,
+            {
+                "name": "Cliente deve ser maior de idade",
+                "description": "Apenas clientes maiores de 18 anos podem contratar.",
+            },
+        ),
+        (
+            Entity,
+            {
+                "name": "Cliente",
+                "description": "Representa um cliente do sistema.",
+            },
+        ),
+        (
+            Constraint,
+            {
+                "name": "LGPD",
+                "description": "Os dados devem obedecer à LGPD.",
+            },
+        ),
+        (
+            TechnologyPreference,
+            {
+                "category": "Backend",
+                "value": "Python",
+            },
+        ),
+    ],
+)
+def test_models_creation(model, kwargs):
+    instance = model(**kwargs)
+
+    for key, value in kwargs.items():
+        assert getattr(instance, key) == value
+
+
+@pytest.mark.parametrize(
+    ("model", "field"),
+    [
+        (BusinessRule, "name"),
+        (BusinessRule, "description"),
+        (Entity, "name"),
+        (Entity, "description"),
+        (Constraint, "name"),
+        (Constraint, "description"),
+        (TechnologyPreference, "category"),
+        (TechnologyPreference, "value"),
+    ],
+)
+def test_models_reject_blank_fields(model, field):
+    kwargs = {
+        BusinessRule: {
+            "name": "Rule",
+            "description": "Description",
+        },
+        Entity: {
+            "name": "Entity",
+            "description": "Description",
+        },
+        Constraint: {
+            "name": "Constraint",
+            "description": "Description",
+        },
+        TechnologyPreference: {
+            "category": "Backend",
+            "value": "Python",
+        },
+    }[model].copy()
+
+    kwargs[field] = "   "
+
+    with pytest.raises(ValidationError):
+        model(**kwargs)
+
+
+def test_project_blueprint_supports_new_domain_objects():
+    blueprint = ProjectBlueprint(
+        project_name="ERP",
+        description="Sistema ERP",
+        business_rules=(
+            BusinessRule(
+                name="Regra",
+                description="Descrição",
+            ),
+        ),
+        entities=(
+            Entity(
+                name="Cliente",
+                description="Pessoa física",
+            ),
+        ),
+        constraints=(
+            Constraint(
+                name="LGPD",
+                description="Obrigatória",
+            ),
+        ),
+        technology_preferences=(
+            TechnologyPreference(
+                category="Backend",
+                value="Python",
+            ),
+        ),
+    )
+
+    assert len(blueprint.business_rules) == 1
+    assert len(blueprint.entities) == 1
+    assert len(blueprint.constraints) == 1
+    assert len(blueprint.technology_preferences) == 1
