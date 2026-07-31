@@ -5,6 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from asep.business_engineering.models import ProjectBlueprint
+from asep.planning import PlanningResult
 
 
 class PlanningAdapter(ABC):
@@ -14,8 +15,8 @@ class PlanningAdapter(ABC):
     def create_execution_plan(
         self,
         blueprint: ProjectBlueprint,
-    ) -> object:
-        """Cria um plano de execução a partir de um ProjectBlueprint."""
+    ) -> PlanningResult:
+        """Cria um PlanningResult a partir de um ProjectBlueprint."""
 
 
 __all__ = [

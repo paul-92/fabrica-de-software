@@ -22,7 +22,7 @@ class PlanningEngineAdapter(PlanningAdapter):
         self,
         blueprint: ProjectBlueprint,
     ) -> PlanningResult:
-        """Cria um plano de execução a partir de um ProjectBlueprint."""
+        """Cria um PlanningResult a partir de um ProjectBlueprint."""
 
         workflow_steps = [
             {
