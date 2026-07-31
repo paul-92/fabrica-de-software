@@ -5,9 +5,14 @@ import pytest
 
 from asep.business_engineering.models import (
     Actor,
+    BusinessDescription,
+    BusinessRule,
+    Constraint,
+    Entity,
     ProjectBlueprint,
     Requirement,
     RequirementPriority,
+    TechnologyPreference,
     UseCase,
 )
 
@@ -419,3 +424,66 @@ def test_project_blueprint_supports_new_domain_objects():
     assert len(blueprint.entities) == 1
     assert len(blueprint.constraints) == 1
     assert len(blueprint.technology_preferences) == 1
+
+def test_business_description_is_created() -> None:
+    description = BusinessDescription(
+        text="Quero um sistema para clínicas médicas.",
+    )
+
+    assert description.text == (
+        "Quero um sistema para clínicas médicas."
+    )
+    assert description.language == "pt-BR"
+    assert description.source == "manual"
+
+
+def test_business_description_accepts_custom_values() -> None:
+    description = BusinessDescription(
+        text="Create an ERP.",
+        language="en-US",
+        source="api",
+    )
+
+    assert description.language == "en-US"
+    assert description.source == "api"
+
+
+@pytest.mark.parametrize(
+    ("field_name", "field_value"),
+    [
+        ("text", ""),
+        ("language", "   "),
+        ("source", "\t"),
+    ],
+)
+def test_business_description_rejects_blank_required_text(
+    field_name: str,
+    field_value: str,
+) -> None:
+    data = {
+        "text": "Sistema ERP",
+        "language": "pt-BR",
+        "source": "manual",
+    }
+
+    data[field_name] = field_value
+
+    with pytest.raises(ValidationError):
+        BusinessDescription(**data)
+
+
+def test_business_description_rejects_extra_fields() -> None:
+    with pytest.raises(ValidationError):
+        BusinessDescription(
+            text="Sistema ERP",
+            unknown="value",
+        )
+
+
+def test_business_description_is_immutable() -> None:
+    description = BusinessDescription(
+        text="Sistema ERP",
+    )
+
+    with pytest.raises(ValidationError):
+        description.text = "Novo texto"    

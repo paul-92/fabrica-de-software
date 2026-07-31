@@ -2,6 +2,7 @@
 
 from .models import (
     Actor,
+    BusinessDescription,
     BusinessRule,
     Constraint,
     Entity,
@@ -15,6 +16,7 @@ from .services import RequirementAnalyzer
 
 __all__ = [
     "Actor",
+    "BusinessDescription",
     "BusinessRule",
     "Constraint",
     "Entity",

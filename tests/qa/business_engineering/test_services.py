@@ -1,8 +1,7 @@
 """Testes dos serviços da Business Engineering."""
 
-import pytest
-
 from asep.business_engineering import (
+    BusinessDescription,
     RequirementAnalyzer,
     RequirementPriority,
 )
@@ -10,13 +9,14 @@ from asep.business_engineering import (
 
 def test_requirement_analyzer_creates_requirements_from_sentences() -> None:
     analyzer = RequirementAnalyzer()
-
-    requirements = analyzer.analyze(
-        (
+    description = BusinessDescription(
+        text=(
             "O sistema deve cadastrar clientes. "
             "O gerente deve aprovar pedidos."
         )
     )
+
+    requirements = analyzer.analyze(description)
 
     assert len(requirements) == 2
 
@@ -37,10 +37,11 @@ def test_requirement_analyzer_creates_requirements_from_sentences() -> None:
 
 def test_requirement_analyzer_accepts_line_breaks() -> None:
     analyzer = RequirementAnalyzer()
-
-    requirements = analyzer.analyze(
-        "Cadastrar clientes\nEmitir relatórios\nConsultar pedidos"
+    description = BusinessDescription(
+        text="Cadastrar clientes\nEmitir relatórios\nConsultar pedidos"
     )
+
+    requirements = analyzer.analyze(description)
 
     assert tuple(item.id for item in requirements) == (
         "REQ-001",
@@ -49,34 +50,16 @@ def test_requirement_analyzer_accepts_line_breaks() -> None:
     )
 
 
-@pytest.mark.parametrize(
-    "description",
-    [
-        "",
-        "   ",
-        "\n\t",
-        "...!!!???",
-    ],
-)
-def test_requirement_analyzer_rejects_invalid_description(
-    description: str,
-) -> None:
-    analyzer = RequirementAnalyzer()
-
-    with pytest.raises(ValueError):
-        analyzer.analyze(description)
-
-
 def test_requirement_analyzer_shortens_long_titles() -> None:
     analyzer = RequirementAnalyzer()
-
-    requirements = analyzer.analyze(
-        (
+    description = BusinessDescription(
+        text=(
             "O sistema deve permitir que administradores visualizem "
             "relatórios financeiros completos por período"
         )
     )
 
+    requirements = analyzer.analyze(description)
     requirement = requirements[0]
 
     assert requirement.title.endswith("...")
@@ -85,3 +68,18 @@ def test_requirement_analyzer_shortens_long_titles() -> None:
         "O sistema deve permitir que administradores visualizem "
         "relatórios financeiros completos por período"
     )
+
+
+def test_requirement_analyzer_preserves_description_language() -> None:
+    analyzer = RequirementAnalyzer()
+    description = BusinessDescription(
+        text="Create customers. Generate reports.",
+        language="en-US",
+        source="api",
+    )
+
+    requirements = analyzer.analyze(description)
+
+    assert len(requirements) == 2
+    assert requirements[0].description == "Create customers"
+    assert requirements[1].description == "Generate reports"

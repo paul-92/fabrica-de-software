@@ -20,6 +20,22 @@ class RequirementPriority(StrEnum):
     HIGH = "high"
     CRITICAL = "critical"
 
+class BusinessDescription(_FrozenModel):
+    """Representa a descrição original fornecida pelo usuário."""
+
+    text: str
+    language: str = "pt-BR"
+    source: str = "manual"
+
+    @field_validator("text", "language", "source")
+    @classmethod
+    def text_is_not_blank(cls, value: str) -> str:
+        value = value.strip()
+
+        if not value:
+            raise ValueError("campo obrigatório não pode ser vazio")
+
+        return value
 
 class Requirement(_FrozenModel):
     id: str
@@ -153,4 +169,5 @@ __all__ = [
     "Entity",
     "Constraint",
     "TechnologyPreference",
+    "BusinessDescription",
 ]

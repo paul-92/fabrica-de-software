@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 
 from asep.business_engineering.models import (
+    BusinessDescription,
     Requirement,
     RequirementPriority,
 )
@@ -19,10 +20,13 @@ class RequirementAnalyzer:
 
     _SENTENCE_SEPARATOR = re.compile(r"[.!?\n]+")
 
-    def analyze(self, description: str) -> tuple[Requirement, ...]:
+    def analyze(
+        self,
+        description: BusinessDescription,
+    ) -> tuple[Requirement, ...]:
         """Analisa uma descrição e retorna requisitos estruturados."""
 
-        normalized_description = description.strip()
+        normalized_description = description.text.strip()
 
         if not normalized_description:
             raise ValueError("description não pode ser vazia")
