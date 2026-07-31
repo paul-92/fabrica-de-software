@@ -12,10 +12,11 @@ from .models import (
     TechnologyPreference,
     UseCase,
 )
-from .services import RequirementAnalyzer
+from .services import BlueprintBuilder, RequirementAnalyzer
 
 __all__ = [
     "Actor",
+    "BlueprintBuilder",
     "BusinessDescription",
     "BusinessRule",
     "Constraint",

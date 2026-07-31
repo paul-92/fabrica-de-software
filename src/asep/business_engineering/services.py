@@ -6,10 +6,10 @@ import re
 
 from asep.business_engineering.models import (
     BusinessDescription,
+    ProjectBlueprint,
     Requirement,
     RequirementPriority,
 )
-
 
 class RequirementAnalyzer:
     """Transforma uma descrição de negócio em requisitos estruturados.
@@ -68,7 +68,37 @@ class RequirementAnalyzer:
         shortened = sentence[:maximum_length].rstrip()
         return f"{shortened}..."
 
+class BlueprintBuilder:
+    """Constrói um ProjectBlueprint a partir de uma descrição de negócio."""
 
+    def __init__(
+        self,
+        requirement_analyzer: RequirementAnalyzer | None = None,
+    ) -> None:
+        self._requirement_analyzer = (
+            requirement_analyzer or RequirementAnalyzer()
+        )
+
+    def build(
+        self,
+        project_name: str,
+        description: BusinessDescription,
+    ) -> ProjectBlueprint:
+        """Cria um blueprint inicial com requisitos analisados."""
+
+        normalized_project_name = project_name.strip()
+
+        if not normalized_project_name:
+            raise ValueError("project_name não pode ser vazio")
+
+        requirements = self._requirement_analyzer.analyze(description)
+
+        return ProjectBlueprint(
+            project_name=normalized_project_name,
+            description=description.text,
+            requirements=requirements,
+        )
 __all__ = [
+    "BlueprintBuilder",
     "RequirementAnalyzer",
 ]

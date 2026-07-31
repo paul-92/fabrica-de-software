@@ -1,11 +1,12 @@
 """Testes dos serviços da Business Engineering."""
+import pytest
 
 from asep.business_engineering import (
+    BlueprintBuilder,
     BusinessDescription,
     RequirementAnalyzer,
     RequirementPriority,
 )
-
 
 def test_requirement_analyzer_creates_requirements_from_sentences() -> None:
     analyzer = RequirementAnalyzer()
@@ -83,3 +84,74 @@ def test_requirement_analyzer_preserves_description_language() -> None:
     assert len(requirements) == 2
     assert requirements[0].description == "Create customers"
     assert requirements[1].description == "Generate reports"
+
+def test_blueprint_builder_creates_project_blueprint() -> None:
+    builder = BlueprintBuilder()
+    description = BusinessDescription(
+        text=(
+            "O sistema deve cadastrar clientes. "
+            "O gerente deve aprovar pedidos."
+        )
+    )
+
+    blueprint = builder.build(
+        project_name="CRM",
+        description=description,
+    )
+
+    assert blueprint.project_name == "CRM"
+    assert blueprint.description == description.text
+    assert len(blueprint.requirements) == 2
+    assert blueprint.requirements[0].id == "REQ-001"
+    assert blueprint.requirements[1].id == "REQ-002"
+    assert blueprint.actors == ()
+    assert blueprint.use_cases == ()
+    assert blueprint.business_rules == ()
+    assert blueprint.entities == ()
+    assert blueprint.constraints == ()
+    assert blueprint.technology_preferences == ()
+
+
+def test_blueprint_builder_normalizes_project_name() -> None:
+    builder = BlueprintBuilder()
+    description = BusinessDescription(
+        text="O sistema deve emitir relatórios."
+    )
+
+    blueprint = builder.build(
+        project_name="  ERP Financeiro  ",
+        description=description,
+    )
+
+    assert blueprint.project_name == "ERP Financeiro"
+
+
+def test_blueprint_builder_rejects_blank_project_name() -> None:
+    builder = BlueprintBuilder()
+    description = BusinessDescription(
+        text="O sistema deve cadastrar clientes."
+    )
+
+    with pytest.raises(ValueError):
+        builder.build(
+            project_name="   ",
+            description=description,
+        )
+
+
+def test_blueprint_builder_uses_injected_requirement_analyzer() -> None:
+    analyzer = RequirementAnalyzer()
+    builder = BlueprintBuilder(requirement_analyzer=analyzer)
+    description = BusinessDescription(
+        text="O sistema deve consultar pedidos."
+    )
+
+    blueprint = builder.build(
+        project_name="Pedidos",
+        description=description,
+    )
+
+    assert len(blueprint.requirements) == 1
+    assert blueprint.requirements[0].description == (
+        "O sistema deve consultar pedidos"
+    )    
