@@ -165,6 +165,27 @@ Essas responsabilidades pertencem a outros módulos da ASEP.
 
 ---
 
+# Serviços
+
+A camada de serviços da Business Engineering é responsável por transformar informações de negócio em objetos de domínio.
+
+## RequirementAnalyzer
+
+O `RequirementAnalyzer` é o primeiro serviço implementado.
+
+Sua responsabilidade é converter descrições de negócio em uma coleção estruturada de objetos `Requirement`.
+
+Características da primeira implementação:
+
+- determinística;
+- independente de IA;
+- independente de provedores externos;
+- produz sempre a mesma saída para a mesma entrada;
+- gera identificadores previsíveis;
+- valida descrições inválidas.
+
+Essa implementação servirá como base para futuras integrações com modelos de linguagem, mantendo a mesma interface pública.
+
 # Roadmap
 
 A evolução da Business Engineering seguirá as seguintes etapas:
