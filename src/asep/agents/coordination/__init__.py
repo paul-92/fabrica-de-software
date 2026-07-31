@@ -1,4 +1,5 @@
 """API pública da coordenação determinística de agentes."""
+from asep.agents.coordination.adapter import AgentCoordinatorAdapter
 
 from asep.agents.coordination.aggregator import (
     DeterministicResultAggregator,
@@ -42,6 +43,7 @@ __all__ = [
     "AgentAssignmentError",
     "AgentCapabilityResolver",
     "AgentCoordinator",
+    "AgentCoordinatorAdapter",
     "AgentExecutionQueue",
     "AgentExecutionResultAggregator",
     "AgentSelectionPolicy",
