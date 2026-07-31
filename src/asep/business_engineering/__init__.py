@@ -1,5 +1,6 @@
 """Business Engineering."""
 
+from .contracts import PlanningAdapter
 from .models import (
     Actor,
     BusinessDescription,
@@ -21,6 +22,7 @@ __all__ = [
     "BusinessRule",
     "Constraint",
     "Entity",
+    "PlanningAdapter",
     "ProjectBlueprint",
     "Requirement",
     "RequirementAnalyzer",

@@ -186,6 +186,31 @@ Características da primeira implementação:
 
 Essa implementação servirá como base para futuras integrações com modelos de linguagem, mantendo a mesma interface pública.
 
+---
+
+# Contratos
+
+A Business Engineering não depende diretamente do Planning Engine.
+
+A integração ocorre por meio de contratos (Ports), seguindo os princípios da Arquitetura Hexagonal.
+
+## PlanningAdapter
+
+O `PlanningAdapter` define o contrato que qualquer mecanismo de planejamento deve implementar para receber um `ProjectBlueprint` e produzir um plano de execução.
+
+Responsabilidades:
+
+- receber um `ProjectBlueprint`;
+- produzir um plano de execução;
+- abstrair a implementação do Planning Engine.
+
+Benefícios:
+
+- baixo acoplamento;
+- facilidade de testes;
+- possibilidade de múltiplas implementações;
+- independência entre Business Engineering e Planning.
+
 # Roadmap
 
 A evolução da Business Engineering seguirá as seguintes etapas:
@@ -243,43 +268,11 @@ Integração com os Agents.
 
 ## Sprint 10.7
 
-Pipeline completo:
+- Contrato de integração com o Planning
+- PlanningAdapter
+- Foundation para integração entre módulos
 
-Business Description
-
-↓
-
-Business Engineering
-
-↓
-
-ProjectBlueprint
-
-↓
-
-Planning
-
-↓
-
-ExecutionPlan
-
-↓
-
-Agents
-
-↓
-
-Generation
-
-↓
-
-Quality Assurance
-
-↓
-
-Release
-
----
+_Status: Concluída_
 
 # Princípios Arquiteturais
 
