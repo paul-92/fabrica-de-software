@@ -211,6 +211,59 @@ Benefícios:
 - possibilidade de múltiplas implementações;
 - independência entre Business Engineering e Planning.
 
+---
+
+# Integração com o Planning
+
+A integração entre a Business Engineering e o Planning é realizada por meio do `PlanningEngineAdapter`.
+
+Fluxo da integração:
+
+BusinessDescription
+
+↓
+
+RequirementAnalyzer
+
+↓
+
+ProjectBlueprint
+
+↓
+
+PlanningEngineAdapter
+
+↓
+
+PlanningRequest
+
+↓
+
+PlanningEngine
+
+↓
+
+PlanningResult
+
+↓
+
+ExecutionPlan
+
+## Responsabilidades do PlanningEngineAdapter
+
+- converter um `ProjectBlueprint` em um `PlanningRequest`;
+- transformar requisitos em etapas de workflow;
+- preservar metadados do projeto;
+- delegar a criação do plano ao `PlanningEngine`;
+- retornar um `PlanningResult`.
+
+## Benefícios
+
+- reutiliza integralmente o Planning Engine existente;
+- evita duplicação da lógica de planejamento;
+- mantém baixo acoplamento entre os módulos;
+- facilita futuras integrações com Agents e Runtime.
+
 # Roadmap
 
 A evolução da Business Engineering seguirá as seguintes etapas:
@@ -271,6 +324,15 @@ Integração com os Agents.
 - Contrato de integração com o Planning
 - PlanningAdapter
 - Foundation para integração entre módulos
+
+_Status: Concluída_
+
+## Sprint 11.2
+
+- Integração Business Engineering ↔ Planning
+- PlanningEngineAdapter
+- Conversão de ProjectBlueprint para PlanningRequest
+- Primeira integração funcional entre módulos
 
 _Status: Concluída_
 
