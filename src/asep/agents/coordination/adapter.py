@@ -27,14 +27,15 @@ class AgentCoordinatorAdapter:
 
         context = CoordinationContext(
             execution_plan=planning_result.plan,
-        metadata={
-    "plan_id": planning_result.plan.plan_id,
-    "planning_warnings": list(planning_result.warnings),
-    "planning_validation_messages": list(
-        planning_result.validation_messages
-    ),
-},  
-)
+            metadata={
+                **dict(planning_result.plan.metadata),
+                "plan_id": planning_result.plan.plan_id,
+                "planning_warnings": list(planning_result.warnings),
+                "planning_validation_messages": list(
+                    planning_result.validation_messages
+                ),
+            },
+        )
 
         return self._coordinator.coordinate(context)
 
