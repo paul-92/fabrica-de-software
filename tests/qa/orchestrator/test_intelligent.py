@@ -2,11 +2,29 @@
 
 from __future__ import annotations
 
+import json
+
 from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
-
+from asep.agents import (
+    AgentExecutionService,
+    InMemoryAgentRegistry,
+)
+from asep.agents.coordination import (
+    AgentCoordinator,
+    AgentCoordinatorAdapter,
+)
+from asep.agents.developer import DeveloperAgent
+from asep.timeline import (
+    InMemoryTimelineRepository,
+    TimelineRecorder,
+)
+from asep.tools.builtin import ListDirectoryTool
+from asep.tools.execution_service import ToolExecutionService
+from asep.tools.models import ToolId
+from asep.tools.registry import InMemoryToolRegistry
 from asep.agents import (
     AgentError,
     AgentExecutionResult,
@@ -203,8 +221,8 @@ from asep.planning import (
     ExecutionPlan,
     PlanningResult,
     PlanningStatistics,
+    PlanStep,
 )
-
 
 class SpyPlanningAdapter:
     """Planning Adapter determinístico para testar o orquestrador."""
@@ -413,3 +431,277 @@ def test_intelligent_orchestrator_is_blocked_when_quality_gate_blocks(
     assert len(result.gate_results) == 1
     assert result.gate_results[0].decision is GateDecision.BLOCKED
     assert result.status is IntelligentExecutionStatus.BLOCKED
+
+def test_intelligent_orchestrator_maps_failed_coordination_to_failed(
+    tmp_path: Path,
+) -> None:
+    planning_adapter = SpyPlanningAdapter()
+
+    class FailedCoordinatorAdapter:
+        def coordinate(
+            self,
+            planning_result: PlanningResult,
+        ) -> CoordinationResult:
+            return CoordinationResult(
+                plan_id=planning_result.plan.plan_id,
+                run_id="run-failed",
+                status=CoordinationStatus.FAILED,
+                assignments=(),
+                results=(),
+                output={},
+                statistics=CoordinationStatistics(
+                    assignments_total=0,
+                    completed_total=0,
+                    failed_total=1,
+                    agents_used=0,
+                    duration_seconds=0,
+                    aggregation_duration_seconds=0,
+                ),
+            )
+
+    orchestrator = IntelligentOrchestratorService(
+        planning_adapter=planning_adapter,
+        coordinator_adapter=FailedCoordinatorAdapter(),
+        artifact_collector=SpyArtifactCollector(),
+    )
+
+    request = IntelligentExecutionRequest(
+        run_id="run-failed",
+        project_id="project-1",
+        project_name="CRM",
+        gate_id="default-quality-gate",
+        description=BusinessDescription(
+            text="O sistema deve cadastrar clientes."
+        ),
+        artifacts_root=tmp_path,
+    )
+
+    result = orchestrator.execute(request)
+
+    assert result.status is IntelligentExecutionStatus.FAILED
+
+
+def test_intelligent_orchestrator_maps_partial_coordination_to_partial(
+    tmp_path: Path,
+) -> None:
+    planning_adapter = SpyPlanningAdapter()
+
+    class PartialCoordinatorAdapter:
+        def coordinate(
+            self,
+            planning_result: PlanningResult,
+        ) -> CoordinationResult:
+            return CoordinationResult(
+                plan_id=planning_result.plan.plan_id,
+                run_id="run-partial",
+                status=CoordinationStatus.PARTIAL,
+                assignments=(),
+                results=(),
+                output={},
+                statistics=CoordinationStatistics(
+                    assignments_total=1,
+                    completed_total=0,
+                    failed_total=1,
+                    agents_used=1,
+                    duration_seconds=0,
+                    aggregation_duration_seconds=0,
+                ),
+            )
+
+    orchestrator = IntelligentOrchestratorService(
+        planning_adapter=planning_adapter,
+        coordinator_adapter=PartialCoordinatorAdapter(),
+        artifact_collector=SpyArtifactCollector(),
+    )
+
+    request = IntelligentExecutionRequest(
+        run_id="run-partial",
+        project_id="project-1",
+        project_name="CRM",
+        gate_id="default-quality-gate",
+        description=BusinessDescription(
+            text="O sistema deve cadastrar clientes."
+        ),
+        artifacts_root=tmp_path,
+    )
+
+    result = orchestrator.execute(request)
+
+    assert result.status is IntelligentExecutionStatus.PARTIAL   
+
+def test_intelligent_orchestrator_executes_real_pipeline_end_to_end(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    artifacts_root = tmp_path / "artifacts"
+
+    workspace.mkdir()
+    artifacts_root.mkdir()
+
+    (workspace / "README.md").write_text(
+        "# Projeto gerado pela ASEP",
+        encoding="utf-8",
+    )
+
+    tool_registry = InMemoryToolRegistry()
+    tool_registry.register(ListDirectoryTool())
+
+    timeline_repository = InMemoryTimelineRepository()
+    counter = 0
+
+    def event_id() -> str:
+        nonlocal counter
+        counter += 1
+        return f"event-e2e-{counter}"
+
+    timeline_recorder = TimelineRecorder(
+        timeline_repository,
+        clock=lambda: NOW,
+        id_generator=event_id,
+    )
+
+    tool_executor = ToolExecutionService(
+        tool_registry,
+        timeline=timeline_recorder,
+        clock=lambda: NOW,
+    )
+
+    developer = DeveloperAgent(
+        tool_executor=tool_executor,
+    )
+
+    agent_registry = InMemoryAgentRegistry()
+    agent_registry.register(developer)
+
+    runtime = AgentExecutionService(
+        agent_registry,
+        timeline=timeline_recorder,
+        tool_executor=tool_executor,
+        clock=lambda: NOW,
+    )
+
+    coordinator = AgentCoordinator(
+        agent_registry,
+        runtime,
+        timeline=timeline_recorder,
+        clock=lambda: NOW,
+    )
+
+    coordinator_adapter = AgentCoordinatorAdapter(
+        coordinator=coordinator,
+    )
+
+    class ToolPlanningAdapter:
+        def create_execution_plan(
+            self,
+            blueprint: ProjectBlueprint,
+        ) -> PlanningResult:
+            return PlanningResult(
+                plan=ExecutionPlan(
+                    plan_id="plan-intelligent-e2e",
+                    goal=blueprint.description,
+                    steps=(
+                        PlanStep(
+                            step_id="inspect-workspace",
+                            description="Listar arquivos do projeto",
+                            required_capability="directory",
+                            tool_id=ToolId(
+                                value="list-directory",
+                            ),
+                            agent_id=AgentId(
+                                value="developer",
+                            ),
+                        ),
+                    ),
+                    estimated_cost=1,
+                    estimated_duration_seconds=60,
+                    created_at=NOW,
+                    metadata={
+                        "workspace": str(workspace),
+                        "options": {
+                            "directory": ".",
+                        },
+                    },
+                ),
+                warnings=(),
+                validation_messages=(
+                    "Plano E2E validado.",
+                ),
+                statistics=PlanningStatistics(
+                    total_steps=1,
+                    dependency_count=0,
+                    maximum_depth=1,
+                    estimated_cost=1,
+                    estimated_duration_seconds=60,
+                    memory_entries_considered=0,
+                ),
+            )
+
+    orchestrator = IntelligentOrchestratorService(
+        planning_adapter=ToolPlanningAdapter(),
+        coordinator_adapter=coordinator_adapter,
+    )
+
+    request = IntelligentExecutionRequest(
+        run_id="run-intelligent-e2e",
+        project_id="project-e2e",
+        project_name="Projeto E2E",
+        gate_id="quality-gate-e2e",
+        description=BusinessDescription(
+            text="Inspecionar os arquivos do projeto."
+        ),
+        artifacts_root=artifacts_root,
+    )
+
+    result = orchestrator.execute(request)
+
+    assert result.status is IntelligentExecutionStatus.COMPLETED
+
+    assert result.blueprint is not None
+    assert result.blueprint.project_name == "Projeto E2E"
+
+    assert result.planning_result is not None
+    assert (
+        result.planning_result.plan.plan_id
+        == "plan-intelligent-e2e"
+    )
+
+    assert result.coordination_result is not None
+    assert (
+        result.coordination_result.status
+        is CoordinationStatus.COMPLETED
+    )
+
+    assert len(result.artifact_references) == 1
+
+    artifact_reference = result.artifact_references[0]
+
+    assert artifact_reference.project_id == "project-e2e"
+    assert artifact_reference.stage_id == "inspect-workspace"
+    assert artifact_reference.agent_id == "developer"
+    assert artifact_reference.path == (
+        "pipeline/inspect-workspace.json"
+    )
+
+    persisted_artifact = (
+        artifacts_root
+        / "pipeline"
+        / "inspect-workspace.json"
+    )
+
+    assert persisted_artifact.is_file()
+
+    artifact_content = json.loads(
+        persisted_artifact.read_text(encoding="utf-8")
+    )
+
+    assert {
+        "path": "README.md",
+        "type": "file",
+    } in artifact_content["entries"]
+
+    assert len(result.gate_results) == 1
+    assert (
+        result.gate_results[0].decision
+        is GateDecision.APPROVED
+    )
