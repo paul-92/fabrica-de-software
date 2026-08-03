@@ -21,7 +21,11 @@ from asep.timeline import (
     InMemoryTimelineRepository,
     TimelineRecorder,
 )
-from asep.tools.builtin import ListDirectoryTool
+from asep.tools.builtin import (
+    ListDirectoryTool,
+    RunTestsTool,
+    WriteFileTool,
+)
 from asep.tools.execution_service import ToolExecutionService
 from asep.tools.models import ToolId
 from asep.tools.registry import InMemoryToolRegistry
@@ -705,3 +709,387 @@ def test_intelligent_orchestrator_executes_real_pipeline_end_to_end(
         result.gate_results[0].decision
         is GateDecision.APPROVED
     )
+def test_intelligent_orchestrator_blocks_generated_code_when_tests_fail(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    artifacts_root = tmp_path / "artifacts"
+
+    workspace.mkdir()
+    artifacts_root.mkdir()
+
+    tool_registry = InMemoryToolRegistry()
+    tool_registry.register(WriteFileTool())
+    tool_registry.register(RunTestsTool())
+
+    timeline_repository = InMemoryTimelineRepository()
+    counter = 0
+
+    def event_id() -> str:
+        nonlocal counter
+        counter += 1
+        return f"event-generation-gate-{counter}"
+
+    timeline_recorder = TimelineRecorder(
+        timeline_repository,
+        clock=lambda: NOW,
+        id_generator=event_id,
+    )
+
+    tool_executor = ToolExecutionService(
+        tool_registry,
+        timeline=timeline_recorder,
+        clock=lambda: NOW,
+    )
+
+    developer = DeveloperAgent(
+        tool_executor=tool_executor,
+    )
+
+    agent_registry = InMemoryAgentRegistry()
+    agent_registry.register(developer)
+
+    runtime = AgentExecutionService(
+        agent_registry,
+        timeline=timeline_recorder,
+        tool_executor=tool_executor,
+        clock=lambda: NOW,
+    )
+
+    coordinator = AgentCoordinator(
+        agent_registry,
+        runtime,
+        timeline=timeline_recorder,
+        clock=lambda: NOW,
+    )
+
+    coordinator_adapter = AgentCoordinatorAdapter(
+        coordinator=coordinator,
+    )
+
+    class FailingGenerationPlanningAdapter:
+        def create_execution_plan(
+            self,
+            blueprint: ProjectBlueprint,
+        ) -> PlanningResult:
+            return PlanningResult(
+                plan=ExecutionPlan(
+                    plan_id="plan-generation-gate",
+                    goal=blueprint.description,
+                    steps=(
+                        PlanStep(
+                            step_id="create-calculator",
+                            description="Criar calculadora",
+                            required_capability="write_file",
+                            tool_id=ToolId(
+                                value="write-file",
+                            ),
+                            agent_id=AgentId(
+                                value="developer",
+                            ),
+                            metadata={
+                                "write_path": "calculator.py",
+                                "content": (
+                                    "def add(a: int, b: int) -> int:\n"
+                                    "    return a - b\n"
+                                ),
+                                "overwrite": False,
+                            },
+                        ),
+                        PlanStep(
+                            step_id="create-calculator-test",
+                            description="Criar teste da calculadora",
+                            required_capability="write_file",
+                            tool_id=ToolId(
+                                value="write-file",
+                            ),
+                            agent_id=AgentId(
+                                value="developer",
+                            ),
+                            metadata={
+                                "write_path": (
+                                    "tests/test_calculator.py"
+                                ),
+                                "content": (
+                                    "from calculator import add\n\n\n"
+                                    "def test_add() -> None:\n"
+                                    "    assert add(2, 3) == 5\n"
+                                ),
+                                "overwrite": False,
+                            },
+                        ),
+                        PlanStep(
+                            step_id="run-generated-tests",
+                            description="Validar o software gerado",
+                            required_capability="test",
+                            tool_id=ToolId(
+                                value="run-tests",
+                            ),
+                            agent_id=AgentId(
+                                value="developer",
+                            ),
+                            metadata={
+                                "test_paths": [
+                                    "tests/test_calculator.py",
+                                ],
+                            },
+                        ),
+                    ),
+                    estimated_cost=3,
+                    estimated_duration_seconds=180,
+                    created_at=NOW,
+                    metadata={
+                        "workspace": str(workspace),
+                        "options": {},
+                    },
+                ),
+                warnings=(),
+                validation_messages=(
+                    "Plano de geração validado.",
+                ),
+                statistics=PlanningStatistics(
+                    total_steps=3,
+                    dependency_count=0,
+                    maximum_depth=1,
+                    estimated_cost=3,
+                    estimated_duration_seconds=180,
+                    memory_entries_considered=0,
+                ),
+            )
+
+    orchestrator = IntelligentOrchestratorService(
+        planning_adapter=FailingGenerationPlanningAdapter(),
+        coordinator_adapter=coordinator_adapter,
+    )
+
+    request = IntelligentExecutionRequest(
+        run_id="run-generation-gate",
+        project_id="project-generation-gate",
+        project_name="Calculator",
+        gate_id="generated-software-quality-gate",
+        description=BusinessDescription(
+            text="Criar uma calculadora com testes automatizados."
+        ),
+        artifacts_root=artifacts_root,
+    )
+
+    result = orchestrator.execute(request)
+
+    assert (workspace / "calculator.py").is_file()
+
+    assert (
+        workspace
+        / "tests"
+        / "test_calculator.py"
+    ).is_file()
+
+    assert result.coordination_result is not None
+    assert len(result.coordination_result.results) == 3
+
+    test_execution = result.coordination_result.results[2]
+
+    assert test_execution.agent_result is not None
+    assert (
+        test_execution.agent_result.status
+        is AgentResultStatus.FAILED
+    )
+
+    assert any(
+        gate.decision is GateDecision.BLOCKED
+        for gate in result.gate_results
+    )
+
+    assert (
+        result.status
+        is IntelligentExecutionStatus.BLOCKED
+    )
+
+def test_intelligent_orchestrator_generates_and_validates_software_end_to_end(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    artifacts_root = tmp_path / "artifacts"
+
+    workspace.mkdir()
+    artifacts_root.mkdir()
+
+    tool_registry = InMemoryToolRegistry()
+    tool_registry.register(WriteFileTool())
+    tool_registry.register(RunTestsTool())
+
+    timeline_repository = InMemoryTimelineRepository()
+    counter = 0
+
+    def event_id() -> str:
+        nonlocal counter
+        counter += 1
+        return f"event-software-generation-{counter}"
+
+    timeline_recorder = TimelineRecorder(
+        timeline_repository,
+        clock=lambda: NOW,
+        id_generator=event_id,
+    )
+
+    tool_executor = ToolExecutionService(
+        tool_registry,
+        timeline=timeline_recorder,
+        clock=lambda: NOW,
+    )
+
+    developer = DeveloperAgent(
+        tool_executor=tool_executor,
+    )
+
+    agent_registry = InMemoryAgentRegistry()
+    agent_registry.register(developer)
+
+    runtime = AgentExecutionService(
+        agent_registry,
+        timeline=timeline_recorder,
+        tool_executor=tool_executor,
+        clock=lambda: NOW,
+    )
+
+    coordinator = AgentCoordinator(
+        agent_registry,
+        runtime,
+        timeline=timeline_recorder,
+        clock=lambda: NOW,
+    )
+
+    coordinator_adapter = AgentCoordinatorAdapter(
+        coordinator=coordinator,
+    )
+
+    class SoftwareGenerationPlanningAdapter:
+        def create_execution_plan(
+            self,
+            blueprint: ProjectBlueprint,
+        ) -> PlanningResult:
+            return PlanningResult(
+                plan=ExecutionPlan(
+                    plan_id="plan-software-generation-e2e",
+                    goal=blueprint.description,
+                    steps=(
+                        PlanStep(
+                            step_id="create-calculator",
+                            description="Criar calculadora",
+                            required_capability="write_file",
+                            tool_id=ToolId(value="write-file"),
+                            agent_id=AgentId(value="developer"),
+                            metadata={
+                                "write_path": "calculator.py",
+                                "content": (
+                                    "def add(a: int, b: int) -> int:\n"
+                                    "    return a + b\n"
+                                ),
+                                "overwrite": False,
+                            },
+                        ),
+                        PlanStep(
+                            step_id="create-calculator-test",
+                            description="Criar teste da calculadora",
+                            required_capability="write_file",
+                            tool_id=ToolId(value="write-file"),
+                            agent_id=AgentId(value="developer"),
+                            metadata={
+                                "write_path": (
+                                    "tests/test_calculator.py"
+                                ),
+                                "content": (
+                                    "from calculator import add\n\n\n"
+                                    "def test_add() -> None:\n"
+                                    "    assert add(2, 3) == 5\n"
+                                ),
+                                "overwrite": False,
+                            },
+                        ),
+                        PlanStep(
+                            step_id="run-generated-tests",
+                            description="Executar testes do software gerado",
+                            required_capability="test",
+                            tool_id=ToolId(value="run-tests"),
+                            agent_id=AgentId(value="developer"),
+                            metadata={
+                                "test_paths": [
+                                    "tests/test_calculator.py",
+                                ],
+                            },
+                        ),
+                    ),
+                    estimated_cost=3,
+                    estimated_duration_seconds=180,
+                    created_at=NOW,
+                    metadata={
+                        "workspace": str(workspace),
+                        "options": {},
+                    },
+                ),
+                warnings=(),
+                validation_messages=(
+                    "Plano de geração validado.",
+                ),
+                statistics=PlanningStatistics(
+                    total_steps=3,
+                    dependency_count=0,
+                    maximum_depth=1,
+                    estimated_cost=3,
+                    estimated_duration_seconds=180,
+                    memory_entries_considered=0,
+                ),
+            )
+
+    orchestrator = IntelligentOrchestratorService(
+        planning_adapter=SoftwareGenerationPlanningAdapter(),
+        coordinator_adapter=coordinator_adapter,
+    )
+
+    request = IntelligentExecutionRequest(
+        run_id="run-software-generation-e2e",
+        project_id="project-software-generation",
+        project_name="Calculator",
+        gate_id="software-generation-quality-gate",
+        description=BusinessDescription(
+            text="Criar uma calculadora com testes automatizados."
+        ),
+        artifacts_root=artifacts_root,
+    )
+
+    result = orchestrator.execute(request)
+
+    assert result.status is IntelligentExecutionStatus.COMPLETED
+
+    assert result.blueprint is not None
+    assert result.blueprint.project_name == "Calculator"
+
+    assert result.planning_result is not None
+    assert (
+        result.planning_result.plan.plan_id
+        == "plan-software-generation-e2e"
+    )
+
+    assert result.coordination_result is not None
+    assert (
+        result.coordination_result.status
+        is CoordinationStatus.COMPLETED
+    )
+
+    calculator = workspace / "calculator.py"
+    calculator_test = workspace / "tests" / "test_calculator.py"
+
+    assert calculator.is_file()
+    assert calculator_test.is_file()
+
+    assert calculator.read_text(encoding="utf-8") == (
+        "def add(a: int, b: int) -> int:\n"
+        "    return a + b\n"
+    )
+
+    assert len(result.artifact_references) == 3
+    assert len(result.gate_results) == 3
+
+    assert all(
+        gate.decision is GateDecision.APPROVED
+        for gate in result.gate_results
+    )    

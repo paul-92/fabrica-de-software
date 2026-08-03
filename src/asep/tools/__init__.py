@@ -6,6 +6,7 @@ from asep.tools.builtin import (
     ReadFileTool,
     RunTestsTool,
     SearchFilesTool,
+    WriteFileTool,
 )
 from asep.tools.contracts import Tool, ToolExecutor
 from asep.tools.exceptions import (
@@ -76,5 +77,6 @@ __all__ = [
     "ToolTimeoutError",
     "ToolValidationError",
     "ToolValidator",
+    "WriteFileTool",
 ]
 

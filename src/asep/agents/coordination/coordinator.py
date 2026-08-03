@@ -224,13 +224,17 @@ class AgentCoordinator:
                     capability=AgentCapability(
                         id=assignment.required_capability
                     ),
-                    input={
-                        "plan_step": step.model_dump(mode="json"),
-                        "memory": [
-                            entry.model_dump(mode="json")
-                            for entry in context.memory
-                        ],
-                    },
+              input={
+                    "plan_step": step.model_dump(mode="json"),
+                    "memory": [
+                        entry.model_dump(mode="json")
+                        for entry in context.memory
+                    ],
+                    "previous_results": [
+                        previous.model_dump(mode="json")
+                        for previous in results
+                    ],
+                },
                     context={
                         "objective": step.description,
                         "workflow": dict(context.workflow),

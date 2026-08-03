@@ -48,7 +48,6 @@ def _success(
         attempts=context.attempt,
     )
 
-
 class ReadFileTool:
     metadata = ToolMetadata(
         id=ToolId(value="read-file"),
@@ -60,29 +59,121 @@ class ReadFileTool:
         capabilities=(ToolCapability(id="read_file"),),
     )
 
-    def execute(self, request: ToolRequest, context: ToolContext) -> ToolResult:
+    def execute(
+        self,
+        request: ToolRequest,
+        context: ToolContext,
+    ) -> ToolResult:
         path = resolve_workspace_path(
-            context.workspace, request.payload.get("path", "")
+            context.workspace,
+            request.payload.get("path", ""),
         )
+
         if not path.is_file():
             raise ToolExecutionError(
-                str(request.tool_id), error_type="NotAFile"
+                str(request.tool_id),
+                error_type="NotAFile",
             )
+
         try:
-            content = path.read_text(encoding="utf-8")
+            content = path.read_text(
+                encoding="utf-8",
+            )
         except UnicodeDecodeError as exc:
             raise ToolExecutionError(
-                str(request.tool_id), error_type="InvalidUtf8"
+                str(request.tool_id),
+                error_type="InvalidUtf8",
             ) from exc
+
         return _success(
             request,
             context,
             {
-                "path": path.relative_to(context.workspace).as_posix(),
+                "path": path.relative_to(
+                    context.workspace
+                ).as_posix(),
                 "content": content,
             },
         )
 
+class WriteFileTool:
+    metadata = ToolMetadata(
+        id=ToolId(value="write-file"),
+        name="Write File",
+        description="Escreve um arquivo UTF-8 dentro do workspace.",
+        version="1.0.0",
+        author="ASEP",
+        category="filesystem",
+        capabilities=(ToolCapability(id="write_file"),),
+    )
+
+    def execute(
+        self,
+        request: ToolRequest,
+        context: ToolContext,
+    ) -> ToolResult:
+        relative_path = request.payload.get("path", "")
+        content = request.payload.get("content")
+        overwrite = request.payload.get("overwrite", False)
+
+        if not isinstance(content, str):
+            raise ToolExecutionError(
+                str(request.tool_id),
+                error_type="InvalidContent",
+            )
+
+        if not isinstance(overwrite, bool):
+            raise ToolExecutionError(
+                str(request.tool_id),
+                error_type="InvalidOverwriteFlag",
+            )
+
+        path = resolve_workspace_path(
+            context.workspace,
+            relative_path,
+            must_exist=False,
+        )
+
+        if path.exists() and not path.is_file():
+            raise ToolExecutionError(
+                str(request.tool_id),
+                error_type="NotAFile",
+            )
+
+        if path.exists() and not overwrite:
+            raise ToolExecutionError(
+                str(request.tool_id),
+                error_type="FileAlreadyExists",
+            )
+
+        try:
+            path.parent.mkdir(
+                parents=True,
+                exist_ok=True,
+            )
+            path.write_text(
+                content,
+                encoding="utf-8",
+            )
+        except OSError as exc:
+            raise ToolExecutionError(
+                str(request.tool_id),
+                error_type="WriteFailed",
+            ) from exc
+
+        return _success(
+            request,
+            context,
+            {
+                "path": path.relative_to(
+                    context.workspace
+                ).as_posix(),
+                "bytes_written": len(
+                    content.encode("utf-8")
+                ),
+                "overwritten": overwrite,
+            },
+        )
 
 class ListDirectoryTool:
     metadata = ToolMetadata(
@@ -296,4 +387,5 @@ __all__ = [
     "ReadFileTool",
     "RunTestsTool",
     "SearchFilesTool",
+    "WriteFileTool",
 ]

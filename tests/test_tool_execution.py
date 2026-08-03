@@ -34,6 +34,9 @@ from asep.tools import (
     ToolResult,
     ToolRetryExhaustedError,
     ToolValidationError,
+    WriteFileTool,
+    ToolSecurityError,
+    
 )
 
 NOW = datetime(2026, 7, 30, 12, 0, tzinfo=UTC)
@@ -332,3 +335,140 @@ def test_agent_runtime_delegates_tools_only_by_contract(tmp_path: Path) -> None:
     with pytest.raises(AgentExecutionValidationError):
         unconfigured.execute_tool(request)
 
+def write_file_request(
+    tmp_path: Path,
+    *,
+    path: str,
+    content: str,
+    overwrite: bool = False,
+) -> ToolRequest:
+    return ToolRequest(
+        execution_id=f"write-{path}",
+        tool_id=ToolId(value="write-file"),
+        capability=ToolCapability(id="write_file"),
+        workspace=tmp_path,
+        payload={
+            "path": path,
+            "content": content,
+            "overwrite": overwrite,
+        },
+        workflow_execution_id="run-write",
+    )
+
+
+def write_file_runtime() -> ToolExecutionService:
+    registry = InMemoryToolRegistry()
+    registry.register(WriteFileTool())
+
+    return ToolExecutionService(
+        registry,
+        timeline=TimelineRecorder(
+            InMemoryTimelineRepository(),
+        ),
+    )
+
+
+def test_write_file_tool_creates_utf8_file(
+    tmp_path: Path,
+) -> None:
+    service = write_file_runtime()
+
+    result = service.execute(
+        write_file_request(
+            tmp_path,
+            path="src/app.py",
+            content='print("ASEP")\n',
+        )
+    )
+
+    target = tmp_path / "src" / "app.py"
+
+    assert result.status is ToolExecutionStatus.SUCCEEDED
+    assert target.is_file()
+    assert target.read_text(encoding="utf-8") == 'print("ASEP")\n'
+    assert result.output["path"] == "src/app.py"
+    assert result.output["bytes_written"] == len(
+        'print("ASEP")\n'.encode("utf-8")
+    )
+    assert result.output["overwritten"] is False
+
+
+def test_write_file_tool_creates_parent_directories(
+    tmp_path: Path,
+) -> None:
+    service = write_file_runtime()
+
+    service.execute(
+        write_file_request(
+            tmp_path,
+            path="src/domain/models/customer.py",
+            content="class Customer:\n    pass\n",
+        )
+    )
+
+    assert (
+        tmp_path
+        / "src"
+        / "domain"
+        / "models"
+        / "customer.py"
+    ).is_file()
+
+
+def test_write_file_tool_refuses_overwrite_by_default(
+    tmp_path: Path,
+) -> None:
+    target = tmp_path / "README.md"
+    target.write_text("original", encoding="utf-8")
+
+    service = write_file_runtime()
+
+    with pytest.raises(ToolExecutionError):
+        service.execute(
+            write_file_request(
+                tmp_path,
+                path="README.md",
+                content="novo conteúdo",
+            )
+        )
+
+    assert target.read_text(encoding="utf-8") == "original"
+
+
+def test_write_file_tool_allows_explicit_overwrite(
+    tmp_path: Path,
+) -> None:
+    target = tmp_path / "README.md"
+    target.write_text("original", encoding="utf-8")
+
+    service = write_file_runtime()
+
+    result = service.execute(
+        write_file_request(
+            tmp_path,
+            path="README.md",
+            content="atualizado",
+            overwrite=True,
+        )
+    )
+
+    assert result.status is ToolExecutionStatus.SUCCEEDED
+    assert target.read_text(encoding="utf-8") == "atualizado"
+    assert result.output["overwritten"] is True
+
+
+def test_write_file_tool_rejects_path_outside_workspace(
+    tmp_path: Path,
+) -> None:
+    service = write_file_runtime()
+
+    with pytest.raises(ToolExecutionError) as captured:
+        service.execute(
+            write_file_request(
+                tmp_path,
+                path="../outside.py",
+                content="malicious",
+            )
+        )
+    assert "ToolSecurityError" in str(captured.value)
+    assert not (tmp_path.parent / "outside.py").exists()
