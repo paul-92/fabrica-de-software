@@ -155,6 +155,21 @@ alterar comportamento de produção. O RC2 foi declarado tecnicamente validado,
 mas publicação, CI multiplataforma, scanner de histórico e revisão humana
 permaneceram gates operacionais separados.
 
+### Capítulo — Fases 10–16: da descrição ao software validado
+
+A Fase 10 estruturou necessidades de negócio em modelos, requisitos e
+blueprints determinísticos. As Fases 11 e 12 conectaram esse resultado,
+respectivamente, ao Planning e à Coordination sem fundir os domínios. As Fases
+13 e 14 comprovaram o caminho até o Runtime e do `DeveloperAgent` até Tools
+reais.
+
+Na Fase 15, `IntelligentOrchestratorService` reuniu construção do blueprint,
+planejamento, coordenação, artefatos e gates numa fachada tipada. Na Fase 16,
+efeitos controlados completaram o fluxo: `WriteFileTool` materializa conteúdo
+no workspace, `RunTestsTool` executa pytest e falhas percorrem AgentResult e
+Quality Gate até o status consolidado. O aprendizado foi reutilizar contratos
+existentes e manter efeitos e qualidade fora dos agentes.
+
 ## Testes
 
 A história é conferida contra testes de contrato, testes SQLite e imports
@@ -199,4 +214,4 @@ Fase 9: [Sprint 9.1](../phase-09/Sprint-9.1-Intelligent-Agent-Runtime.md) e
 
 ## Relacionado a
 
-Fases 07–09; Architecture v1; Roadmap; ADRs; glossário; testes.
+Fases 07–16; Architecture v1; Roadmap; ADRs; glossário; testes.

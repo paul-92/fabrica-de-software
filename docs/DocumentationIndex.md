@@ -192,6 +192,17 @@ não alterou decisão arquitetural e não criou ADR.
 
 ### Project Analysis — Sprint 10.1
 
+- [Fase 10 — Business Engineering](phase-10/business-engineering.md);
+- [Fase 11 — integração com Planning](phase-11/integration.md);
+- [Fase 12 — integração com Coordination](phase-12/coordination.md);
+- [Fase 13 — execução pelo Runtime](phase-13/runtime-execution.md);
+- [Fase 14 — DeveloperAgent e Tools](phase-14/developer-tool-execution.md);
+- [Fase 15 — Intelligent Orchestrator](phase-15/intelligent-orchestrator.md);
+- [Fase 16 — Software Generation & Validation](phase-16/software-generation-validation.md);
+- [Auditoria documental até a Fase 16](audits/Phase-01-16-Documentation-Audit.md);
+- [ADR-030](adr/ADR-030-intelligent-orchestrator-boundary.md) e
+  [ADR-031](adr/ADR-031-controlled-software-generation.md).
+
 - [Overview](project-analysis/Overview.md): arquitetura e API;
 - [ProjectAnalyzer](project-analysis/ProjectAnalyzer.md): fachada e modelos;
 - [Scanner](project-analysis/Scanner.md): percurso e exclusões;

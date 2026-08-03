@@ -268,3 +268,8 @@ documentais encontradas:
 - [Revisão de consistência arquitetural](Architectural-Consistency-Review.md)
 - [ADR-015 proposto](decisions/ADR-015-provider-boundaries-and-execution-graph-isolation.md)
 - [Plano de refatoração proposto](Provider-Graph-Refactoring-Plan.md)
+- [Fase 15 — Intelligent Orchestrator](../phase-15/intelligent-orchestrator.md)
+- [Fase 16 — Software Generation & Validation](../phase-16/software-generation-validation.md)
+- [ADR-030 — fronteira do Intelligent Orchestrator](../adr/ADR-030-intelligent-orchestrator-boundary.md)
+- [ADR-031 — geração controlada por Tools](../adr/ADR-031-controlled-software-generation.md)
+- [Auditoria documental até a Fase 16](../audits/Phase-01-16-Documentation-Audit.md)

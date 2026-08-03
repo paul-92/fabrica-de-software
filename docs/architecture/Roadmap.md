@@ -1,6 +1,6 @@
 # Roadmap arquitetural
 
-**Dono:** Engenharia ASEP | **Versão:** 1.0 | **Status:** planejado
+**Dono:** Engenharia ASEP | **Versão:** 1.1 | **Status:** atualizado até a Fase 16
 
 O roadmap registra intenção, não compromisso nem comportamento implementado.
 Mudanças de contrato exigem decisão arquitetural e testes.
@@ -122,12 +122,22 @@ do escopo.
 ## v1.0
 
 - 10.1 Project Analyzer determinístico — implementado localmente;
-- Blueprint;
-- API;
-- Dashboard;
-- packaging;
-- documentação;
-- API pública estável.
+- Fase 10 Business Engineering — modelos, análise, parser e BlueprintBuilder
+  implementados;
+- Fase 11 Business Engineering → Planning — implementada;
+- Fase 12 Planning → Agent Coordination — implementada;
+- Fase 13 Coordination → Agent Runtime — implementada e coberta por E2E;
+- Fase 14 DeveloperAgent → Tool Execution — implementada;
+- Fase 15 Intelligent Orchestrator — concluída;
+- Fase 16 Software Generation & Validation Pipeline — concluída.
+
+Subdivisões comprovadas da Fase 16: 16.1 reutilização da infraestrutura; 16.2
+Safe WriteFileTool; 16.3 DeveloperAgent + WriteFileTool; 16.4 múltiplos
+arquivos; 16.5 alteração explícita; 16.6 propagação de resultados; 16.7
+validação automática; 16.8 Quality Gate da geração; 16.9 E2E requisito →
+software validado.
+
+Não há Fase 17 definida neste roadmap.
 
 ## Pré-condições arquiteturais
 

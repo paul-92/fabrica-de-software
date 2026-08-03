@@ -1,296 +1,83 @@
 # Fase 15 — Intelligent Orchestrator
 
+**Dono:** Engenharia ASEP
+**Versão:** 1.0
+**Status:** concluída e comprovada por implementação e testes
+
 ## Objetivo
 
-Unificar a execução legada e a execução inteligente da ASEP sob um único ponto de orquestração, preservando compatibilidade e evitando duplicação de responsabilidades.
+Consolidar, numa fachada de aplicação tipada, Business Engineering, Planning,
+coordenação de agentes, persistência de artefatos e Quality Gates. A fase não
+cria um novo runtime: reutiliza os contratos e serviços existentes.
 
----
-
-## Contexto
-
-Atualmente a ASEP possui dois fluxos de execução.
-
-### Pipeline legado
-
-```text
-Orchestrator
-        │
-        ▼
-StageExecutionService
-        │
-        ▼
-Legacy AgentRuntime
-        │
-        ▼
-AgentResult
-        │
-        ▼
-ArtifactManager
-        │
-        ▼
-QualityGateEngine
-        │
-        ▼
-ExecutionOutcome
-```
-
-Esse fluxo já possui:
-
-- carregamento de projeto;
-- controle de estado;
-- execução sequencial de etapas;
-- persistência de artefatos;
-- quality gates;
-- retomada de execução;
-- resultado final.
-
----
-
-### Pipeline inteligente
+## Fluxo implementado
 
 ```text
 BusinessDescription
-        │
-        ▼
-RequirementAnalyzer
-        │
-        ▼
-BlueprintBuilder
-        │
-        ▼
-ProjectBlueprint
-        │
-        ▼
-PlanningEngineAdapter
-        │
-        ▼
-PlanningEngine
-        │
-        ▼
-PlanningResult
-        │
-        ▼
-AgentCoordinatorAdapter
-        │
-        ▼
-AgentCoordinator
-        │
-        ▼
-AgentExecutionService
-        │
-        ▼
-DeveloperAgent
-        │
-        ▼
-ToolExecutionService
-        │
-        ▼
-ArtifactDraft
+  -> BlueprintBuilder -> ProjectBlueprint
+  -> PlanningEngineAdapter -> PlanningResult / ExecutionPlan
+  -> AgentCoordinatorAdapter -> CoordinationResult
+  -> CoordinationArtifactCollector -> ArtifactManager
+  -> QualityGateEngine -> GateResult
+  -> IntelligentExecutionResult
 ```
 
-Esse fluxo já possui:
+`IntelligentOrchestratorService.execute()` constrói o blueprint, cria o plano,
+coordena a execução, persiste os `ArtifactDraft` de cada `AgentResult`, avalia
+um gate por resultado de agente e devolve uma consolidação imutável. Ele não
+executa Tools nem agentes diretamente; essa responsabilidade permanece atrás
+do Coordinator e do Runtime.
 
-- modelagem de negócio;
-- planejamento determinístico;
-- coordenação multiagente;
-- runtime inteligente;
-- execução de Tools;
-- produção de `ArtifactDraft`.
+## Contratos públicos
 
-Ainda faltam:
+- `IntelligentExecutionRequest`: `run_id`, `project_id`, `project_name`,
+  `gate_id`, `BusinessDescription`, raiz dos artefatos e metadata JSON-safe;
+- `IntelligentExecutionResult`: preserva os identificadores e reúne
+  `ProjectBlueprint`, `PlanningResult`, `CoordinationResult`,
+  `ArtifactReference`, `GateResult`, erros e metadata;
+- `IntelligentExecutionStatus`: `COMPLETED`, `FAILED`, `PARTIAL` ou `BLOCKED`;
+- `CoordinationArtifactCollector`: converte os drafts produzidos pelos agentes
+  em referências persistidas, mantendo `run_id`, `project_id`, `stage_id` e
+  `agent_id`.
 
-- persistência dos artefatos;
-- quality gates;
-- atualização do estado;
-- resultado final unificado.
+Os modelos de entrada e saída são Pydantic estritos e imutáveis. Os contratos
+existentes `ArtifactDraft`, `ArtifactReference`, `GateResult` e
+`GateDecision` são reutilizados, sem modelos paralelos.
 
----
+## Consolidação de status
 
-## Decisão arquitetural
+Qualquer `GateDecision.BLOCKED` prevalece e produz `BLOCKED`. Sem gate
+bloqueador, `CoordinationStatus.COMPLETED`, `FAILED` e `PARTIAL` são mapeados
+respectivamente para os estados homônimos do resultado inteligente.
+`APPROVED_WITH_PENDING` não bloqueia a consolidação.
 
-O pipeline legado não será removido nesta fase.
+O `QualityGateEngine` atualmente verifica: resultado do agente concluído,
+existência de artefato, presença dos metadados de correlação, ausência de erros
+críticos e etapa em execução. Ele não interpreta diretamente `exit_code` de
+pytest; a falha chega pelo `ToolResult` e pelo resultado do agente.
 
-O `Orchestrator` será evoluído para suportar dois modos de execução:
+## Artefatos e qualidade
 
-```text
-Orchestrator
-        │
-        ├── legacy
-        │
-        └── intelligent
-```
+O collector ignora execuções sem `agent_result`, persiste todos os drafts pelo
+`ArtifactManager` e entrega referências ao gate correspondente à mesma etapa.
+O manager aplica caminho relativo seguro, colisão explícita, escrita atômica,
+metadata YAML e checksum SHA-256. Quality Gate continua separado do agente e
+do collector.
 
-A seleção do modo será explícita e não será inferida silenciosamente.
+## Evidência automatizada
 
----
+`tests/qa/orchestrator/test_intelligent.py` cobre contratos, persistência e
+metadata de artefatos, composição integral, estados concluído/parcial/falho e
+bloqueado, além dos caminhos de geração validada e testes reprovados.
+`tests/qa/agents/coordination/test_end_to_end.py` comprova a execução que
+alimenta a coordenação. A evidência corresponde aos commits `e132995`,
+`f11b6cc` e `bd138b2`.
 
-## Princípios
+## Limites
 
-A evolução do Orchestrator deverá seguir estes princípios:
+O fluxo atual é síncrono e determinístico. A fase não prova geração autônoma
+por IA, paralelismo, distribuição ou interpretação semântica dos artefatos.
 
-1. Preservar compatibilidade com o pipeline legado.
+## Decisão relacionada
 
-2. Reutilizar o `ArtifactManager`.
-
-3. Reutilizar o `QualityGateEngine`.
-
-4. Reutilizar o `StateManager`.
-
-5. Não duplicar regras de persistência.
-
-6. Não duplicar regras de quality gate.
-
-7. Manter Planning, Coordination e Runtime desacoplados.
-
-8. Permitir evolução incremental do pipeline inteligente.
-
----
-
-## Responsabilidades do Intelligent Orchestrator
-
-O modo inteligente deverá:
-
-- receber uma descrição de negócio;
-- criar um `ProjectBlueprint`;
-- gerar um `PlanningResult`;
-- coordenar agentes;
-- executar Tools;
-- coletar `ArtifactDraft`;
-- persistir artefatos;
-- executar quality gates;
-- atualizar o estado da execução;
-- produzir um resultado final.
-
----
-
-## Fluxo proposto
-
-```text
-BusinessDescription
-        │
-        ▼
-Business Engineering
-        │
-        ▼
-ProjectBlueprint
-        │
-        ▼
-Planning
-        │
-        ▼
-PlanningResult
-        │
-        ▼
-Agent Coordination
-        │
-        ▼
-CoordinationResult
-        │
-        ▼
-Artifact Collection
-        │
-        ▼
-ArtifactManager
-        │
-        ▼
-ArtifactReference
-        │
-        ▼
-QualityGateEngine
-        │
-        ▼
-ExecutionOutcome
-```
-
----
-
-## Estratégia de implementação
-
-### Sprint 15.1
-
-- documentação da arquitetura;
-- definição dos modos de execução;
-- identificação das responsabilidades compartilhadas.
-
-**Status:** Em andamento
-
-### Sprint 15.2
-
-- criar o contrato do pipeline inteligente;
-- definir entrada e saída do modo inteligente;
-- não executar lógica ainda.
-
-### Sprint 15.3
-
-- implementar coleta de `ArtifactDraft` a partir de `CoordinationResult`;
-- persistir com `ArtifactManager`;
-- retornar `ArtifactReference`.
-
-### Sprint 15.4
-
-- integrar Quality Gates;
-- bloquear ou aprovar artefatos persistidos.
-
-### Sprint 15.5
-
-- integrar estado da execução;
-- produzir `ExecutionOutcome`.
-
-### Sprint 15.6
-
-- teste end-to-end:
-  - descrição de negócio;
-  - planejamento;
-  - coordenação;
-  - runtime;
-  - Tools;
-  - artefatos;
-  - quality gates;
-  - resultado final.
-
----
-
-## Fora do escopo desta fase
-
-Não será implementado agora:
-
-- remoção do pipeline legado;
-- migração automática de workflows antigos;
-- execução paralela;
-- rollback automático;
-- self-healing;
-- interface gráfica;
-- integração com Codex ou LLMs.
-
----
-
-## Critério de conclusão da Fase 15
-
-A fase estará concluída quando a ASEP conseguir executar este fluxo:
-
-```text
-BusinessDescription
-        │
-        ▼
-Planning
-        │
-        ▼
-Coordination
-        │
-        ▼
-Agent Runtime
-        │
-        ▼
-Tools
-        │
-        ▼
-ArtifactManager
-        │
-        ▼
-Quality Gates
-        │
-        ▼
-ExecutionOutcome
-```
-
-sem quebrar o pipeline legado.
+[ADR-030](../adr/ADR-030-intelligent-orchestrator-boundary.md).

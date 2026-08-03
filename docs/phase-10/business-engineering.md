@@ -3,8 +3,8 @@
 ## Status
 
 - **Phase:** 10
-- **Sprint:** 10.2
-- **Status:** In Progress
+- **Sprint:** 10.1–10.7
+- **Status:** Completed
 
 ---
 

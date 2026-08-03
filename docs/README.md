@@ -6,6 +6,11 @@ A arquitetura executável vigente está documentada em
 [architecture/ASEP-Architecture-v1.md](architecture/ASEP-Architecture-v1.md).
 A navegação completa, trilhas por público e rastreabilidade estão no
 [DocumentationIndex](DocumentationIndex.md).
+
+As capacidades implementadas após o RC2 estão consolidadas na
+[auditoria documental até a Fase 16](audits/Phase-01-16-Documentation-Audit.md),
+com aprofundamento no [Intelligent Orchestrator](phase-15/intelligent-orchestrator.md)
+e em [Software Generation & Validation](phase-16/software-generation-validation.md).
 A revisão de consistência e a decisão supersessora proposta estão em
 [architecture/Architectural-Consistency-Review.md](architecture/Architectural-Consistency-Review.md).
 
