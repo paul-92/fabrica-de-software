@@ -5,7 +5,11 @@ from __future__ import annotations
 from typing import Protocol
 
 from asep.ai_planning import EngineeringReflection
-from asep.learning.models import LearnedKnowledge
+from asep.learning.models import (
+    KnowledgeRetrievalRequest,
+    LearnedKnowledge,
+    LearnedKnowledgeContext,
+)
 from asep.repair import RepairResult
 
 
@@ -23,6 +27,17 @@ class LearningExtractor(Protocol):
         ...
 
 
+class KnowledgeRetriever(Protocol):
+    """Recupera conhecimento aprendido pela infraestrutura de memória."""
+
+    def retrieve(
+        self,
+        request: KnowledgeRetrievalRequest,
+    ) -> LearnedKnowledgeContext:
+        ...
+
+
 __all__ = [
+    "KnowledgeRetriever",
     "LearningExtractor",
 ]

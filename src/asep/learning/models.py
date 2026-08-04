@@ -82,8 +82,41 @@ class LearningResult(BaseModel):
     memory_entry: MemoryEntry
 
 
+class KnowledgeRetrievalRequest(BaseModel):
+    """Filtros explícitos para recuperar conhecimento aprendido."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    agent_id: AgentId
+    text: str | None = None
+    max_results: int = Field(default=10, ge=1)
+    source_type: str | None = None
+    minimum_confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+
+    @field_validator("text", "source_type")
+    @classmethod
+    def optional_text_is_not_blank(
+        cls,
+        value: str | None,
+    ) -> str | None:
+        if value is not None and not value.strip():
+            raise ValueError("filtro textual não pode ser vazio")
+        return value
+
+
+class LearnedKnowledgeContext(BaseModel):
+    """Contexto recuperado sem reconstrução textual de LearnedKnowledge."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    entries: tuple[MemoryEntry, ...] = ()
+    total_matches: int = Field(ge=0)
+
+
 __all__ = [
     "LearnedKnowledge",
+    "LearnedKnowledgeContext",
+    "KnowledgeRetrievalRequest",
     "LearningRequest",
     "LearningResult",
 ]
