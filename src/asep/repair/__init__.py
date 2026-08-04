@@ -14,9 +14,12 @@ from asep.repair.models import (
     RepairStatus,
 )
 
+from asep.repair.analyzer import PytestFailureAnalyzer
+
 __all__ = [
     "FailureAnalysis",
     "FailureAnalyzer",
+    "PytestFailureAnalyzer",
     "RepairAttempt",
     "RepairChange",
     "RepairExecutor",
