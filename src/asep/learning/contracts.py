@@ -8,15 +8,14 @@ from asep.ai_planning import EngineeringReflection
 from asep.learning.models import LearnedKnowledge
 from asep.repair import RepairResult
 
-LearningSource = EngineeringReflection | RepairResult
-
 
 class LearningExtractor(Protocol):
     """Decide o conhecimento estruturado extraído de uma execução."""
 
     def extract(
         self,
-        source: LearningSource,
+        repair_result: RepairResult,
+        reflection: EngineeringReflection,
         *,
         source_execution_id: str,
         source_type: str,
@@ -26,6 +25,4 @@ class LearningExtractor(Protocol):
 
 __all__ = [
     "LearningExtractor",
-    "LearningSource",
 ]
-

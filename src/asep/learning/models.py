@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Mapping
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, field_validator
 
 from asep._json_values import freeze_json
+from asep.agents import AgentId
+from asep.ai_planning import EngineeringReflection
+from asep.memory import MemoryEntry, MemoryId
+from asep.repair import RepairResult
 
 
 class LearnedKnowledge(BaseModel):
@@ -51,5 +56,34 @@ class LearnedKnowledge(BaseModel):
         return freeze_json(value, location="learned knowledge metadata")
 
 
-__all__ = ["LearnedKnowledge"]
+class LearningRequest(BaseModel):
+    """Entrada explícita da extração, adaptação e persistência."""
 
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    repair_result: RepairResult
+    reflection: EngineeringReflection
+    source_execution_id: str = Field(min_length=1)
+    source_type: str = Field(min_length=1)
+    memory_id: MemoryId
+    agent_id: AgentId
+    execution_id: str = Field(min_length=1)
+    workflow_execution_id: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class LearningResult(BaseModel):
+    """Resultado estruturado do aprendizado persistido."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    learned_knowledge: LearnedKnowledge
+    memory_entry: MemoryEntry
+
+
+__all__ = [
+    "LearnedKnowledge",
+    "LearningRequest",
+    "LearningResult",
+]
