@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from asep.repair.models import RepairStatus
+
 
 class RepairProposal(BaseModel):
     """Proposta informativa de reparo, sem conteúdo de código executável."""
@@ -43,5 +45,52 @@ class RepairProposal(BaseModel):
         return values
 
 
-__all__ = ["RepairProposal"]
+class EngineeringReflection(BaseModel):
+    """Avaliação estruturada e não executável de um resultado de reparo."""
 
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+    )
+
+    summary: str = Field(min_length=1)
+    outcome: RepairStatus
+    lessons: tuple[str, ...] = Field(min_length=1)
+    recommended_actions: tuple[str, ...] = Field(min_length=1)
+    should_retry: bool
+    confidence: float = Field(ge=0.0, le=1.0)
+
+    @field_validator("outcome")
+    @classmethod
+    def outcome_is_supported(cls, value: RepairStatus) -> RepairStatus:
+        supported = {
+            RepairStatus.SUCCEEDED,
+            RepairStatus.FAILED,
+            RepairStatus.EXHAUSTED,
+        }
+        if value not in supported:
+            raise ValueError("outcome deve ser terminal e refletível")
+        return value
+
+    @field_validator("summary")
+    @classmethod
+    def summary_is_not_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("summary não pode ser vazio")
+        return value
+
+    @field_validator("lessons", "recommended_actions")
+    @classmethod
+    def reflection_entries_are_not_blank(
+        cls,
+        values: tuple[str, ...],
+    ) -> tuple[str, ...]:
+        if any(not value.strip() for value in values):
+            raise ValueError("itens de reflexão não podem ser vazios")
+        return values
+
+
+__all__ = [
+    "EngineeringReflection",
+    "RepairProposal",
+]

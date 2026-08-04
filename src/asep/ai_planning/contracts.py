@@ -5,9 +5,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Protocol
 
-from asep.ai_planning.models import RepairProposal
-from asep.repair.models import FailureAnalysis
-from asep.repair.models import RepairPlan
+from asep.ai_planning.models import EngineeringReflection, RepairProposal
+from asep.repair.models import FailureAnalysis, RepairPlan, RepairResult
 
 
 class RepairProposalPlanner(Protocol):
@@ -34,7 +33,18 @@ class RepairPlanGenerator(Protocol):
         ...
 
 
+class ReflectionEvaluator(Protocol):
+    """Avalia um resultado de reparo sem executar novas ações."""
+
+    def evaluate(
+        self,
+        result: RepairResult,
+    ) -> EngineeringReflection:
+        ...
+
+
 __all__ = [
+    "ReflectionEvaluator",
     "RepairPlanGenerator",
     "RepairProposalPlanner",
 ]
