@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Protocol
 
 from asep.ai_planning.models import RepairProposal
 from asep.repair.models import FailureAnalysis
+from asep.repair.models import RepairPlan
 
 
 class RepairProposalPlanner(Protocol):
@@ -18,5 +20,21 @@ class RepairProposalPlanner(Protocol):
         ...
 
 
-__all__ = ["RepairProposalPlanner"]
+class RepairPlanGenerator(Protocol):
+    """Transforma uma proposta e conteúdo explícito em plano de reparo."""
 
+    def generate(
+        self,
+        proposal: RepairProposal,
+        *,
+        analysis: FailureAnalysis,
+        replacement_contents: Mapping[str, str],
+        test_paths: tuple[str, ...] = ("tests",),
+    ) -> RepairPlan:
+        ...
+
+
+__all__ = [
+    "RepairPlanGenerator",
+    "RepairProposalPlanner",
+]
