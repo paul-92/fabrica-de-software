@@ -1,6 +1,6 @@
 # Mapa da arquitetura ASEP
 
-**Dono:** Engenharia ASEP | **Versão:** 2.2 | **Status:** atualizado até a Fase 16
+**Dono:** Engenharia ASEP | **Versão:** 2.3 | **Status:** atualizado até a Fase 17
 
 ## Visão Geral
 
@@ -288,6 +288,21 @@ Agents alcançam filesystem e testes somente por Tools restritas ao workspace.
 O gate avalia o resultado contratual do agente; não interpreta pytest
 diretamente.
 
+### Software Repair
+
+```text
+pytest FAILED -> FailureAnalyzer -> RepairPlanner -> RepairLoop
+                                           |             |
+                                           v             v
+                                      RepairPlan -> RepairExecutor
+                                                    /          \
+                                             WriteFileTool  RunTestsTool
+```
+
+Repair produz novos planos para falhas funcionais. `runtime.recovery` continua
+responsável apenas por retry/backoff/fallback operacional. Quality Gate não
+executa o loop e permanece uma fronteira separada.
+
 ## Componentes envolvidos
 
 CLI/API, application, execution, workflow, agents, providers, artifacts,
@@ -337,5 +352,5 @@ Atualizar níveis afetados somente após mudanças implementadas.
 
 ## Relacionado a
 
-Sprints 7.5, 8.4 e 9.1–9.8; Fases 07–16; ADRs 016, 020 e 022–031; módulos; testes;
+Sprints 7.5, 8.4 e 9.1–9.8; Fases 07–17; ADRs 016, 020 e 022–032; módulos; testes;
 Roadmap; RC2; auditoria documental até a Fase 16.

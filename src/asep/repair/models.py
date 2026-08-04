@@ -57,6 +57,7 @@ class RepairAttempt(_FrozenRepairModel):
     attempt: int = Field(ge=1)
     plan: RepairPlan
     status: RepairStatus = RepairStatus.PENDING
+    validation_output: str = ""
     messages: tuple[str, ...] = ()
 
 
@@ -69,11 +70,26 @@ class RepairResult(_FrozenRepairModel):
     messages: tuple[str, ...] = ()
 
 
+class RepairLoopPolicy(_FrozenRepairModel):
+    """Limites determinísticos do ciclo de reparo."""
+
+    max_attempts: int = Field(default=1, ge=1)
+
+
+class RepairLoopContext(_FrozenRepairModel):
+    """Entrada imutável para um ciclo de reparo."""
+
+    initial_analysis: FailureAnalysis
+    policy: RepairLoopPolicy = Field(default_factory=RepairLoopPolicy)
+
+
 __all__ = [
     "FailureAnalysis",
     "RepairAttempt",
     "RepairChange",
     "RepairPlan",
     "RepairResult",
+    "RepairLoopContext",
+    "RepairLoopPolicy",
     "RepairStatus",
 ]

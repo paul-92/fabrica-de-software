@@ -202,6 +202,8 @@ não alterou decisão arquitetural e não criou ADR.
 - [Auditoria documental até a Fase 16](audits/Phase-01-16-Documentation-Audit.md);
 - [ADR-030](adr/ADR-030-intelligent-orchestrator-boundary.md) e
   [ADR-031](adr/ADR-031-controlled-software-generation.md).
+- [Fase 17 — Software Repair](phase-17/software-repair.md);
+- [ADR-032 — Software Repair separado de Retry](adr/ADR-032-software-repair-boundary.md).
 
 - [Overview](project-analysis/Overview.md): arquitetura e API;
 - [ProjectAnalyzer](project-analysis/ProjectAnalyzer.md): fachada e modelos;

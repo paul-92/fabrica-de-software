@@ -10,7 +10,7 @@ from asep.repair.models import (
     RepairPlan,
     RepairResult,
     RepairStatus,
-)
+    )
 
 
 def test_failure_analysis_accepts_minimal_valid_data() -> None:
@@ -106,9 +106,10 @@ def test_repair_attempt_tracks_plan_and_status() -> None:
         attempt=1,
         plan=plan,
         status=RepairStatus.APPLYING,
+        validation_output="1 passed in 0.10s",
         messages=("Aplicando alteração.",),
     )
-
+    assert attempt.validation_output == "1 passed in 0.10s"
     assert attempt.attempt == 1
     assert attempt.status is RepairStatus.APPLYING
     assert attempt.messages == (
@@ -178,3 +179,25 @@ def test_repair_models_are_frozen() -> None:
 
     with pytest.raises(ValidationError):
         analysis.summary = "Alterado"
+
+
+def test_repair_attempt_uses_empty_validation_output_by_default() -> None:
+    plan = RepairPlan(
+        analysis=FailureAnalysis(
+            summary="Falha funcional.",
+        ),
+        changes=(
+            RepairChange(
+                path="calculator.py",
+                content="",
+                reason="Atualizar implementação.",
+            ),
+        ),
+    )
+
+    attempt = RepairAttempt(
+        attempt=1,
+        plan=plan,
+    )
+
+    assert attempt.validation_output == ""

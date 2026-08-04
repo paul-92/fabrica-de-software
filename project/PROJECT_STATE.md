@@ -1,9 +1,9 @@
 # Estado atual da ASEP
 
-**Atualizado em:** 2026-08-03
+**Atualizado em:** 2026-08-04
 **Projeto:** AI Software Engineering Platform (ASEP)
 **Versão do pacote:** 0.1.0
-**Commit avaliado:** `bd138b26c0e37b5c4551b70925f8f5573dd49f11`
+**Commit base avaliado:** `cefdfcf84ed41b93ede5b65b91ccb413b794c53d`
 
 ## Estado de entrega
 
@@ -17,10 +17,11 @@ Business Engineering e execução avançou por implementação e testes:
 - Fase 14 — DeveloperAgent → Tool Execution: implementada;
 - Fase 15 — Intelligent Orchestrator: concluída;
 - Fase 16 — Software Generation & Validation Pipeline: concluída.
+- Fase 17 — Software Repair: blocos 17.1–17.4 concluídos.
 
-Não há Fase 17 definida. Consulte a
-[auditoria documental](../docs/audits/Phase-01-16-Documentation-Audit.md) para
-a matriz, evidências e limitações.
+Consulte a [Fase 17](../docs/phase-17/software-repair.md) para o ciclo de
+reparo e a [auditoria documental](../docs/audits/Phase-01-16-Documentation-Audit.md)
+para a matriz histórica anterior.
 
 ## Git e ambiente desta fotografia
 
@@ -66,7 +67,8 @@ novo desta revisão.
 ## Decisões essenciais
 
 ADRs 016–029 continuam vigentes. ADR-030 registra a fronteira do Intelligent
-Orchestrator e ADR-031, a geração controlada por Tools e workspace.
+Orchestrator; ADR-031, a geração controlada por Tools e workspace; e ADR-032,
+a separação entre Software Repair e retry operacional.
 
 ## Leitura essencial
 

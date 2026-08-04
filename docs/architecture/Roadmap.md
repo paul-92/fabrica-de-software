@@ -1,6 +1,6 @@
 # Roadmap arquitetural
 
-**Dono:** Engenharia ASEP | **Versão:** 1.1 | **Status:** atualizado até a Fase 16
+**Dono:** Engenharia ASEP | **Versão:** 1.2 | **Status:** atualizado até a Fase 17
 
 O roadmap registra intenção, não compromisso nem comportamento implementado.
 Mudanças de contrato exigem decisão arquitetural e testes.
@@ -137,7 +137,14 @@ arquivos; 16.5 alteração explícita; 16.6 propagação de resultados; 16.7
 validação automática; 16.8 Quality Gate da geração; 16.9 E2E requisito →
 software validado.
 
-Não há Fase 17 definida neste roadmap.
+## Fase 17 — Software Repair
+
+- 17.1 Foundation — concluída;
+- 17.2 Planning & Execution — concluída;
+- 17.3 Repair Loop — concluída;
+- 17.4 End-to-End Repair Pipeline — concluída.
+
+Repair permanece determinístico, limitado e separado de retry operacional.
 
 ## Pré-condições arquiteturais
 
