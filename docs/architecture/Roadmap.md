@@ -1,6 +1,6 @@
 # Roadmap arquitetural
 
-**Dono:** Engenharia ASEP | **Versão:** 1.2 | **Status:** atualizado até a Fase 17
+**Dono:** Engenharia ASEP | **Versão:** 1.3 | **Status:** atualizado até a Fase 18
 
 O roadmap registra intenção, não compromisso nem comportamento implementado.
 Mudanças de contrato exigem decisão arquitetural e testes.
@@ -145,6 +145,16 @@ software validado.
 - 17.4 End-to-End Repair Pipeline — concluída.
 
 Repair permanece determinístico, limitado e separado de retry operacional.
+
+## Fase 18 — Intelligent Engineering
+
+- 18.1 AI Planning Foundation — concluída;
+- 18.2 Repair Plan Generation — concluída;
+- 18.3 Evaluation & Reflection — concluída;
+- 18.4 Autonomous Engineering Pipeline — concluída.
+
+A fase compõe contratos determinísticos. Conteúdo de substituição continua
+explícito; não há IA externa, memória persistente ou retry automático.
 
 ## Pré-condições arquiteturais
 

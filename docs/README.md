@@ -13,6 +13,8 @@ com aprofundamento no [Intelligent Orchestrator](phase-15/intelligent-orchestrat
 e em [Software Generation & Validation](phase-16/software-generation-validation.md).
 O ciclo determinístico de correção funcional está em
 [Software Repair](phase-17/software-repair.md).
+O planejamento estruturado, a geração explícita de plano e a reflexão estão em
+[Intelligent Engineering](phase-18/intelligent-engineering.md).
 A revisão de consistência e a decisão supersessora proposta estão em
 [architecture/Architectural-Consistency-Review.md](architecture/Architectural-Consistency-Review.md).
 

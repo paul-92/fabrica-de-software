@@ -18,10 +18,13 @@ Business Engineering e execução avançou por implementação e testes:
 - Fase 15 — Intelligent Orchestrator: concluída;
 - Fase 16 — Software Generation & Validation Pipeline: concluída.
 - Fase 17 — Software Repair: blocos 17.1–17.4 concluídos.
+- Fase 18 — Intelligent Engineering: blocos 18.1–18.4 concluídos.
 
 Consulte a [Fase 17](../docs/phase-17/software-repair.md) para o ciclo de
-reparo e a [auditoria documental](../docs/audits/Phase-01-16-Documentation-Audit.md)
-para a matriz histórica anterior.
+reparo, a [Fase 18](../docs/phase-18/intelligent-engineering.md) para a
+composição inteligente controlada e a
+[auditoria documental](../docs/audits/Phase-01-16-Documentation-Audit.md) para
+a matriz histórica anterior.
 
 ## Git e ambiente desta fotografia
 
@@ -59,6 +62,8 @@ novo desta revisão.
 
 - workflow e runtime permanecem síncronos;
 - geração atual é determinística e dirigida pelo plano, não autônoma por IA;
+- Intelligent Engineering exige conteúdo de substituição explícito e não
+  possui IA externa, memória persistente ou retry próprio;
 - timeout do runtime não interrompe chamada bloqueada;
 - publicação, CI remoto, scanner histórico e árvore limpa são gates
   operacionais separados;
@@ -76,4 +81,6 @@ a separação entre Software Repair e retry operacional.
 [Roadmap](../docs/architecture/Roadmap.md),
 [Documentation Index](../docs/DocumentationIndex.md),
 [Fase 15](../docs/phase-15/intelligent-orchestrator.md) e
-[Fase 16](../docs/phase-16/software-generation-validation.md).
+[Fase 16](../docs/phase-16/software-generation-validation.md),
+[Fase 17](../docs/phase-17/software-repair.md) e
+[Fase 18](../docs/phase-18/intelligent-engineering.md).

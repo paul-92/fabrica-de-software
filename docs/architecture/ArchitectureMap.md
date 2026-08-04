@@ -1,6 +1,6 @@
 # Mapa da arquitetura ASEP
 
-**Dono:** Engenharia ASEP | **Versão:** 2.3 | **Status:** atualizado até a Fase 17
+**Dono:** Engenharia ASEP | **Versão:** 2.4 | **Status:** atualizado até a Fase 18
 
 ## Visão Geral
 
@@ -303,6 +303,19 @@ Repair produz novos planos para falhas funcionais. `runtime.recovery` continua
 responsável apenas por retry/backoff/fallback operacional. Quality Gate não
 executa o loop e permanece uma fronteira separada.
 
+### Intelligent Engineering
+
+```text
+FailureAnalysis -> RepairProposalPlanner -> RepairProposal
+  -> RepairPlanGenerator + replacement_contents explícito -> RepairPlan
+  -> RepairExecutor -> RepairResult
+  -> ReflectionEvaluator -> EngineeringReflection
+```
+
+O serviço de aplicação apenas compõe esse fluxo uma vez. AI Planning não
+executa efeitos; Reflection não comanda retry; filesystem, Tools e validação
+continuam atrás das fronteiras da Fase 17.
+
 ## Componentes envolvidos
 
 CLI/API, application, execution, workflow, agents, providers, artifacts,
@@ -352,5 +365,5 @@ Atualizar níveis afetados somente após mudanças implementadas.
 
 ## Relacionado a
 
-Sprints 7.5, 8.4 e 9.1–9.8; Fases 07–17; ADRs 016, 020 e 022–032; módulos; testes;
+Sprints 7.5, 8.4 e 9.1–9.8; Fases 07–18; ADRs 016, 020 e 022–032; módulos; testes;
 Roadmap; RC2; auditoria documental até a Fase 16.
