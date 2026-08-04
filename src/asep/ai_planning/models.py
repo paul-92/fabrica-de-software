@@ -2,9 +2,16 @@
 
 from __future__ import annotations
 
+from typing import Mapping
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from asep.repair.models import RepairStatus
+from asep.repair.models import (
+    FailureAnalysis,
+    RepairPlan,
+    RepairResult,
+    RepairStatus,
+)
 
 
 class RepairProposal(BaseModel):
@@ -90,7 +97,36 @@ class EngineeringReflection(BaseModel):
         return values
 
 
+class AutonomousEngineeringRequest(BaseModel):
+    """Entrada explícita do pipeline autônomo de engenharia."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+    )
+
+    analysis: FailureAnalysis
+    replacement_contents: Mapping[str, str]
+    test_paths: tuple[str, ...] = ("tests",)
+
+
+class AutonomousEngineeringResult(BaseModel):
+    """Resultado consolidado das etapas compostas pelo pipeline."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+    )
+
+    proposal: RepairProposal
+    plan: RepairPlan
+    repair_result: RepairResult
+    reflection: EngineeringReflection
+
+
 __all__ = [
+    "AutonomousEngineeringRequest",
+    "AutonomousEngineeringResult",
     "EngineeringReflection",
     "RepairProposal",
 ]

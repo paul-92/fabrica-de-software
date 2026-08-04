@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from asep.ai_planning import (
+    AutonomousEngineeringRequest,
+    AutonomousEngineeringResult,
+    AutonomousEngineeringService,
     DeterministicRepairPlanGenerator,
     DeterministicReflectionEvaluator,
     EngineeringReflection,
@@ -12,6 +15,9 @@ from asep.ai_planning import (
 
 
 def test_package_exports_public_api() -> None:
+    assert AutonomousEngineeringRequest is not None
+    assert AutonomousEngineeringResult is not None
+    assert AutonomousEngineeringService is not None
     assert DeterministicRepairPlanGenerator is not None
     assert DeterministicReflectionEvaluator is not None
     assert EngineeringReflection is not None
