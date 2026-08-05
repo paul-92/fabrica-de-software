@@ -1,3 +1,2 @@
-export const apiConfig = Object.freeze({
-  baseUrl: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1",
-});
+export { createApiConfig, loadApiConfig } from "./api/config";
+export type { ApiConfig } from "./api/config";
