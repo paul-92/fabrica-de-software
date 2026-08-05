@@ -16,6 +16,100 @@ body {
 
 button { font: inherit; }
 
+a:focus-visible,
+button:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-brand-primary) 45%, transparent);
+  outline-offset: 3px;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.sidebar {
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  left: 0;
+  padding: 24px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+.sidebar__brand { padding: 0 8px 24px; }
+.sidebar__nav { display: grid; gap: 4px; }
+.sidebar__footer { color: var(--color-text-secondary); font-size: .72rem; margin: auto 10px 0; }
+
+.nav-link {
+  align-items: center;
+  border-radius: 10px;
+  color: var(--color-text-secondary);
+  display: flex;
+  font-size: .88rem;
+  font-weight: 650;
+  gap: 12px;
+  padding: 10px 12px;
+  text-decoration: none;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.nav-link:hover {
+  background: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+}
+
+.nav-link--active {
+  background: color-mix(in srgb, var(--color-brand-primary) 11%, var(--color-surface));
+  color: var(--color-brand-primary);
+}
+
+.nav-icon { flex: 0 0 auto; height: 19px; width: 19px; }
+.app-shell__workspace { min-width: 0; }
+
+.app-header {
+  align-items: center;
+  background: color-mix(in srgb, var(--color-background) 91%, transparent);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  height: 72px;
+  justify-content: space-between;
+  padding: 0 32px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.app-header__context { align-items: center; display: flex; gap: 14px; }
+.app-header__eyebrow { color: var(--color-text-secondary); font-size: .68rem; font-weight: 750; letter-spacing: .1em; margin: 0 0 3px; text-transform: uppercase; }
+.app-header__title { font-size: 1rem; font-weight: 750; margin: 0; }
+.app-header__actions { align-items: center; display: flex; min-width: 120px; justify-content: flex-end; }
+
+.menu-button {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  cursor: pointer;
+  display: none;
+  height: 40px;
+  padding: 10px;
+  width: 40px;
+}
+
+.menu-button span { background: var(--color-text-primary); display: block; height: 1.5px; margin: 4px 0; width: 18px; }
+.app-content { margin: 0 auto; max-width: 1400px; padding: 38px 42px 72px; }
+.page-stack { display: grid; gap: 30px; }
+.page-header { align-items: end; display: flex; gap: 24px; justify-content: space-between; }
+.page-header h1 { font-size: clamp(2rem, 5vw, 3.6rem); letter-spacing: -.055em; line-height: 1; }
+.page-header__description { color: var(--color-text-secondary); line-height: 1.6; margin: 16px 0 0; max-width: 660px; }
+.page-header__actions { flex: 0 0 auto; }
+.content-grid { display: grid; gap: 18px; grid-template-columns: minmax(0, 1.3fr) minmax(260px, .7fr); }
+.sidebar-scrim { display: none; }
+
 .shell { width: min(1120px, calc(100% - 40px)); margin: 0 auto; padding: 28px 0 64px; }
 .shell__header { align-items: center; display: flex; justify-content: space-between; margin-bottom: 72px; }
 .brand-mark { align-items: center; display: flex; gap: 12px; }
@@ -46,6 +140,30 @@ h1 { font-size: clamp(2.8rem, 7vw, 5.6rem); letter-spacing: -.07em; line-height:
 .signal__line { background: linear-gradient(90deg, var(--color-brand-primary), var(--color-brand-secondary)); border-radius: 999px; height: 8px; margin-top: 48px; width: 76%; }
 
 @media (max-width: 760px) {
+  .app-shell { display: block; }
+  .sidebar {
+    box-shadow: var(--shadow-elevated);
+    max-width: calc(100vw - 48px);
+    position: fixed;
+    transform: translateX(-105%);
+    transition: transform 180ms ease;
+    width: 280px;
+  }
+  .sidebar--open { transform: translateX(0); }
+  .sidebar-scrim {
+    background: rgb(0 0 0 / 48%);
+    border: 0;
+    display: block;
+    inset: 0;
+    padding: 0;
+    position: fixed;
+    z-index: 25;
+  }
+  .menu-button { display: block; }
+  .app-header { height: 66px; padding: 0 16px; }
+  .app-content { padding: 28px 18px 56px; }
+  .content-grid { grid-template-columns: 1fr; }
+  .page-header { align-items: start; flex-direction: column; }
   .shell { width: min(100% - 24px, 1120px); }
   .shell__header { margin-bottom: 36px; }
   .brand-mark__name { display: none; }
