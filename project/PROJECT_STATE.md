@@ -1,6 +1,6 @@
 # Estado atual da ASEP
 
-**Atualizado em:** 2026-08-04
+**Atualizado em:** 2026-08-05
 **Projeto:** AI Software Engineering Platform (ASEP)
 **Versão do pacote:** 0.1.0
 **Commit base avaliado:** `cefdfcf84ed41b93ede5b65b91ccb413b794c53d`
@@ -19,10 +19,13 @@ Business Engineering e execução avançou por implementação e testes:
 - Fase 16 — Software Generation & Validation Pipeline: concluída.
 - Fase 17 — Software Repair: blocos 17.1–17.4 concluídos.
 - Fase 18 — Intelligent Engineering: blocos 18.1–18.4 concluídos.
+- Fase 20 — Intelligent Integration: blocos 20.1–20.4 concluídos.
 
 Consulte a [Fase 17](../docs/phase-17/software-repair.md) para o ciclo de
 reparo, a [Fase 18](../docs/phase-18/intelligent-engineering.md) para a
 composição inteligente controlada e a
+[Fase 20](../docs/phase-20/intelligent-integration.md) para o fluxo de
+conhecimento recuperado, Planning, engenharia e novo aprendizado, e a
 [auditoria documental](../docs/audits/Phase-01-16-Documentation-Audit.md) para
 a matriz histórica anterior.
 
@@ -48,6 +51,11 @@ workflow e o pipeline inteligente são síncronos. Providers, exporters,
 Timeline, métricas, Dashboard, memória, recovery e Project Analyzer preservam
 as fronteiras documentadas nos ADRs existentes.
 
+A camada Intelligence combina conhecimento recuperado com
+`PlanningContext.memory` e consolida resultados de Planning e Autonomous
+Engineering. Ela não acessa storage, não executa recomendações e não cria
+retry. A próxima fase planejada é a Fase 21 — Application/API Layer.
+
 ## Evidência
 
 As afirmações das Fases 15 e 16 foram verificadas em Orchestrator, seus modelos,
@@ -63,7 +71,9 @@ novo desta revisão.
 - workflow e runtime permanecem síncronos;
 - geração atual é determinística e dirigida pelo plano, não autônoma por IA;
 - Intelligent Engineering exige conteúdo de substituição explícito e não
-  possui IA externa, memória persistente ou retry próprio;
+  possui IA externa ou retry próprio;
+- Intelligent Integration reutiliza a Memory existente; `recommended_actions`
+  e `should_retry` continuam informativos e não executáveis;
 - timeout do runtime não interrompe chamada bloqueada;
 - publicação, CI remoto, scanner histórico e árvore limpa são gates
   operacionais separados;
@@ -84,3 +94,4 @@ a separação entre Software Repair e retry operacional.
 [Fase 16](../docs/phase-16/software-generation-validation.md),
 [Fase 17](../docs/phase-17/software-repair.md) e
 [Fase 18](../docs/phase-18/intelligent-engineering.md).
+[Fase 20](../docs/phase-20/intelligent-integration.md).

@@ -205,6 +205,7 @@ não alterou decisão arquitetural e não criou ADR.
 - [Fase 17 — Software Repair](phase-17/software-repair.md);
 - [ADR-032 — Software Repair separado de Retry](adr/ADR-032-software-repair-boundary.md).
 - [Fase 18 — Intelligent Engineering](phase-18/intelligent-engineering.md).
+- [Fase 20 — Intelligent Integration](phase-20/intelligent-integration.md).
 
 - [Overview](project-analysis/Overview.md): arquitetura e API;
 - [ProjectAnalyzer](project-analysis/ProjectAnalyzer.md): fachada e modelos;

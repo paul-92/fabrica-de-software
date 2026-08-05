@@ -1,6 +1,6 @@
 # Roadmap arquitetural
 
-**Dono:** Engenharia ASEP | **Versão:** 1.3 | **Status:** atualizado até a Fase 18
+**Dono:** Engenharia ASEP | **Versão:** 1.4 | **Status:** atualizado até a Fase 20
 
 O roadmap registra intenção, não compromisso nem comportamento implementado.
 Mudanças de contrato exigem decisão arquitetural e testes.
@@ -155,6 +155,22 @@ Repair permanece determinístico, limitado e separado de retry operacional.
 
 A fase compõe contratos determinísticos. Conteúdo de substituição continua
 explícito; não há IA externa, memória persistente ou retry automático.
+
+## Fase 20 — Intelligent Integration
+
+- 20.1 Knowledge-Aware Context — concluída;
+- 20.2 Knowledge-Aware Planning — concluída;
+- 20.3 Intelligent Engineering Integration — concluída;
+- 20.4 End-to-End Intelligent Integration — concluída.
+
+Conhecimento recuperado chega ao Planning pela fronteira existente de memória.
+Planning e Autonomous Engineering permanecem separados e são compostos uma
+única vez; não há IA externa, execução de recomendações ou retry automático.
+
+## Próxima fase — Fase 21: Application/API Layer
+
+Criar uma fachada estável de aplicação para consumo por interfaces externas,
+especialmente a futura GUI white-label.
 
 ## Pré-condições arquiteturais
 

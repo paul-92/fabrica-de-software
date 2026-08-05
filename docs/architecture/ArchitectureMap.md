@@ -1,6 +1,6 @@
 # Mapa da arquitetura ASEP
 
-**Dono:** Engenharia ASEP | **Versão:** 2.4 | **Status:** atualizado até a Fase 18
+**Dono:** Engenharia ASEP | **Versão:** 2.5 | **Status:** atualizado até a Fase 20
 
 ## Visão Geral
 
@@ -316,6 +316,21 @@ O serviço de aplicação apenas compõe esse fluxo uma vez. AI Planning não
 executa efeitos; Reflection não comanda retry; filesystem, Tools e validação
 continuam atrás das fronteiras da Fase 17.
 
+### Intelligent Integration
+
+```text
+Memory -> Knowledge Retrieval -> KnowledgeAwareContext
+  -> KnowledgeAwarePlanningAdapter -> Planning
+  -> IntelligentEngineeringService
+       |-> PlanningResult
+       `-> AutonomousEngineeringResult -> LearningService -> Memory
+```
+
+Intelligence compõe entradas e resultados sem acessar storage. Planning não
+conhece Learning ou retrieval, e Autonomous Engineering não conhece Memory.
+Conhecimento e reflexão permanecem informativos: recomendações não são
+executadas e não iniciam retry automático.
+
 ## Componentes envolvidos
 
 CLI/API, application, execution, workflow, agents, providers, artifacts,
@@ -365,5 +380,5 @@ Atualizar níveis afetados somente após mudanças implementadas.
 
 ## Relacionado a
 
-Sprints 7.5, 8.4 e 9.1–9.8; Fases 07–18; ADRs 016, 020 e 022–032; módulos; testes;
+Sprints 7.5, 8.4 e 9.1–9.8; Fases 07–20; ADRs 016, 020 e 022–032; módulos; testes;
 Roadmap; RC2; auditoria documental até a Fase 16.
