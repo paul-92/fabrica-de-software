@@ -18,6 +18,8 @@ O planejamento estruturado, a geração explícita de plano e a reflexão estão
 O enriquecimento de Planning com conhecimento aprendido e sua composição
 controlada com engenharia estão em
 [Intelligent Integration](phase-20/intelligent-integration.md).
+A fachada de aplicação e o adapter HTTP de Intelligent Engineering estão em
+[Application/API Layer](phase-21/application-api-layer.md).
 A revisão de consistência e a decisão supersessora proposta estão em
 [architecture/Architectural-Consistency-Review.md](architecture/Architectural-Consistency-Review.md).
 

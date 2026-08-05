@@ -1,6 +1,6 @@
 # Roadmap arquitetural
 
-**Dono:** Engenharia ASEP | **Versão:** 1.4 | **Status:** atualizado até a Fase 20
+**Dono:** Engenharia ASEP | **Versão:** 1.5 | **Status:** atualizado até a Fase 21
 
 O roadmap registra intenção, não compromisso nem comportamento implementado.
 Mudanças de contrato exigem decisão arquitetural e testes.
@@ -167,10 +167,25 @@ Conhecimento recuperado chega ao Planning pela fronteira existente de memória.
 Planning e Autonomous Engineering permanecem separados e são compostos uma
 única vez; não há IA externa, execução de recomendações ou retry automático.
 
-## Próxima fase — Fase 21: Application/API Layer
+## Fase 21 — Application/API Layer
 
-Criar uma fachada estável de aplicação para consumo por interfaces externas,
-especialmente a futura GUI white-label.
+- 21.1 Application Contracts & Intelligent Facade — concluída;
+- 21.2 Application Composition — concluída;
+- 21.3 HTTP/API Adapter for Intelligent Engineering — concluída;
+- 21.4 End-to-End API Integration — concluída.
+
+A fachada de Application, seu composition root e o endpoint HTTP v1 preservam
+as fronteiras com Intelligence e Core e foram comprovados por E2E.
+
+## Próxima fase — Fase 22: White-label Presentation Layer / Graphical Interface
+
+Construir uma interface visual que consuma exclusivamente as fronteiras
+públicas de Application/API, sem acoplar apresentação diretamente ao Core.
+
+Escopo previsto: branding white-label configurável (nome, logo, identidade,
+tema e cores), sem identidade de cliente no Core; Dashboard, Projetos,
+Execuções, Agentes, Planning, Knowledge/Memory, timeline/logs,
+métricas/quality gates e configurações.
 
 ## Pré-condições arquiteturais
 

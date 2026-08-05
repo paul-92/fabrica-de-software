@@ -102,8 +102,8 @@ composição dos subsistemas e o fluxo E2E de aprendizado e recuperação.
 
 ## Próxima fase
 
-A Fase 21 — Application/API Layer criará uma fachada estável de aplicação
-para interfaces externas, especialmente a futura GUI white-label.
+A [Fase 21 — Application/API Layer](../phase-21/application-api-layer.md)
+concluiu a fachada estável e o adapter HTTP para interfaces externas.
 
 ## Decisões
 

@@ -1,6 +1,6 @@
 # Mapa da arquitetura ASEP
 
-**Dono:** Engenharia ASEP | **Versão:** 2.5 | **Status:** atualizado até a Fase 20
+**Dono:** Engenharia ASEP | **Versão:** 2.6 | **Status:** atualizado até a Fase 21
 
 ## Visão Geral
 
@@ -331,6 +331,17 @@ conhece Learning ou retrieval, e Autonomous Engineering não conhece Memory.
 Conhecimento e reflexão permanecem informativos: recomendações não são
 executadas e não iniciam retry automático.
 
+### Application/API Layer
+
+```text
+HTTP Client -> FastAPI / HTTP DTOs -> Application Layer
+  -> Intelligence -> Planning + Autonomous Engineering
+```
+
+O adapter HTTP mapeia DTOs próprios e recebe a fachada de Application por
+injeção explícita. Application não conhece FastAPI; HTTP não constrói
+infraestrutura nem acessa diretamente implementações do Core.
+
 ## Componentes envolvidos
 
 CLI/API, application, execution, workflow, agents, providers, artifacts,
@@ -380,5 +391,5 @@ Atualizar níveis afetados somente após mudanças implementadas.
 
 ## Relacionado a
 
-Sprints 7.5, 8.4 e 9.1–9.8; Fases 07–20; ADRs 016, 020 e 022–032; módulos; testes;
+Sprints 7.5, 8.4 e 9.1–9.8; Fases 07–21; ADRs 016, 020 e 022–032; módulos; testes;
 Roadmap; RC2; auditoria documental até a Fase 16.

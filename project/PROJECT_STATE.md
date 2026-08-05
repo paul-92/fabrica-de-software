@@ -20,12 +20,15 @@ Business Engineering e execução avançou por implementação e testes:
 - Fase 17 — Software Repair: blocos 17.1–17.4 concluídos.
 - Fase 18 — Intelligent Engineering: blocos 18.1–18.4 concluídos.
 - Fase 20 — Intelligent Integration: blocos 20.1–20.4 concluídos.
+- Fase 21 — Application/API Layer: blocos 21.1–21.4 concluídos.
 
 Consulte a [Fase 17](../docs/phase-17/software-repair.md) para o ciclo de
 reparo, a [Fase 18](../docs/phase-18/intelligent-engineering.md) para a
 composição inteligente controlada e a
 [Fase 20](../docs/phase-20/intelligent-integration.md) para o fluxo de
 conhecimento recuperado, Planning, engenharia e novo aprendizado, e a
+[Fase 21](../docs/phase-21/application-api-layer.md) para a fachada de
+Application e o adapter HTTP. Consulte também a
 [auditoria documental](../docs/audits/Phase-01-16-Documentation-Audit.md) para
 a matriz histórica anterior.
 
@@ -54,7 +57,8 @@ as fronteiras documentadas nos ADRs existentes.
 A camada Intelligence combina conhecimento recuperado com
 `PlanningContext.memory` e consolida resultados de Planning e Autonomous
 Engineering. Ela não acessa storage, não executa recomendações e não cria
-retry. A próxima fase planejada é a Fase 21 — Application/API Layer.
+retry. A próxima fase planejada é a Fase 22 — White-label Presentation Layer /
+Graphical Interface, consumindo somente Application/API.
 
 ## Evidência
 
@@ -74,6 +78,9 @@ novo desta revisão.
   possui IA externa ou retry próprio;
 - Intelligent Integration reutiliza a Memory existente; `recommended_actions`
   e `should_retry` continuam informativos e não executáveis;
+- Application/API expõe Intelligent Engineering sem construir infraestrutura;
+- no Windows, o teste legado de multiprocessing pode falhar com `WinError 5`
+  ao criar named pipe; essa limitação ambiental não é regressão da Fase 21;
 - timeout do runtime não interrompe chamada bloqueada;
 - publicação, CI remoto, scanner histórico e árvore limpa são gates
   operacionais separados;
@@ -92,6 +99,7 @@ a separação entre Software Repair e retry operacional.
 [Documentation Index](../docs/DocumentationIndex.md),
 [Fase 15](../docs/phase-15/intelligent-orchestrator.md) e
 [Fase 16](../docs/phase-16/software-generation-validation.md),
-[Fase 17](../docs/phase-17/software-repair.md) e
-[Fase 18](../docs/phase-18/intelligent-engineering.md).
-[Fase 20](../docs/phase-20/intelligent-integration.md).
+[Fase 17](../docs/phase-17/software-repair.md),
+[Fase 18](../docs/phase-18/intelligent-engineering.md),
+[Fase 20](../docs/phase-20/intelligent-integration.md) e
+[Fase 21](../docs/phase-21/application-api-layer.md).
