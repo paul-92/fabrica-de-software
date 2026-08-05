@@ -2,6 +2,12 @@
 
 from asep.intelligence.builder import DeterministicKnowledgeContextBuilder
 from asep.intelligence.contracts import KnowledgeContextBuilder
+from asep.intelligence.engineering import (
+    AutonomousEngineeringExecutor,
+    IntelligentEngineeringRequest,
+    IntelligentEngineeringResult,
+    IntelligentEngineeringService,
+)
 from asep.intelligence.models import KnowledgeAwareContext
 from asep.intelligence.planning import (
     KnowledgeAwarePlanningAdapter,
@@ -9,7 +15,11 @@ from asep.intelligence.planning import (
 )
 
 __all__ = [
+    "AutonomousEngineeringExecutor",
     "DeterministicKnowledgeContextBuilder",
+    "IntelligentEngineeringRequest",
+    "IntelligentEngineeringResult",
+    "IntelligentEngineeringService",
     "KnowledgeAwareContext",
     "KnowledgeAwarePlanningAdapter",
     "KnowledgeContextBuilder",
