@@ -24,6 +24,13 @@ export class ApiNetworkError extends ApiError {
   }
 }
 
+export class ApiTimeoutError extends ApiNetworkError {
+  constructor(public readonly timeoutMs: number, cause: unknown) {
+    super(`API request timed out after ${timeoutMs} ms.`, cause);
+    this.name = "ApiTimeoutError";
+  }
+}
+
 export class ApiResponseError extends ApiError {
   constructor(message: string, public readonly responseBody?: unknown) {
     super(message);

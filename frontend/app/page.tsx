@@ -1,11 +1,5 @@
-import { SectionPlaceholder } from "../components/layout/SectionPlaceholder";
+import { OperationalDashboard } from "../components/dashboard/OperationalDashboard";
 
 export default function DashboardPage() {
-  return (
-    <SectionPlaceholder
-      eyebrow="Overview"
-      title="Dashboard"
-      description="Uma visão operacional clara para execuções, qualidade e conhecimento."
-    />
-  );
+  return <OperationalDashboard />;
 }

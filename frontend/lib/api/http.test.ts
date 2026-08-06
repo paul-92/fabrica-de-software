@@ -1,9 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { FetchHttpTransport } from "./http";
+import { FetchHttpTransport, HttpTimeoutError } from "./http";
 
 describe("FetchHttpTransport", () => {
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
 
   it("serializes JSON requests and parses JSON responses", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
@@ -44,5 +47,31 @@ describe("FetchHttpTransport", () => {
         method: "DELETE",
       }),
     ).resolves.toEqual({ status: 204, ok: true, body: undefined });
+  });
+
+  it("aborts and rejects a stalled request after the configured timeout", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_url: string | URL | Request, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            reject(new DOMException("Aborted", "AbortError"));
+          });
+        }),
+      ),
+    );
+
+    const request = new FetchHttpTransport(50).send({
+      url: "https://platform.example/api/v1/runs",
+      method: "GET",
+    });
+    const rejection = expect(request).rejects.toMatchObject({
+      name: "HttpTimeoutError",
+      timeoutMs: 50,
+    } satisfies Partial<HttpTimeoutError>);
+    await vi.advanceTimersByTimeAsync(50);
+
+    await rejection;
   });
 });

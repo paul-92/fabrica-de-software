@@ -13,7 +13,7 @@ export class MetricsClient {
 
   summary(signal?: AbortSignal): Promise<MetricsSummaryDto> {
     return this.api.request<MetricsSummaryDto>({
-      path: "metrics/summary",
+      path: "/api/v1/metrics/summary",
       signal,
     });
   }
@@ -21,7 +21,7 @@ export class MetricsClient {
   async byStatus(signal?: AbortSignal): Promise<readonly StatusMetricDto[]> {
     return (
       await this.api.request<StatusMetricsResponse>({
-        path: "metrics/status",
+        path: "/api/v1/metrics/status",
         signal,
       })
     ).items;
@@ -32,7 +32,7 @@ export class MetricsClient {
   ): Promise<readonly ProviderMetricDto[]> {
     return (
       await this.api.request<ProviderMetricsResponse>({
-        path: "metrics/providers",
+        path: "/api/v1/metrics/providers",
         signal,
       })
     ).items;

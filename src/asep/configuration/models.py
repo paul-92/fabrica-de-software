@@ -5,11 +5,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path, PurePath
+from urllib.parse import urlsplit
 
 from asep.configuration.errors import ConfigurationValidationError
 
 _DEFAULT_STORAGE_DIRECTORY = Path("storage")
 _DEFAULT_SQLITE_DATABASE = _DEFAULT_STORAGE_DIRECTORY / "asep.db"
+DEFAULT_CORS_ORIGINS = (
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+)
 
 
 class StorageBackend(StrEnum):
@@ -30,6 +35,7 @@ class ApplicationSettings:
     timeline_filename: str = "timeline-events.json"
     workflows_filename: str = "workflow-snapshots.json"
     sqlite_database: Path | str = _DEFAULT_SQLITE_DATABASE
+    cors_origins: tuple[str, ...] | str = DEFAULT_CORS_ORIGINS
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -58,6 +64,11 @@ class ApplicationSettings:
                 "sqlite_database",
                 self.sqlite_database,
             ),
+        )
+        object.__setattr__(
+            self,
+            "cors_origins",
+            self._validate_cors_origins(self.cors_origins),
         )
 
     @staticmethod
@@ -91,6 +102,38 @@ class ApplicationSettings:
                 f"{field} não pode ser vazio."
             )
         return Path(value)
+
+    @staticmethod
+    def _validate_cors_origins(
+        value: tuple[str, ...] | str,
+    ) -> tuple[str, ...]:
+        origins = value.split(",") if isinstance(value, str) else value
+        if not isinstance(origins, tuple | list):
+            raise ConfigurationValidationError(
+                "cors_origins deve conter origens HTTP validas."
+            )
+
+        normalized: list[str] = []
+        for raw_origin in origins:
+            if not isinstance(raw_origin, str) or not raw_origin.strip():
+                raise ConfigurationValidationError(
+                    "cors_origins nao pode conter origens vazias."
+                )
+            parsed = urlsplit(raw_origin.strip())
+            if (
+                parsed.scheme not in {"http", "https"}
+                or not parsed.netloc
+                or parsed.path not in {"", "/"}
+                or parsed.query
+                or parsed.fragment
+            ):
+                raise ConfigurationValidationError(
+                    f"Origem CORS invalida: {raw_origin}"
+                )
+            origin = f"{parsed.scheme.lower()}://{parsed.netloc.lower()}"
+            if origin not in normalized:
+                normalized.append(origin)
+        return tuple(normalized)
 
     @staticmethod
     def _validate_filename(field: str, value: str) -> None:

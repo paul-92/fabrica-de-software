@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from asep.application import (
     IntelligentEngineeringApplicationService,
@@ -18,6 +19,7 @@ from asep.api.routes import (
     create_runs_router,
 )
 from asep.metrics import MetricsService
+from asep.configuration.models import DEFAULT_CORS_ORIGINS
 
 
 def create_app(
@@ -26,6 +28,7 @@ def create_app(
     intelligent_engineering_service: (
         IntelligentEngineeringApplicationService | None
     ) = None,
+    cors_origins: tuple[str, ...] = DEFAULT_CORS_ORIGINS,
 ) -> FastAPI:
     app = FastAPI(
         title="ASEP Dashboard API",
@@ -39,6 +42,14 @@ def create_app(
     app.state.metrics_service = metrics_service
     app.state.intelligent_engineering_service = (
         intelligent_engineering_service
+    )
+    app.state.cors_origins = cors_origins
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=list(cors_origins),
+        allow_credentials=False,
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["Accept", "Content-Type"],
     )
     register_exception_handlers(app)
     app.include_router(create_health_router())

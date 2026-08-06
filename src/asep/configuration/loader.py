@@ -18,6 +18,7 @@ class Configuration:
         "ASEP_TIMELINE_FILENAME": "timeline_filename",
         "ASEP_WORKFLOWS_FILENAME": "workflows_filename",
         "ASEP_SQLITE_DATABASE": "sqlite_database",
+        "ASEP_CORS_ORIGINS": "cors_origins",
     }
 
     @classmethod

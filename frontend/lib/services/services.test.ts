@@ -19,7 +19,7 @@ class RecordingTransport implements HttpTransport {
 
 function setup() {
   const transport = new RecordingTransport();
-  const api = new ApiClient({ baseUrl: "https://example.test/api/v1" }, transport);
+  const api = new ApiClient({ baseUrl: "https://example.test" }, transport);
   return { transport, api };
 }
 

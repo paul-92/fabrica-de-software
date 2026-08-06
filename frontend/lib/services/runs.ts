@@ -8,12 +8,12 @@ export class RunsClient {
   constructor(private readonly api: ApiClient) {}
 
   async list(signal?: AbortSignal): Promise<readonly RunDto[]> {
-    return (await this.api.request<RunListResponse>({ path: "runs", signal })).items;
+    return (await this.api.request<RunListResponse>({ path: "/api/v1/runs", signal })).items;
   }
 
   get(runId: string, signal?: AbortSignal): Promise<RunDto> {
     return this.api.request<RunDto>({
-      path: `runs/${encodeURIComponent(runId)}`,
+      path: `/api/v1/runs/${encodeURIComponent(runId)}`,
       signal,
     });
   }
@@ -24,7 +24,7 @@ export class RunsClient {
   ): Promise<readonly TimelineEventDto[]> {
     return (
       await this.api.request<TimelineResponse>({
-        path: `runs/${encodeURIComponent(runId)}/timeline`,
+        path: `/api/v1/runs/${encodeURIComponent(runId)}/timeline`,
         signal,
       })
     ).items;

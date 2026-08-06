@@ -1,6 +1,6 @@
 import type { ApiConfig } from "./config";
-import { ApiError, ApiHttpError, ApiNetworkError, ApiResponseError } from "./errors";
-import type { HttpMethod, HttpTransport } from "./http";
+import { ApiError, ApiHttpError, ApiNetworkError, ApiResponseError, ApiTimeoutError } from "./errors";
+import { HttpTimeoutError, type HttpMethod, type HttpTransport } from "./http";
 
 type ApiRequest = Readonly<{
   path: string;
@@ -46,6 +46,9 @@ export class ApiClient {
       }
       return response.body as T;
     } catch (error) {
+      if (error instanceof HttpTimeoutError) {
+        throw new ApiTimeoutError(error.timeoutMs, error);
+      }
       if (error instanceof ApiError) {
         throw error;
       }

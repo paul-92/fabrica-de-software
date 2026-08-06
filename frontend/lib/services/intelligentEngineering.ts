@@ -4,7 +4,7 @@ import type {
   IntelligentEngineeringResponseDto,
 } from "../api/dtos";
 
-const EXECUTE_PATH = "intelligent-engineering/execute";
+const EXECUTE_PATH = "/api/v1/intelligent-engineering/execute";
 
 export class IntelligentEngineeringClient {
   constructor(private readonly api: ApiClient) {}

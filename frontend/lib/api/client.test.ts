@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { ApiClient } from "./client";
-import { ApiHttpError, ApiNetworkError, ApiResponseError } from "./errors";
-import type { HttpRequest, HttpResponse, HttpTransport } from "./http";
+import { ApiHttpError, ApiNetworkError, ApiResponseError, ApiTimeoutError } from "./errors";
+import { HttpTimeoutError, type HttpRequest, type HttpResponse, type HttpTransport } from "./http";
 
 class TransportFake implements HttpTransport {
   requests: HttpRequest[] = [];
@@ -74,6 +74,18 @@ describe("ApiClient", () => {
     await expect(client.request({ path: "runs" })).rejects.toBeInstanceOf(
       ApiNetworkError,
     );
+  });
+
+  it("preserves timeout semantics as a typed API error", async () => {
+    const client = new ApiClient(
+      { baseUrl: "https://platform.example/api/v1" },
+      new TransportFake(undefined, new HttpTimeoutError(50, new Error("abort"))),
+    );
+
+    await expect(client.request({ path: "runs" })).rejects.toMatchObject({
+      name: "ApiTimeoutError",
+      timeoutMs: 50,
+    } satisfies Partial<ApiTimeoutError>);
   });
 
   it("rejects successful responses without a body", async () => {

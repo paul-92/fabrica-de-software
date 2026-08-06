@@ -5,8 +5,8 @@ import { ApiConfigurationError, createApiConfig, loadApiConfig } from "./config"
 describe("API configuration", () => {
   it("loads the base URL exclusively from NEXT_PUBLIC_API_URL", () => {
     expect(
-      loadApiConfig({ NEXT_PUBLIC_API_URL: "https://platform.example/api/v1/" }),
-    ).toEqual({ baseUrl: "https://platform.example/api/v1" });
+      loadApiConfig("https://platform.example/"),
+    ).toEqual({ baseUrl: "https://platform.example" });
   });
 
   it("normalizes surrounding spaces and removes the trailing slash", () => {
