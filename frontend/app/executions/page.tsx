@@ -1,5 +1,5 @@
-import { SectionPlaceholder } from "../../components/layout/SectionPlaceholder";
+import { ExecutionsWorkspace } from "../../components/executions/ExecutionsWorkspace";
 
 export default function ExecutionsPage() {
-  return <SectionPlaceholder eyebrow="Operations" title="Executions" description="Acompanhe o ciclo de vida das execuções e suas evidências." />;
+  return <ExecutionsWorkspace />;
 }

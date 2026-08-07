@@ -68,6 +68,23 @@ describe("specialized API clients", () => {
     ]);
   });
 
+  it("encodes every special character in run ids before building paths", async () => {
+    const { transport, api } = setup();
+    transport.responses.push(
+      { status: 200, ok: true, body: { id: "run/a ?#" } },
+      { status: 200, ok: true, body: { items: [] } },
+    );
+    const runs = new RunsClient(api);
+
+    await runs.get("run/a ?#");
+    await runs.timeline("run/a ?#");
+
+    expect(transport.requests.map(({ url }) => url)).toEqual([
+      "https://example.test/api/v1/runs/run%2Fa%20%3F%23",
+      "https://example.test/api/v1/runs/run%2Fa%20%3F%23/timeline",
+    ]);
+  });
+
   it("provides all public metrics resources", async () => {
     const { transport, api } = setup();
     transport.responses.push(
