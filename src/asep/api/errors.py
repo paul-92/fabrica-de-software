@@ -9,9 +9,66 @@ from fastapi.responses import JSONResponse
 from asep.api.schemas import ErrorDetail, ErrorResponse
 from asep.errors import AsepError, ProjectNotFoundError, RunNotFoundError
 from asep.planning import PlanningValidationError
+from asep.ai_runtime import (
+    AIRuntimeAuthenticationError,
+    AIRuntimeInvalidResponseError,
+    AIRuntimeNotFoundError,
+    AIRuntimeTimeoutError,
+    AIRuntimeUnavailableError,
+)
 
 
 def register_exception_handlers(app: FastAPI) -> None:
+    @app.exception_handler(AIRuntimeNotFoundError)
+    async def runtime_not_found_handler(
+        request: Request, error: AIRuntimeNotFoundError
+    ) -> JSONResponse:
+        return _error_response(
+            status_code=404,
+            code="AI_RUNTIME_NOT_FOUND",
+            message="AI Runtime not found.",
+        )
+
+    @app.exception_handler(AIRuntimeAuthenticationError)
+    async def runtime_auth_handler(
+        request: Request, error: AIRuntimeAuthenticationError
+    ) -> JSONResponse:
+        return _error_response(
+            status_code=409,
+            code="AI_RUNTIME_NOT_AUTHENTICATED",
+            message="AI Runtime is not connected.",
+        )
+
+    @app.exception_handler(AIRuntimeUnavailableError)
+    async def runtime_unavailable_handler(
+        request: Request, error: AIRuntimeUnavailableError
+    ) -> JSONResponse:
+        return _error_response(
+            status_code=503,
+            code="AI_RUNTIME_UNAVAILABLE",
+            message="AI Runtime is unavailable.",
+        )
+
+    @app.exception_handler(AIRuntimeTimeoutError)
+    async def runtime_timeout_handler(
+        request: Request, error: AIRuntimeTimeoutError
+    ) -> JSONResponse:
+        return _error_response(
+            status_code=504,
+            code="AI_RUNTIME_TIMEOUT",
+            message="AI Runtime timed out.",
+        )
+
+    @app.exception_handler(AIRuntimeInvalidResponseError)
+    async def runtime_response_handler(
+        request: Request, error: AIRuntimeInvalidResponseError
+    ) -> JSONResponse:
+        return _error_response(
+            status_code=502,
+            code="AI_RUNTIME_INVALID_RESPONSE",
+            message="AI Runtime returned an invalid response.",
+        )
+
     @app.exception_handler(ProjectNotFoundError)
     async def project_not_found_handler(
         request: Request,

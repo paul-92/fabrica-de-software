@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any, Mapping
+from pathlib import Path
 
 from pydantic import (
     BaseModel,
@@ -63,6 +64,7 @@ class AIRuntimeRequest(_FrozenRuntimeModel):
     instruction: str
     context: Mapping[str, Any] = Field(default_factory=dict, repr=False)
     metadata: Mapping[str, Any] = Field(default_factory=dict, repr=False)
+    workspace: Path | None = Field(default=None, exclude=True, repr=False)
 
     @field_validator("instruction")
     @classmethod
@@ -78,6 +80,16 @@ class AIRuntimeRequest(_FrozenRuntimeModel):
         cls, value: Mapping[str, Any]
     ) -> Mapping[str, Any]:
         return freeze_json(value, location="AI Runtime request")
+
+    @field_validator("workspace")
+    @classmethod
+    def workspace_is_valid(cls, value: Path | None) -> Path | None:
+        if value is None:
+            return None
+        resolved = value.expanduser().resolve()
+        if not resolved.exists() or not resolved.is_dir():
+            raise ValueError("workspace deve existir e ser diretório")
+        return resolved
 
     @field_serializer("context", "metadata")
     def serialize_mappings(self, value: Mapping[str, Any]) -> dict[str, Any]:

@@ -1,6 +1,8 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from asep.projects import WorkspaceProject
 
@@ -41,3 +43,31 @@ class ProjectResponse(ProjectHttpSchema):
 
 class ProjectListResponse(ProjectHttpSchema):
     items: tuple[ProjectResponse, ...]
+
+
+class ProjectAIRuntimeExecutionRequestBody(ProjectHttpSchema):
+    runtime_id: str
+    instruction: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("runtime_id", "instruction")
+    @classmethod
+    def execution_text(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("campo obrigatório não pode ser vazio")
+        return value.strip()
+
+
+class AIRuntimeUsageResponse(ProjectHttpSchema):
+    input_units: int | None
+    output_units: int | None
+    total_units: int | None
+    cost: float | None
+
+
+class ProjectAIRuntimeExecutionResponse(ProjectHttpSchema):
+    output: str
+    runtime_id: str
+    model_id: str
+    usage: AIRuntimeUsageResponse | None
+    metadata: dict[str, Any]

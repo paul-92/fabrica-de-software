@@ -180,6 +180,16 @@ def test_workspace_must_be_explicit_existing_directory(tmp_path: Path) -> None:
         CodexAIRuntimeConfig(workspace=tmp_path / "missing")
 
 
+def test_request_workspace_overrides_configured_workspace(tmp_path: Path) -> None:
+    configured = tmp_path / "configured"; configured.mkdir()
+    project = tmp_path / "project"; project.mkdir()
+    runner = FakeProcessRunner()
+    runtime(configured, runner).execute(
+        AIRuntimeRequest(instruction="test", workspace=project)
+    )
+    assert runner.calls[0]["working_directory"] == project.resolve()
+
+
 def test_parser_maps_structured_usage_only_when_present(tmp_path: Path) -> None:
     with_usage = runtime(tmp_path, FakeProcessRunner()).execute(
         AIRuntimeRequest(instruction="test")

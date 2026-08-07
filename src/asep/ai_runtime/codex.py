@@ -97,7 +97,7 @@ class CodexAIRuntime:
                 self._command(),
                 input_text=self._input(request),
                 timeout=self._config.timeout,
-                working_directory=self._config.workspace,
+                working_directory=request.workspace or self._config.workspace,
                 environment={},
                 encoding=self._config.encoding,
             )

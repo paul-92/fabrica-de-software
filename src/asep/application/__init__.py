@@ -12,6 +12,10 @@ from asep.application.intelligent_engineering_composition import (
 )
 from asep.application.run_query import RunQueryService
 from asep.application.projects import ProjectService
+from asep.application.project_ai_runtime import (
+    ProjectAIRuntimeExecutionRequest,
+    ProjectAIRuntimeExecutionService,
+)
 
 __all__ = [
     "AIRuntimeConnectionService",
@@ -21,5 +25,7 @@ __all__ = [
     "IntelligentEngineeringCapability",
     "RunQueryService",
     "ProjectService",
+    "ProjectAIRuntimeExecutionRequest",
+    "ProjectAIRuntimeExecutionService",
     "create_intelligent_engineering_application_service",
 ]

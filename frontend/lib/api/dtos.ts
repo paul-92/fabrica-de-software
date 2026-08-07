@@ -11,6 +11,18 @@ export type AIRuntimeStatusDto = Readonly<{
   message: string;
   authentication_command: string | null;
 }>;
+export type ProjectAIRuntimeExecutionDto = Readonly<{
+  output: string;
+  runtime_id: string;
+  model_id: string;
+  usage: Readonly<{
+    input_units: number | null;
+    output_units: number | null;
+    total_units: number | null;
+    cost: number | null;
+  }> | null;
+  metadata: Record<string, JsonValue>;
+}>;
 
 export type ProjectDto = Readonly<{
   project_id: string;

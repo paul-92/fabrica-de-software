@@ -198,6 +198,8 @@ button:focus-visible {
 .runtime-guidance p:last-child { color: var(--color-text-secondary); margin: 10px 0 0; }
 .runtime-guidance code { color: var(--color-brand-primary); font-weight: 750; }
 .runtime-guidance a { color: var(--color-brand-primary); }
+.runtime-result { border-top: 1px solid var(--color-border); margin-top: 24px; padding-top: 20px; }
+.runtime-result pre { background: var(--color-surface-elevated); border-radius: 12px; color: var(--color-text-primary); overflow-wrap: anywhere; padding: 16px; white-space: pre-wrap; }
 
 @keyframes dashboard-pulse {
   to { opacity: .52; }
