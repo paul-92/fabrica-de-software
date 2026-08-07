@@ -51,6 +51,18 @@ O JSONL oficial fornece a mensagem final e pode fornecer contagem estruturada
 de tokens; somente nesse caso ela é mapeada para `AIRuntimeUsage`. O adapter
 não estima tokens nem custos.
 
+## Connection diagnostics
+
+O diagnóstico usa exclusivamente comandos públicos do cliente oficial:
+
+- `codex --version`: instalação e versão;
+- `codex login status`: estado de autenticação;
+- `codex login`: instrução exibida quando o usuário precisa autenticar.
+
+A API não inicia `codex login`, pois o fluxo é interativo e controlado pelo
+cliente/browser. Ela também não acessa arquivos privados de autenticação nem
+retorna stdout, stderr, tokens, cookies ou caminhos de credential stores.
+
 ## Erros
 
 A hierarquia distingue configuração, autenticação, indisponibilidade, rate

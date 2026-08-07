@@ -6,6 +6,13 @@ from asep.ai_runtime.codex import (
     CodexAIRuntimeConfig,
     create_codex_ai_runtime_registry,
 )
+from asep.ai_runtime.diagnostics import (
+    AIRuntimeConnectionState,
+    AIRuntimeConnectionStatus,
+    AIRuntimeDiagnostics,
+    CodexAIRuntimeDiagnostics,
+    CodexDiagnosticsConfig,
+)
 from asep.ai_runtime.errors import (
     AIRuntimeAlreadyRegisteredError,
     AIRuntimeAuthenticationError,
@@ -31,10 +38,13 @@ from asep.ai_runtime.registry import InMemoryAIRuntimeRegistry
 __all__ = [
     "AIRuntime",
     "AIRuntimeAlreadyRegisteredError",
+    "AIRuntimeConnectionState",
+    "AIRuntimeConnectionStatus",
     "AIRuntimeAuthenticationError",
     "AIRuntimeCapability",
     "AIRuntimeConfigurationError",
     "AIRuntimeError",
+    "AIRuntimeDiagnostics",
     "AIRuntimeIdentity",
     "AIRuntimeInvalidResponseError",
     "AIRuntimeNotFoundError",
@@ -49,6 +59,8 @@ __all__ = [
     "AIRuntimeUsage",
     "CodexAIRuntime",
     "CodexAIRuntimeConfig",
+    "CodexAIRuntimeDiagnostics",
+    "CodexDiagnosticsConfig",
     "InMemoryAIRuntimeRegistry",
     "create_codex_ai_runtime_registry",
 ]

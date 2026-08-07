@@ -218,10 +218,13 @@ def test_package_public_api_contains_only_intentional_contracts() -> None:
     assert set(api.__all__) == {
         "AIRuntime",
         "AIRuntimeAlreadyRegisteredError",
+        "AIRuntimeConnectionState",
+        "AIRuntimeConnectionStatus",
         "AIRuntimeAuthenticationError",
         "AIRuntimeCapability",
         "AIRuntimeConfigurationError",
         "AIRuntimeError",
+        "AIRuntimeDiagnostics",
         "AIRuntimeIdentity",
         "AIRuntimeInvalidResponseError",
         "AIRuntimeNotFoundError",
@@ -236,6 +239,8 @@ def test_package_public_api_contains_only_intentional_contracts() -> None:
         "AIRuntimeUsage",
         "CodexAIRuntime",
         "CodexAIRuntimeConfig",
+        "CodexAIRuntimeDiagnostics",
+        "CodexDiagnosticsConfig",
         "InMemoryAIRuntimeRegistry",
         "create_codex_ai_runtime_registry",
     }

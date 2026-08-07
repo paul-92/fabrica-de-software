@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 from fastapi import FastAPI
+from pathlib import Path
+
+from asep.ai_runtime import CodexAIRuntimeDiagnostics, CodexDiagnosticsConfig
 
 from asep.api.app import create_app
 from asep.application import (
     IntelligentEngineeringApplicationService,
     RunQueryService,
     ProjectService,
+    AIRuntimeConnectionService,
     create_intelligent_engineering_application_service,
 )
 from asep.ai_planning import (
@@ -76,6 +80,13 @@ def create_default_app(
     )
     metrics_service = MetricsService(query_service)
     project_service = ProjectService(repositories.project_repository)
+    ai_runtime_connection_service = AIRuntimeConnectionService(
+        (
+            CodexAIRuntimeDiagnostics(
+                CodexDiagnosticsConfig(working_directory=Path.cwd())
+            ),
+        )
+    )
     intelligent_engineering_service = _create_intelligent_engineering_service(
         settings,
         repositories,
@@ -86,4 +97,5 @@ def create_default_app(
         intelligent_engineering_service=intelligent_engineering_service,
         cors_origins=settings.cors_origins,
         project_service=project_service,
+        ai_runtime_connection_service=ai_runtime_connection_service,
     )

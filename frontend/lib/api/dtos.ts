@@ -1,5 +1,17 @@
 export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
+export type AIRuntimeConnectionState = "not_installed" | "not_authenticated" | "ready" | "error";
+export type AIRuntimeStatusDto = Readonly<{
+  runtime_id: string;
+  installed: boolean;
+  authenticated: boolean;
+  ready: boolean;
+  state: AIRuntimeConnectionState;
+  version: string | null;
+  message: string;
+  authentication_command: string | null;
+}>;
+
 export type ProjectDto = Readonly<{
   project_id: string;
   name: string;

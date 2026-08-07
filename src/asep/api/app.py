@@ -11,6 +11,8 @@ from asep.application import (
     ProjectService,
 )
 from asep.api.errors import register_exception_handlers
+from asep.api.ai_runtime_routes import create_ai_runtime_router
+from asep.application import AIRuntimeConnectionService
 from asep.api.intelligent_engineering_routes import (
     create_intelligent_engineering_router,
 )
@@ -32,6 +34,7 @@ def create_app(
     ) = None,
     cors_origins: tuple[str, ...] = DEFAULT_CORS_ORIGINS,
     project_service: ProjectService | None = None,
+    ai_runtime_connection_service: AIRuntimeConnectionService | None = None,
 ) -> FastAPI:
     app = FastAPI(
         title="ASEP Dashboard API",
@@ -48,6 +51,7 @@ def create_app(
     )
     app.state.cors_origins = cors_origins
     app.state.project_service = project_service
+    app.state.ai_runtime_connection_service = ai_runtime_connection_service
     app.add_middleware(
         CORSMiddleware,
         allow_origins=list(cors_origins),
@@ -61,6 +65,10 @@ def create_app(
     app.include_router(create_metrics_router(metrics_service))
     if project_service is not None:
         app.include_router(create_projects_router(project_service))
+    if ai_runtime_connection_service is not None:
+        app.include_router(
+            create_ai_runtime_router(ai_runtime_connection_service)
+        )
     if intelligent_engineering_service is not None:
         app.include_router(
             create_intelligent_engineering_router(
