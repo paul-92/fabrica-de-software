@@ -66,6 +66,29 @@ def test_factory_returns_application_boundary_without_execution() -> None:
     assert engineering.calls == []
 
 
+def test_factory_reuses_explicit_planning_adapter() -> None:
+    planner = PlannerFake()
+    engineering = EngineeringFake()
+
+    class PlanningAdapterSpy:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def adapt(self, planning_request, knowledge_context):
+            self.calls += 1
+            return planning_request
+
+    adapter = PlanningAdapterSpy()
+    service = create_intelligent_engineering_application_service(
+        planner,
+        engineering,
+        adapter,
+    )
+
+    service.execute(request())
+    assert adapter.calls == 1
+
+
 def test_composed_service_reuses_dependencies_when_executed() -> None:
     planner = PlannerFake()
     engineering = EngineeringFake()

@@ -19,6 +19,7 @@ class Configuration:
         "ASEP_WORKFLOWS_FILENAME": "workflows_filename",
         "ASEP_SQLITE_DATABASE": "sqlite_database",
         "ASEP_CORS_ORIGINS": "cors_origins",
+        "ASEP_REPAIR_WORKSPACE": "repair_workspace",
     }
 
     @classmethod

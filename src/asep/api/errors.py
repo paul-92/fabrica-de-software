@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 
 from asep.api.schemas import ErrorDetail, ErrorResponse
 from asep.errors import AsepError, RunNotFoundError
+from asep.planning import PlanningValidationError
 
 
 def register_exception_handlers(app: FastAPI) -> None:
@@ -48,6 +49,17 @@ def register_exception_handlers(app: FastAPI) -> None:
             status_code=422,
             code="REQUEST_VALIDATION_ERROR",
             message="Request validation failed.",
+        )
+
+    @app.exception_handler(PlanningValidationError)
+    async def planning_validation_handler(
+        request: Request,
+        error: PlanningValidationError,
+    ) -> JSONResponse:
+        return _error_response(
+            status_code=400,
+            code="PLANNING_INVALID",
+            message="Planning request could not produce a valid plan.",
         )
 
     @app.exception_handler(AsepError)

@@ -12,6 +12,7 @@ from asep.intelligence.models import KnowledgeAwareContext
 from asep.intelligence.planning import (
     KnowledgeAwarePlanningAdapter,
     KnowledgePlanningAdapter,
+    ToolAwarePlanningAdapter,
 )
 
 __all__ = [
@@ -24,4 +25,5 @@ __all__ = [
     "KnowledgeAwarePlanningAdapter",
     "KnowledgeContextBuilder",
     "KnowledgePlanningAdapter",
+    "ToolAwarePlanningAdapter",
 ]

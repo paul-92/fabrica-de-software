@@ -89,6 +89,30 @@ def test_configuration_rejects_empty_sqlite_database() -> None:
         ApplicationSettings(sqlite_database="")
 
 
+def test_repair_workspace_is_optional() -> None:
+    assert Configuration.load({}).repair_workspace is None
+
+
+def test_repair_workspace_is_loaded_and_resolved(tmp_path: Path) -> None:
+    settings = Configuration.load(
+        {"ASEP_REPAIR_WORKSPACE": str(tmp_path)}
+    )
+    assert settings.repair_workspace == tmp_path.resolve()
+
+
+@pytest.mark.parametrize("workspace", ["", "   "])
+def test_repair_workspace_rejects_empty_value(workspace: str) -> None:
+    with pytest.raises(ConfigurationValidationError, match="não pode ser vazio"):
+        Configuration.load({"ASEP_REPAIR_WORKSPACE": workspace})
+
+
+def test_repair_workspace_must_be_an_existing_directory(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(ConfigurationValidationError, match="deve existir"):
+        ApplicationSettings(repair_workspace=tmp_path / "missing")
+
+
 @pytest.mark.parametrize(
     ("field", "filename"),
     [

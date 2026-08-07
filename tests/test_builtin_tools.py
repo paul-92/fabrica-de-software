@@ -279,6 +279,38 @@ def test_run_tests_rejects_arbitrary_arguments(tmp_path: Path) -> None:
     assert runner.calls == []
 
 
+def test_run_tests_reports_missing_payload_path_explicitly(
+    tmp_path: Path,
+) -> None:
+    runner = FakeRunner()
+
+    with pytest.raises(ToolExecutionError) as captured:
+        call(
+            RunTestsTool(runner, executable="python-safe"),
+            tmp_path,
+            {"paths": ["tests"]},
+            "test",
+        )
+
+    assert captured.value.error_type == "InvalidTestPath"
+    assert "payload.paths[0]='tests'" in str(captured.value)
+    assert runner.calls == []
+
+
+def test_run_tests_rejects_absolute_external_path(tmp_path: Path) -> None:
+    runner = FakeRunner()
+
+    with pytest.raises(ToolSecurityError):
+        call(
+            RunTestsTool(runner, executable="python-safe"),
+            tmp_path,
+            {"paths": [str(tmp_path.parent)]},
+            "test",
+        )
+
+    assert runner.calls == []
+
+
 def test_run_tests_rejects_invalid_payload_and_maps_process_error(
     tmp_path: Path,
 ) -> None:

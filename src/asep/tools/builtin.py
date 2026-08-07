@@ -15,7 +15,12 @@ from asep.providers.process import (
     ProcessStartError,
     ProcessTimeoutError,
 )
-from asep.tools.exceptions import ToolExecutionError, ToolTimeoutError
+from asep.tools.exceptions import (
+    ToolExecutionError,
+    ToolSecurityError,
+    ToolTimeoutError,
+    ToolValidationError,
+)
 from asep.tools.models import (
     ToolCapability,
     ToolContext,
@@ -325,12 +330,26 @@ class RunTestsTool:
                 str(request.tool_id), error_type="InvalidTestPaths"
             )
         safe_paths: list[str] = []
-        for value in paths:
+        for index, value in enumerate(paths):
             if not isinstance(value, str):
                 raise ToolExecutionError(
-                    str(request.tool_id), error_type="InvalidTestPaths"
+                    str(request.tool_id),
+                    error_type="InvalidTestPaths",
+                    safe_detail=f"payload.paths[{index}] deve ser texto.",
                 )
-            path = resolve_workspace_path(context.workspace, value)
+            try:
+                path = resolve_workspace_path(context.workspace, value)
+            except ToolSecurityError:
+                raise
+            except ToolValidationError as exc:
+                raise ToolExecutionError(
+                    str(request.tool_id),
+                    error_type="InvalidTestPath",
+                    safe_detail=(
+                        f"payload.paths[{index}]='{value}' deve existir "
+                        "dentro do workspace."
+                    ),
+                ) from exc
             safe_paths.append(path.relative_to(context.workspace).as_posix())
         command = (self._executable, "-m", "pytest", *safe_paths)
         timeout = request.timeout_seconds or 300.0

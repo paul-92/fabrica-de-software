@@ -36,6 +36,7 @@ class ApplicationSettings:
     workflows_filename: str = "workflow-snapshots.json"
     sqlite_database: Path | str = _DEFAULT_SQLITE_DATABASE
     cors_origins: tuple[str, ...] | str = DEFAULT_CORS_ORIGINS
+    repair_workspace: Path | str | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -69,6 +70,11 @@ class ApplicationSettings:
             self,
             "cors_origins",
             self._validate_cors_origins(self.cors_origins),
+        )
+        object.__setattr__(
+            self,
+            "repair_workspace",
+            self._validate_repair_workspace(self.repair_workspace),
         )
 
     @staticmethod
@@ -134,6 +140,25 @@ class ApplicationSettings:
             if origin not in normalized:
                 normalized.append(origin)
         return tuple(normalized)
+
+    @staticmethod
+    def _validate_repair_workspace(value: Path | str | None) -> Path | None:
+        if value is None:
+            return None
+        if not isinstance(value, (str, PurePath)):
+            raise ConfigurationValidationError(
+                "repair_workspace deve ser um caminho válido."
+            )
+        if isinstance(value, str) and not value.strip():
+            raise ConfigurationValidationError(
+                "repair_workspace não pode ser vazio."
+            )
+        workspace = Path(value).expanduser().resolve()
+        if not workspace.exists() or not workspace.is_dir():
+            raise ConfigurationValidationError(
+                "repair_workspace deve existir e ser um diretório."
+            )
+        return workspace
 
     @staticmethod
     def _validate_filename(field: str, value: str) -> None:

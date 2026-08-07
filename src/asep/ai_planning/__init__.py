@@ -12,6 +12,7 @@ from asep.ai_planning.models import (
     AutonomousEngineeringResult,
 )
 from asep.ai_planning.pipeline import AutonomousEngineeringService
+from asep.ai_planning.proposal import DeterministicRepairProposalPlanner
 from asep.ai_planning.reflection import DeterministicReflectionEvaluator
 
 __all__ = [
@@ -19,6 +20,7 @@ __all__ = [
     "AutonomousEngineeringResult",
     "AutonomousEngineeringService",
     "DeterministicRepairPlanGenerator",
+    "DeterministicRepairProposalPlanner",
     "DeterministicReflectionEvaluator",
     "EngineeringReflection",
     "ReflectionEvaluator",

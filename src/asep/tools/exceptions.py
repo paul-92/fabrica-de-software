@@ -34,11 +34,15 @@ class ToolExecutionError(ToolException):
         *,
         error_type: str,
         retryable: bool = False,
+        safe_detail: str | None = None,
     ) -> None:
         self.tool_id = tool_id
         self.error_type = error_type
         self.retryable = retryable
-        super().__init__(f"Execução da Tool {tool_id} falhou ({error_type}).")
+        detail = f" {safe_detail}" if safe_detail else ""
+        super().__init__(
+            f"Execução da Tool {tool_id} falhou ({error_type}).{detail}"
+        )
 
 
 class ToolTimeoutError(ToolExecutionError):
