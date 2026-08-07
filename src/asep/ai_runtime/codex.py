@@ -19,6 +19,7 @@ from asep.ai_runtime.errors import (
 from asep.ai_runtime.models import (
     AIRuntimeCapability,
     AIRuntimeIdentity,
+    AIRuntimeExecutionMode,
     AIRuntimeRequest,
     AIRuntimeResult,
 )
@@ -94,7 +95,7 @@ class CodexAIRuntime:
 
         try:
             result = self._process_runner.run(
-                self._command(),
+                self._command(request.execution_mode),
                 input_text=self._input(request),
                 timeout=self._config.timeout,
                 working_directory=request.workspace or self._config.workspace,
@@ -112,14 +113,21 @@ class CodexAIRuntime:
             self._raise_process_failure(result.stderr)
         return self._parser.parse(result.stdout, identity=self.identity)
 
-    def _command(self) -> tuple[str, ...]:
+    def _command(
+        self, execution_mode: AIRuntimeExecutionMode
+    ) -> tuple[str, ...]:
+        sandbox = {
+            AIRuntimeExecutionMode.READ_ONLY: "read-only",
+            AIRuntimeExecutionMode.WORKSPACE_WRITE: "workspace-write",
+        }[execution_mode]
         return (
             self._config.executable,
             "exec",
             "--json",
             "--ephemeral",
             "--sandbox",
-            "read-only",
+            sandbox,
+            "--skip-git-repo-check",
             "-",
         )
 

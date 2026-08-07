@@ -29,6 +29,7 @@ from asep.ai_runtime.errors import (
 from asep.ai_runtime.models import (
     AIRuntimeCapability,
     AIRuntimeIdentity,
+    AIRuntimeExecutionMode,
     AIRuntimeRequest,
     AIRuntimeResult,
     AIRuntimeUsage,
@@ -46,6 +47,7 @@ __all__ = [
     "AIRuntimeError",
     "AIRuntimeDiagnostics",
     "AIRuntimeIdentity",
+    "AIRuntimeExecutionMode",
     "AIRuntimeInvalidResponseError",
     "AIRuntimeNotFoundError",
     "AIRuntimeRateLimitError",

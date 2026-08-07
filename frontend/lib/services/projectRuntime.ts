@@ -1,5 +1,5 @@
 import { ApiClient } from "../api/client";
-import type { JsonValue, ProjectAIRuntimeExecutionDto } from "../api/dtos";
+import type { AIRuntimeExecutionMode, JsonValue, ProjectAIRuntimeExecutionDto } from "../api/dtos";
 
 export class ProjectRuntimeClient {
   constructor(private readonly api: ApiClient) {}
@@ -7,6 +7,7 @@ export class ProjectRuntimeClient {
     runtime_id: string;
     instruction: string;
     metadata?: Record<string, JsonValue>;
+    execution_mode?: AIRuntimeExecutionMode;
   }>): Promise<ProjectAIRuntimeExecutionDto> {
     return this.api.request({
       path: `/api/v1/projects/${encodeURIComponent(projectId)}/ai-runtime/execute`,

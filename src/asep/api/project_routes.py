@@ -53,18 +53,25 @@ def create_projects_router(
                     runtime_id=body.runtime_id,
                     instruction=body.instruction,
                     metadata=body.metadata,
+                    execution_mode=body.execution_mode,
                 )
             )
+            runtime_result = result.runtime_result
             return ProjectAIRuntimeExecutionResponse(
-                output=result.output,
-                runtime_id=result.identity.runtime_id,
-                model_id=result.identity.model_id,
+                output=runtime_result.output,
+                runtime_id=runtime_result.identity.runtime_id,
+                model_id=runtime_result.identity.model_id,
                 usage=(
                     None
-                    if result.usage is None
-                    else result.usage.model_dump(mode="json")
+                    if runtime_result.usage is None
+                    else runtime_result.usage.model_dump(mode="json")
                 ),
-                metadata=result.model_dump(mode="json")["metadata"],
+                metadata=runtime_result.model_dump(mode="json")["metadata"],
+                execution_mode=result.execution_mode,
+                changes=tuple(
+                    change.model_dump(mode="json")
+                    for change in result.changes
+                ),
             )
 
     return router

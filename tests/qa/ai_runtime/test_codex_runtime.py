@@ -9,6 +9,7 @@ from pydantic import ValidationError
 
 from asep.ai_runtime import (
     AIRuntime,
+    AIRuntimeExecutionMode,
     AIRuntimeAuthenticationError,
     AIRuntimeInvalidResponseError,
     AIRuntimeRateLimitError,
@@ -126,6 +127,7 @@ def test_runtime_maps_request_to_controlled_codex_exec(tmp_path: Path) -> None:
                 "--ephemeral",
                 "--sandbox",
                 "read-only",
+                "--skip-git-repo-check",
                 "-",
             ),
             "input_text": runner.calls[0]["input_text"],
@@ -188,6 +190,42 @@ def test_request_workspace_overrides_configured_workspace(tmp_path: Path) -> Non
         AIRuntimeRequest(instruction="test", workspace=project)
     )
     assert runner.calls[0]["working_directory"] == project.resolve()
+
+
+@pytest.mark.parametrize(("mode", "sandbox"), [
+    (AIRuntimeExecutionMode.READ_ONLY, "read-only"),
+    (AIRuntimeExecutionMode.WORKSPACE_WRITE, "workspace-write"),
+])
+def test_execution_mode_maps_to_only_supported_sandbox(
+    tmp_path: Path, mode: AIRuntimeExecutionMode, sandbox: str
+) -> None:
+    runner = FakeProcessRunner()
+    runtime(tmp_path, runner).execute(
+        AIRuntimeRequest(instruction="test", execution_mode=mode)
+    )
+    command = runner.calls[0]["command"]
+    assert command == (
+        "controlled-codex", "exec", "--json", "--ephemeral",
+        "--sandbox", sandbox, "--skip-git-repo-check", "-",
+    )
+    assert "danger-full-access" not in command
+    assert "bypass" not in " ".join(command)
+
+
+def test_metadata_cannot_control_git_check_or_sandbox(tmp_path: Path) -> None:
+    runner = FakeProcessRunner()
+    runtime(tmp_path, runner).execute(AIRuntimeRequest(
+        instruction="test",
+        metadata={
+            "skip_git_repo_check": False,
+            "sandbox": "danger-full-access",
+        },
+    ))
+    command = runner.calls[0]["command"]
+    assert command.count("--skip-git-repo-check") == 1
+    assert command[command.index("--sandbox") + 1] == "read-only"
+    assert "danger-full-access" not in command
+    assert '"skip_git_repo_check": false' in runner.calls[0]["input_text"]
 
 
 def test_parser_maps_structured_usage_only_when_present(tmp_path: Path) -> None:

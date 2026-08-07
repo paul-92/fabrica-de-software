@@ -5,6 +5,8 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from asep.projects import WorkspaceProject
+from asep.ai_runtime import AIRuntimeExecutionMode
+from asep.application.workspace_changes import WorkspaceChangeType
 
 
 class ProjectHttpSchema(BaseModel):
@@ -49,6 +51,7 @@ class ProjectAIRuntimeExecutionRequestBody(ProjectHttpSchema):
     runtime_id: str
     instruction: str
     metadata: dict[str, Any] = Field(default_factory=dict)
+    execution_mode: AIRuntimeExecutionMode = AIRuntimeExecutionMode.READ_ONLY
 
     @field_validator("runtime_id", "instruction")
     @classmethod
@@ -65,9 +68,18 @@ class AIRuntimeUsageResponse(ProjectHttpSchema):
     cost: float | None
 
 
+class WorkspaceChangeResponse(ProjectHttpSchema):
+    path: str
+    change_type: WorkspaceChangeType
+    size_before: int | None
+    size_after: int | None
+
+
 class ProjectAIRuntimeExecutionResponse(ProjectHttpSchema):
     output: str
     runtime_id: str
     model_id: str
     usage: AIRuntimeUsageResponse | None
     metadata: dict[str, Any]
+    execution_mode: AIRuntimeExecutionMode
+    changes: tuple[WorkspaceChangeResponse, ...] = ()

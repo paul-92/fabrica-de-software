@@ -1,6 +1,13 @@
 export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
 export type AIRuntimeConnectionState = "not_installed" | "not_authenticated" | "ready" | "error";
+export type AIRuntimeExecutionMode = "read_only" | "workspace_write";
+export type WorkspaceChangeDto = Readonly<{
+  path: string;
+  change_type: "created" | "modified" | "deleted";
+  size_before: number | null;
+  size_after: number | null;
+}>;
 export type AIRuntimeStatusDto = Readonly<{
   runtime_id: string;
   installed: boolean;
@@ -22,6 +29,8 @@ export type ProjectAIRuntimeExecutionDto = Readonly<{
     cost: number | null;
   }> | null;
   metadata: Record<string, JsonValue>;
+  execution_mode: AIRuntimeExecutionMode;
+  changes: readonly WorkspaceChangeDto[];
 }>;
 
 export type ProjectDto = Readonly<{

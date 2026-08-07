@@ -31,6 +31,13 @@ não existe enum de fornecedores.
 
 ## Codex adapter
 
+`WorkspaceProject` não precisa ser um repositório Git. O adapter inclui
+`--skip-git-repo-check` como decisão interna e não configurável para permitir
+o modo não interativo nesses diretórios. Essa flag remove somente a exigência
+de Git/trusted repository: `read_only` continua no sandbox `read-only` e
+`workspace_write` continua no sandbox `workspace-write`, confinado ao `cwd`
+resolvido do projeto persistido.
+
 `CodexAIRuntime` usa o modo oficial não interativo `codex exec`. O comando
 habilita JSONL, sessão efêmera e sandbox somente leitura; o processo recebe um
 workspace existente e explicitamente configurado como `cwd`. A ASEP não usa
@@ -62,6 +69,31 @@ O diagnóstico usa exclusivamente comandos públicos do cliente oficial:
 A API não inicia `codex login`, pois o fluxo é interativo e controlado pelo
 cliente/browser. Ela também não acessa arquivos privados de autenticação nem
 retorna stdout, stderr, tokens, cookies ou caminhos de credential stores.
+
+## Escrita controlada no workspace
+
+`AIRuntimeRequest.execution_mode` aceita somente `read_only` (padrão) e
+`workspace_write`. O adapter Codex traduz esses valores respectivamente para
+os sandboxes `read-only` e `workspace-write`; a ASEP nunca habilita
+`danger-full-access` nem bypass de sandbox.
+
+O cliente HTTP não pode fornecer `cwd`, raiz, sandbox ou outro caminho. O
+diretório é sempre resolvido do `WorkspaceProject` persistido. A interface
+exige confirmação explícita antes de escrever, mostrando projeto, workspace e
+modo. Escritas concorrentes no mesmo projeto são protegidas por lock local ao
+processo da aplicação.
+
+Antes e depois de uma execução com escrita, a Application Layer produz
+snapshots SHA-256 limitados. A evidência contém apenas caminhos relativos, tipo
+(`created`, `modified` ou `deleted`) e tamanhos; nunca conteúdo. A ordem é
+determinística. `.git`, arquivos de credenciais, symlinks e reparse points não
+são percorridos. Limites explícitos de quantidade de arquivos, tamanho
+individual e total fazem a captura falhar de forma conservadora.
+
+O snapshot não é rollback nem isolamento transacional. Se o runtime falhar
+depois de alterar arquivos, a ASEP tenta preservar a evidência pós-falha, mas
+as alterações permanecem e exigem revisão humana. O lock não coordena múltiplas
+instâncias da API.
 
 ## Erros
 

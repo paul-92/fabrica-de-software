@@ -56,6 +56,6 @@ export function ProjectsWorkspace({ service }: { service?: ProjectsWorkspaceServ
     {listError ? <div role="alert" className="dashboard-state dashboard-state--error"><h2>Projects unavailable</h2><Button onClick={() => { setListError(false); setAttempt((value) => value + 1); }}>Try again</Button></div> : null}
     {items?.length === 0 ? <div className="dashboard-state"><h2>No projects yet</h2><p>Create a project to associate a local workspace.</p></div> : null}
     {items && items.length > 0 ? <Card title="Projects" eyebrow="Workspaces"><ul className="project-list">{items.map((project) => <li key={project.project_id}><button type="button" onClick={() => setSelected(project)}><strong>{project.name}</strong><span>{project.workspace_path}</span><small>{project.project_id}</small></button></li>)}</ul></Card> : null}
-    {selected ? <><Card title={selected.name} eyebrow="Project details"><dl className="execution-facts"><div><dt>Project ID</dt><dd>{selected.project_id}</dd></div><div><dt>Workspace</dt><dd>{selected.workspace_path}</dd></div></dl></Card><ProjectRuntimePanel projectId={selected.project_id} /></> : null}
+    {selected ? <><Card title={selected.name} eyebrow="Project details"><dl className="execution-facts"><div><dt>Project ID</dt><dd>{selected.project_id}</dd></div><div><dt>Workspace</dt><dd>{selected.workspace_path}</dd></div></dl></Card><ProjectRuntimePanel projectId={selected.project_id} projectName={selected.name} workspacePath={selected.workspace_path} /></> : null}
   </div>;
 }

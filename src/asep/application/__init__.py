@@ -14,6 +14,7 @@ from asep.application.run_query import RunQueryService
 from asep.application.projects import ProjectService
 from asep.application.project_ai_runtime import (
     ProjectAIRuntimeExecutionRequest,
+    ProjectAIRuntimeExecutionResult,
     ProjectAIRuntimeExecutionService,
 )
 
@@ -26,6 +27,7 @@ __all__ = [
     "RunQueryService",
     "ProjectService",
     "ProjectAIRuntimeExecutionRequest",
+    "ProjectAIRuntimeExecutionResult",
     "ProjectAIRuntimeExecutionService",
     "create_intelligent_engineering_application_service",
 ]

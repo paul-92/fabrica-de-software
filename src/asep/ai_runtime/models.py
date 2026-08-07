@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from enum import StrEnum
 from typing import Any, Mapping
 from pathlib import Path
 
@@ -19,6 +20,11 @@ from asep._json_values import freeze_json, json_value
 
 class _FrozenRuntimeModel(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
+
+
+class AIRuntimeExecutionMode(StrEnum):
+    READ_ONLY = "read_only"
+    WORKSPACE_WRITE = "workspace_write"
 
 
 class AIRuntimeCapability(_FrozenRuntimeModel):
@@ -65,6 +71,7 @@ class AIRuntimeRequest(_FrozenRuntimeModel):
     context: Mapping[str, Any] = Field(default_factory=dict, repr=False)
     metadata: Mapping[str, Any] = Field(default_factory=dict, repr=False)
     workspace: Path | None = Field(default=None, exclude=True, repr=False)
+    execution_mode: AIRuntimeExecutionMode = AIRuntimeExecutionMode.READ_ONLY
 
     @field_validator("instruction")
     @classmethod
@@ -143,6 +150,7 @@ class AIRuntimeResult(_FrozenRuntimeModel):
 
 __all__ = [
     "AIRuntimeCapability",
+    "AIRuntimeExecutionMode",
     "AIRuntimeIdentity",
     "AIRuntimeRequest",
     "AIRuntimeResult",

@@ -54,10 +54,15 @@ def test_project_runtime_http_contract_excludes_workspace_and_preserves_result(t
     assert response.json() == {
         "output": "safe result", "runtime_id": "codex", "model_id": "test-model",
         "usage": None, "metadata": {},
+        "execution_mode": "read_only", "changes": [],
     }
     assert runtime.request.workspace == tmp_path.resolve()
+    for forbidden in ("workspace_path", "cwd", "working_directory", "root", "sandbox"):
+        assert client.post("/api/v1/projects/p-1/ai-runtime/execute", json={
+            "runtime_id": "codex", "instruction": "inspect", forbidden: str(tmp_path)
+        }).status_code == 422
     assert client.post("/api/v1/projects/p-1/ai-runtime/execute", json={
-        "runtime_id": "codex", "instruction": "inspect", "workspace_path": str(tmp_path)
+        "runtime_id": "codex", "instruction": "inspect", "execution_mode": "unsafe"
     }).status_code == 422
 
 
