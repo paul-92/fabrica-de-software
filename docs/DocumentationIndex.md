@@ -80,6 +80,7 @@ docs/
 - [ExecutionPackage](architecture/ExecutionPackage.md): pacote de provider.
 - [ExecutionGraph](architecture/ExecutionGraph.md): representação canônica.
 - [Providers](architecture/Providers.md): adapters de agentes externos.
+- [AI Runtime](architecture/AIRuntime.md): porta provider-agnostic para IA.
 - [Exporters](architecture/Exporters.md): Mermaid/BPMN/JSON.
 - [CLI](architecture/CLI.md): comandos e códigos de saída.
 - [RunRepository](architecture/RunRepository.md): porta e backends de Run.
