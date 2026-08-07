@@ -34,6 +34,12 @@ from asep.projects import (
     InMemoryProjectRepository,
     ProjectRepository,
     SQLiteProjectRepository,
+    ProjectExecutionRepository,
+    ProjectSessionRepository,
+    InMemoryProjectExecutionRepository,
+    InMemoryProjectSessionRepository,
+    SQLiteProjectExecutionRepository,
+    SQLiteProjectSessionRepository,
 )
 
 
@@ -48,6 +54,12 @@ class RepositoryBundle:
     memory_store: MemoryStore = field(default_factory=InMemoryMemoryStore)
     project_repository: ProjectRepository = field(
         default_factory=InMemoryProjectRepository
+    )
+    project_session_repository: ProjectSessionRepository = field(
+        default_factory=InMemoryProjectSessionRepository
+    )
+    project_execution_repository: ProjectExecutionRepository = field(
+        default_factory=InMemoryProjectExecutionRepository
     )
 
 
@@ -106,4 +118,6 @@ class RepositoryFactory:
             workflow_repository=SQLiteWorkflowRepository(database),
             memory_store=SQLiteMemoryStore(database),
             project_repository=SQLiteProjectRepository(database),
+            project_session_repository=SQLiteProjectSessionRepository(database),
+            project_execution_repository=SQLiteProjectExecutionRepository(database),
         )

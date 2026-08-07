@@ -19,6 +19,7 @@ export type AIRuntimeStatusDto = Readonly<{
   authentication_command: string | null;
 }>;
 export type ProjectAIRuntimeExecutionDto = Readonly<{
+  execution_id: string;
   output: string;
   runtime_id: string;
   model_id: string;
@@ -31,6 +32,31 @@ export type ProjectAIRuntimeExecutionDto = Readonly<{
   metadata: Record<string, JsonValue>;
   execution_mode: AIRuntimeExecutionMode;
   changes: readonly WorkspaceChangeDto[];
+}>;
+
+export type ProjectSessionDto = Readonly<{
+  session_id: string;
+  project_id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}>;
+
+export type ProjectExecutionDto = Readonly<{
+  execution_id: string;
+  session_id: string;
+  project_id: string;
+  runtime_id: string;
+  instruction: string;
+  execution_mode: AIRuntimeExecutionMode;
+  status: "pending" | "running" | "succeeded" | "failed";
+  output: string | null;
+  model: string | null;
+  usage: ProjectAIRuntimeExecutionDto["usage"];
+  changes: readonly WorkspaceChangeDto[];
+  error_code: string | null;
+  created_at: string;
+  completed_at: string | null;
 }>;
 
 export type ProjectDto = Readonly<{

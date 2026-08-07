@@ -15,9 +15,15 @@ from asep.application import (
     ProjectAIRuntimeExecutionRequest,
     ProjectAIRuntimeExecutionService,
     ProjectService,
+    ProjectSessionService,
 )
 from asep.errors import ProjectNotFoundError
-from asep.projects import InMemoryProjectRepository, WorkspaceProject
+from asep.projects import (
+    InMemoryProjectExecutionRepository,
+    InMemoryProjectRepository,
+    InMemoryProjectSessionRepository,
+    WorkspaceProject,
+)
 
 
 class Runtime:
@@ -56,18 +62,26 @@ def service(tmp_path: Path):
     runtime = Runtime()
     registry = InMemoryAIRuntimeRegistry()
     registry.register(runtime)
-    return ProjectAIRuntimeExecutionService(ProjectService(projects), registry), runtime
+    project_service = ProjectService(projects)
+    sessions = InMemoryProjectSessionRepository()
+    executions = InMemoryProjectExecutionRepository()
+    session_service = ProjectSessionService(project_service, sessions, executions, id_generator=lambda: "session-1")
+    session_service.create("project-1", "Test")
+    return ProjectAIRuntimeExecutionService(project_service, registry, session_service, executions), runtime
 
 
 def test_execution_resolves_workspace_only_from_persisted_project(tmp_path: Path) -> None:
     execution, runtime = service(tmp_path)
     result = execution.execute(ProjectAIRuntimeExecutionRequest(
-        project_id="project-1", runtime_id="codex",
+        project_id="project-1", session_id="session-1", runtime_id="codex",
         instruction=" Analyze project ", metadata={"source": "ui"},
     ))
     assert result.runtime_result.output == "analysis"
     assert result.execution_mode is AIRuntimeExecutionMode.READ_ONLY
     assert result.changes == ()
+    assert result.execution.status.value == "succeeded"
+    assert result.execution.output == "analysis"
+    assert result.execution.model == "model"
     assert len(runtime.requests) == 1
     request = runtime.requests[0]
     assert request.instruction == "Analyze project"
@@ -79,11 +93,11 @@ def test_missing_project_and_runtime_are_rejected(tmp_path: Path) -> None:
     execution, _ = service(tmp_path)
     with pytest.raises(ProjectNotFoundError):
         execution.execute(ProjectAIRuntimeExecutionRequest(
-            project_id="missing", runtime_id="codex", instruction="test"
+            project_id="missing", session_id="session-1", runtime_id="codex", instruction="test"
         ))
     with pytest.raises(AIRuntimeNotFoundError):
         execution.execute(ProjectAIRuntimeExecutionRequest(
-            project_id="project-1", runtime_id="missing", instruction="test"
+            project_id="project-1", session_id="session-1", runtime_id="missing", instruction="test"
         ))
 
 
@@ -95,9 +109,11 @@ def test_workspace_write_reports_changes_and_propagates_mode(tmp_path: Path) -> 
     ))
     runtime = WritingRuntime(tmp_path)
     registry = InMemoryAIRuntimeRegistry(); registry.register(runtime)
-    execution = ProjectAIRuntimeExecutionService(ProjectService(projects), registry)
+    project_service = ProjectService(projects); sessions = InMemoryProjectSessionRepository(); executions = InMemoryProjectExecutionRepository()
+    session_service = ProjectSessionService(project_service, sessions, executions, id_generator=lambda: "session-1"); session_service.create("project-1", "Test")
+    execution = ProjectAIRuntimeExecutionService(project_service, registry, session_service, executions)
     result = execution.execute(ProjectAIRuntimeExecutionRequest(
-        project_id="project-1", runtime_id="codex", instruction="write",
+        project_id="project-1", session_id="session-1", runtime_id="codex", instruction="write",
         execution_mode=AIRuntimeExecutionMode.WORKSPACE_WRITE,
     ))
     assert runtime.requests[0].execution_mode is AIRuntimeExecutionMode.WORKSPACE_WRITE
@@ -115,11 +131,17 @@ def test_failed_workspace_write_preserves_change_evidence(tmp_path: Path) -> Non
     failure = ValueError("runtime failed")
     runtime = WritingRuntime(tmp_path, failure)
     registry = InMemoryAIRuntimeRegistry(); registry.register(runtime)
-    execution = ProjectAIRuntimeExecutionService(ProjectService(projects), registry)
+    project_service = ProjectService(projects); sessions = InMemoryProjectSessionRepository(); executions = InMemoryProjectExecutionRepository()
+    session_service = ProjectSessionService(project_service, sessions, executions, id_generator=lambda: "session-1"); session_service.create("project-1", "Test")
+    execution = ProjectAIRuntimeExecutionService(project_service, registry, session_service, executions)
     with pytest.raises(ValueError) as caught:
         execution.execute(ProjectAIRuntimeExecutionRequest(
-            project_id="project-1", runtime_id="codex", instruction="write",
+            project_id="project-1", session_id="session-1", runtime_id="codex", instruction="write",
             execution_mode=AIRuntimeExecutionMode.WORKSPACE_WRITE,
         ))
     assert caught.value is failure
     assert caught.value.workspace_changes[0].path == "created.txt"  # type: ignore[attr-defined]
+    persisted = executions.list_by_project("project-1")[0]
+    assert persisted.status.value == "failed"
+    assert persisted.error_code == "VALUE_ERROR"
+    assert persisted.changes[0].path == "created.txt"

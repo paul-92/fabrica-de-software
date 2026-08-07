@@ -4,9 +4,9 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from asep.projects import WorkspaceProject
+from asep.projects import ProjectExecution, ProjectSession, WorkspaceProject
 from asep.ai_runtime import AIRuntimeExecutionMode
-from asep.application.workspace_changes import WorkspaceChangeType
+from asep.workspace_changes import WorkspaceChangeType
 
 
 class ProjectHttpSchema(BaseModel):
@@ -48,12 +48,13 @@ class ProjectListResponse(ProjectHttpSchema):
 
 
 class ProjectAIRuntimeExecutionRequestBody(ProjectHttpSchema):
+    session_id: str
     runtime_id: str
     instruction: str
     metadata: dict[str, Any] = Field(default_factory=dict)
     execution_mode: AIRuntimeExecutionMode = AIRuntimeExecutionMode.READ_ONLY
 
-    @field_validator("runtime_id", "instruction")
+    @field_validator("session_id", "runtime_id", "instruction")
     @classmethod
     def execution_text(cls, value: str) -> str:
         if not value.strip():
@@ -76,6 +77,7 @@ class WorkspaceChangeResponse(ProjectHttpSchema):
 
 
 class ProjectAIRuntimeExecutionResponse(ProjectHttpSchema):
+    execution_id: str
     output: str
     runtime_id: str
     model_id: str
@@ -83,3 +85,56 @@ class ProjectAIRuntimeExecutionResponse(ProjectHttpSchema):
     metadata: dict[str, Any]
     execution_mode: AIRuntimeExecutionMode
     changes: tuple[WorkspaceChangeResponse, ...] = ()
+
+
+class CreateProjectSessionRequest(ProjectHttpSchema):
+    title: str
+
+    @field_validator("title")
+    @classmethod
+    def title_not_blank(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("title must not be blank")
+        return normalized
+
+
+class ProjectSessionResponse(ProjectHttpSchema):
+    session_id: str
+    project_id: str
+    title: str
+    created_at: datetime
+    updated_at: datetime
+
+    @classmethod
+    def from_domain(cls, session: ProjectSession) -> "ProjectSessionResponse":
+        return cls.model_validate(session.model_dump(mode="json"))
+
+
+class ProjectSessionListResponse(ProjectHttpSchema):
+    items: tuple[ProjectSessionResponse, ...]
+
+
+class ProjectExecutionResponse(ProjectHttpSchema):
+    execution_id: str
+    session_id: str
+    project_id: str
+    runtime_id: str
+    instruction: str
+    execution_mode: AIRuntimeExecutionMode
+    status: str
+    output: str | None
+    model: str | None
+    usage: AIRuntimeUsageResponse | None
+    changes: tuple[WorkspaceChangeResponse, ...]
+    error_code: str | None
+    created_at: datetime
+    completed_at: datetime | None
+
+    @classmethod
+    def from_domain(cls, execution: ProjectExecution) -> "ProjectExecutionResponse":
+        return cls.model_validate(execution.model_dump(mode="json"))
+
+
+class ProjectExecutionListResponse(ProjectHttpSchema):
+    items: tuple[ProjectExecutionResponse, ...]

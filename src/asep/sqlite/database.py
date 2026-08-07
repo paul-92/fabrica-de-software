@@ -60,6 +60,29 @@ class SQLiteDatabase:
             created_at TEXT NOT NULL,
             payload TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS project_sessions (
+            id TEXT PRIMARY KEY,
+            project_id TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            payload TEXT NOT NULL,
+            FOREIGN KEY(project_id) REFERENCES projects(id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_project_sessions_project
+            ON project_sessions (project_id, created_at);
+        CREATE TABLE IF NOT EXISTS project_executions (
+            id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            project_id TEXT NOT NULL,
+            status TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            payload TEXT NOT NULL,
+            FOREIGN KEY(session_id) REFERENCES project_sessions(id),
+            FOREIGN KEY(project_id) REFERENCES projects(id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_project_executions_session
+            ON project_executions (session_id, created_at);
+        CREATE INDEX IF NOT EXISTS idx_project_executions_project
+            ON project_executions (project_id, created_at);
     """
     _EXPECTED_COLUMNS = {
         "runs": {"id", "started_at", "payload"},
@@ -81,6 +104,10 @@ class SQLiteDatabase:
             "payload",
         },
         "projects": {"id", "created_at", "payload"},
+        "project_sessions": {"id", "project_id", "created_at", "payload"},
+        "project_executions": {
+            "id", "session_id", "project_id", "status", "created_at", "payload"
+        },
     }
 
     def __init__(self, path: Path) -> None:
@@ -92,6 +119,7 @@ class SQLiteDatabase:
         try:
             connection = sqlite3.connect(self.path)
             connection.row_factory = sqlite3.Row
+            connection.execute("PRAGMA foreign_keys = ON")
         except (OSError, sqlite3.Error) as exc:
             raise SQLiteConnectionError(
                 "Falha ao abrir o banco SQLite.",

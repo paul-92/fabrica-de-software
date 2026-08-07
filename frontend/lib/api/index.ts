@@ -6,7 +6,7 @@ import { MetricsClient } from "../services/metrics";
 import { RunsClient } from "../services/runs";
 import { ProjectsClient } from "../services/projects";
 import { AIRuntimesClient } from "../services/aiRuntimes";
-import { ProjectRuntimeClient } from "../services/projectRuntime";
+import { ProjectHistoryClient, ProjectRuntimeClient } from "../services/projectRuntime";
 
 export type PlatformClients = Readonly<{
   intelligentEngineering: IntelligentEngineeringClient;
@@ -15,6 +15,7 @@ export type PlatformClients = Readonly<{
   projects: ProjectsClient;
   aiRuntimes: AIRuntimesClient;
   projectRuntime: ProjectRuntimeClient;
+  projectHistory: ProjectHistoryClient;
 }>;
 
 export function createPlatformClients(): PlatformClients {
@@ -26,5 +27,6 @@ export function createPlatformClients(): PlatformClients {
     projects: new ProjectsClient(api),
     aiRuntimes: new AIRuntimesClient(api),
     projectRuntime: new ProjectRuntimeClient(api),
+    projectHistory: new ProjectHistoryClient(api),
   });
 }

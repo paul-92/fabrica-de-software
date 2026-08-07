@@ -17,6 +17,7 @@ from asep.application.project_ai_runtime import (
     ProjectAIRuntimeExecutionResult,
     ProjectAIRuntimeExecutionService,
 )
+from asep.application.project_sessions import ProjectSessionService
 
 __all__ = [
     "AIRuntimeConnectionService",
@@ -29,5 +30,6 @@ __all__ = [
     "ProjectAIRuntimeExecutionRequest",
     "ProjectAIRuntimeExecutionResult",
     "ProjectAIRuntimeExecutionService",
+    "ProjectSessionService",
     "create_intelligent_engineering_application_service",
 ]

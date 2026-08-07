@@ -1,33 +1,32 @@
-"""Execução read-only de AI Runtime no workspace de um projeto."""
+"""Execução controlada de AI Runtime e histórico de projeto."""
 
-from __future__ import annotations
-
-from typing import Any, Mapping
+from collections.abc import Callable, Mapping
+from datetime import UTC, datetime
+import re
 from threading import Lock
+from typing import Any
+from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from asep._json_values import freeze_json
-from asep.ai_runtime import (
-    AIRuntimeExecutionMode,
-    AIRuntimeRegistry,
-    AIRuntimeRequest,
-    AIRuntimeResult,
-)
+from asep.ai_runtime import AIRuntimeExecutionMode, AIRuntimeRegistry, AIRuntimeRequest, AIRuntimeResult
+from asep.application.project_sessions import ProjectSessionService
 from asep.application.projects import ProjectService
 from asep.application.workspace_changes import WorkspaceChange, WorkspaceSnapshotter
+from asep.projects import ProjectExecution, ProjectExecutionRepository, ProjectExecutionStatus
 
 
 class ProjectAIRuntimeExecutionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
-
     project_id: str
+    session_id: str
     runtime_id: str
     instruction: str
     metadata: Mapping[str, Any] = Field(default_factory=dict)
     execution_mode: AIRuntimeExecutionMode = AIRuntimeExecutionMode.READ_ONLY
 
-    @field_validator("project_id", "runtime_id", "instruction")
+    @field_validator("project_id", "session_id", "runtime_id", "instruction")
     @classmethod
     def text_is_not_blank(cls, value: str) -> str:
         normalized = value.strip()
@@ -43,75 +42,118 @@ class ProjectAIRuntimeExecutionRequest(BaseModel):
 
 class ProjectAIRuntimeExecutionResult(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
-
     runtime_result: AIRuntimeResult
     changes: tuple[WorkspaceChange, ...] = ()
     execution_mode: AIRuntimeExecutionMode
+    execution: ProjectExecution
 
 
 class ProjectAIRuntimeExecutionService:
-    def __init__(
-        self,
-        projects: ProjectService,
-        runtimes: AIRuntimeRegistry,
-        snapshotter: WorkspaceSnapshotter | None = None,
-    ) -> None:
+    def __init__(self, projects: ProjectService, runtimes: AIRuntimeRegistry,
+                 sessions: ProjectSessionService, executions: ProjectExecutionRepository,
+                 snapshotter: WorkspaceSnapshotter | None = None, *,
+                 clock: Callable[[], datetime] | None = None,
+                 id_generator: Callable[[], str] | None = None) -> None:
         self._projects = projects
         self._runtimes = runtimes
+        self._sessions = sessions
+        self._executions = executions
         self._snapshotter = snapshotter or WorkspaceSnapshotter()
+        self._clock = clock or (lambda: datetime.now(UTC))
+        self._id_generator = id_generator or (lambda: str(uuid4()))
         self._locks_guard = Lock()
         self._write_locks: dict[str, Lock] = {}
 
-    def execute(
-        self,
-        request: ProjectAIRuntimeExecutionRequest,
-    ) -> ProjectAIRuntimeExecutionResult:
+    def execute(self, request: ProjectAIRuntimeExecutionRequest) -> ProjectAIRuntimeExecutionResult:
         project = self._projects.get(request.project_id)
-        runtime = self._runtimes.get(request.runtime_id)
+        self._sessions.get(request.project_id, request.session_id)
+        execution = ProjectExecution(
+            execution_id=self._id_generator(), session_id=request.session_id,
+            project_id=request.project_id, runtime_id=request.runtime_id,
+            instruction=request.instruction, execution_mode=request.execution_mode,
+            status=ProjectExecutionStatus.RUNNING, created_at=self._clock(),
+        )
+        self._executions.create(execution)
+        try:
+            runtime = self._runtimes.get(request.runtime_id)
+        except Exception as error:
+            self._persist_failure(execution, error)
+            raise
+        execution = ProjectExecution.model_validate({
+            **execution.model_dump(), "model": runtime.identity.model_id,
+        })
+        self._executions.update(execution)
         runtime_request = AIRuntimeRequest(
-            instruction=request.instruction,
-            metadata=request.metadata,
-            workspace=project.workspace_path,
-            execution_mode=request.execution_mode,
+            instruction=request.instruction, metadata=request.metadata,
+            workspace=project.workspace_path, execution_mode=request.execution_mode,
         )
         if request.execution_mode is AIRuntimeExecutionMode.READ_ONLY:
-            return ProjectAIRuntimeExecutionResult(
-                runtime_result=runtime.execute(runtime_request),
-                execution_mode=request.execution_mode,
-            )
+            try:
+                result = runtime.execute(runtime_request)
+            except Exception as error:
+                self._persist_failure(execution, error)
+                raise
+            return self._persist_success(execution, result, ())
 
         lock = self._write_lock(request.project_id)
         if not lock.acquire(blocking=False):
-            raise RuntimeError("workspace write já está em execução")
+            error = RuntimeError("workspace write já está em execução")
+            self._persist_failure(execution, error)
+            raise error
         try:
             before = self._snapshotter.capture(project.workspace_path)
             try:
-                runtime_result = runtime.execute(runtime_request)
+                result = runtime.execute(runtime_request)
             except Exception as error:
+                changes: tuple[WorkspaceChange, ...] = ()
                 try:
-                    after = self._snapshotter.capture(project.workspace_path)
-                    error.workspace_changes = self._snapshotter.changes(  # type: ignore[attr-defined]
-                        before, after
-                    )
+                    changes = self._snapshotter.changes(before, self._snapshotter.capture(project.workspace_path))
+                    error.workspace_changes = changes  # type: ignore[attr-defined]
                 except Exception:
                     error.add_note("Workspace change evidence could not be completed.")
+                self._persist_failure(execution, error, changes)
                 raise
-            after = self._snapshotter.capture(project.workspace_path)
-            return ProjectAIRuntimeExecutionResult(
-                runtime_result=runtime_result,
-                changes=self._snapshotter.changes(before, after),
-                execution_mode=request.execution_mode,
-            )
+            changes = self._snapshotter.changes(before, self._snapshotter.capture(project.workspace_path))
+            return self._persist_success(execution, result, changes)
+        except Exception as error:
+            if self._executions.get(execution.execution_id).status is ProjectExecutionStatus.RUNNING:
+                self._persist_failure(execution, error)
+            raise
         finally:
             lock.release()
+
+    def _persist_success(self, execution: ProjectExecution, result: AIRuntimeResult,
+                         changes: tuple[WorkspaceChange, ...]) -> ProjectAIRuntimeExecutionResult:
+        completed = ProjectExecution.model_validate({**execution.model_dump(), **{
+            "status": ProjectExecutionStatus.SUCCEEDED, "output": result.output,
+            "model": result.identity.model_id, "usage": result.usage,
+            "changes": changes, "completed_at": self._clock(),
+        }})
+        self._executions.update(completed)
+        return ProjectAIRuntimeExecutionResult(runtime_result=result, changes=changes,
+                                               execution_mode=execution.execution_mode,
+                                               execution=completed)
+
+    def _persist_failure(self, execution: ProjectExecution, error: Exception,
+                         changes: tuple[WorkspaceChange, ...] = ()) -> None:
+        explicit_code = getattr(error, "code", None)
+        if explicit_code is None:
+            code = re.sub(
+                r"(?<!^)(?=[A-Z])", "_", type(error).__name__
+            ).upper()
+            if code.startswith("AI_RUNTIME_") and code.endswith("_ERROR"):
+                code = code[:-6]
+        else:
+            code = str(explicit_code).upper()
+        failed = ProjectExecution.model_validate({**execution.model_dump(), **{
+            "status": ProjectExecutionStatus.FAILED, "changes": changes,
+            "error_code": code, "completed_at": self._clock(),
+        }})
+        self._executions.update(failed)
 
     def _write_lock(self, project_id: str) -> Lock:
         with self._locks_guard:
             return self._write_locks.setdefault(project_id, Lock())
 
 
-__all__ = [
-    "ProjectAIRuntimeExecutionRequest",
-    "ProjectAIRuntimeExecutionResult",
-    "ProjectAIRuntimeExecutionService",
-]
+__all__ = ["ProjectAIRuntimeExecutionRequest", "ProjectAIRuntimeExecutionResult", "ProjectAIRuntimeExecutionService"]

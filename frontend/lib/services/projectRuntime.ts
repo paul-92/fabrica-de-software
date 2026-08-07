@@ -1,9 +1,10 @@
 import { ApiClient } from "../api/client";
-import type { AIRuntimeExecutionMode, JsonValue, ProjectAIRuntimeExecutionDto } from "../api/dtos";
+import type { AIRuntimeExecutionMode, JsonValue, ProjectAIRuntimeExecutionDto, ProjectExecutionDto, ProjectSessionDto } from "../api/dtos";
 
 export class ProjectRuntimeClient {
   constructor(private readonly api: ApiClient) {}
   execute(projectId: string, request: Readonly<{
+    session_id: string;
     runtime_id: string;
     instruction: string;
     metadata?: Record<string, JsonValue>;
@@ -14,5 +15,24 @@ export class ProjectRuntimeClient {
       method: "POST",
       body: request,
     });
+  }
+}
+
+type SessionsResponse = Readonly<{ items: readonly ProjectSessionDto[] }>;
+type ExecutionsResponse = Readonly<{ items: readonly ProjectExecutionDto[] }>;
+
+export class ProjectHistoryClient {
+  constructor(private readonly api: ApiClient) {}
+  async listSessions(projectId: string): Promise<readonly ProjectSessionDto[]> {
+    return (await this.api.request<SessionsResponse>({ path: `/api/v1/projects/${encodeURIComponent(projectId)}/sessions` })).items;
+  }
+  createSession(projectId: string, title: string): Promise<ProjectSessionDto> {
+    return this.api.request({ path: `/api/v1/projects/${encodeURIComponent(projectId)}/sessions`, method: "POST", body: { title } });
+  }
+  async listSessionExecutions(projectId: string, sessionId: string): Promise<readonly ProjectExecutionDto[]> {
+    return (await this.api.request<ExecutionsResponse>({ path: `/api/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/executions` })).items;
+  }
+  getExecution(projectId: string, executionId: string): Promise<ProjectExecutionDto> {
+    return this.api.request({ path: `/api/v1/projects/${encodeURIComponent(projectId)}/executions/${encodeURIComponent(executionId)}` });
   }
 }

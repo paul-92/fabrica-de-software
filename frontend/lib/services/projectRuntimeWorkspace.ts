@@ -1,20 +1,28 @@
 import { createPlatformClients, type PlatformClients } from "../api";
-import type { AIRuntimeExecutionMode, AIRuntimeStatusDto, ProjectAIRuntimeExecutionDto } from "../api/dtos";
+import type { AIRuntimeExecutionMode, AIRuntimeStatusDto, ProjectAIRuntimeExecutionDto, ProjectExecutionDto, ProjectSessionDto } from "../api/dtos";
 
 export interface ProjectRuntimeWorkspaceService {
   status(): Promise<AIRuntimeStatusDto>;
-  execute(projectId: string, instruction: string, executionMode: AIRuntimeExecutionMode): Promise<ProjectAIRuntimeExecutionDto>;
+  execute(projectId: string, sessionId: string, instruction: string, executionMode: AIRuntimeExecutionMode): Promise<ProjectAIRuntimeExecutionDto>;
+  listSessions(projectId: string): Promise<readonly ProjectSessionDto[]>;
+  createSession(projectId: string, title: string): Promise<ProjectSessionDto>;
+  listExecutions(projectId: string, sessionId: string): Promise<readonly ProjectExecutionDto[]>;
+  getExecution(projectId: string, executionId: string): Promise<ProjectExecutionDto>;
 }
 
 export function createProjectRuntimeWorkspaceService(
-  clientsFactory: () => Pick<PlatformClients, "aiRuntimes" | "projectRuntime"> = createPlatformClients,
+  clientsFactory: () => Pick<PlatformClients, "aiRuntimes" | "projectRuntime" | "projectHistory"> = createPlatformClients,
 ): ProjectRuntimeWorkspaceService {
-  let clients: Pick<PlatformClients, "aiRuntimes" | "projectRuntime"> | undefined;
+  let clients: Pick<PlatformClients, "aiRuntimes" | "projectRuntime" | "projectHistory"> | undefined;
   const get = () => (clients ??= clientsFactory());
   return {
     status: () => get().aiRuntimes.status("codex"),
-    execute: (projectId, instruction, executionMode) => get().projectRuntime.execute(projectId, {
-      runtime_id: "codex", instruction, execution_mode: executionMode,
+    execute: (projectId, sessionId, instruction, executionMode) => get().projectRuntime.execute(projectId, {
+      session_id: sessionId, runtime_id: "codex", instruction, execution_mode: executionMode,
     }),
+    listSessions: (projectId) => get().projectHistory.listSessions(projectId),
+    createSession: (projectId, title) => get().projectHistory.createSession(projectId, title),
+    listExecutions: (projectId, sessionId) => get().projectHistory.listSessionExecutions(projectId, sessionId),
+    getExecution: (projectId, executionId) => get().projectHistory.getExecution(projectId, executionId),
   };
 }
