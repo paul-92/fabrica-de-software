@@ -7,11 +7,22 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from asep.api.schemas import ErrorDetail, ErrorResponse
-from asep.errors import AsepError, RunNotFoundError
+from asep.errors import AsepError, ProjectNotFoundError, RunNotFoundError
 from asep.planning import PlanningValidationError
 
 
 def register_exception_handlers(app: FastAPI) -> None:
+    @app.exception_handler(ProjectNotFoundError)
+    async def project_not_found_handler(
+        request: Request,
+        error: ProjectNotFoundError,
+    ) -> JSONResponse:
+        return _error_response(
+            status_code=404,
+            code=error.code,
+            message="Project not found.",
+        )
+
     @app.exception_handler(RunNotFoundError)
     async def run_not_found_handler(
         request: Request,

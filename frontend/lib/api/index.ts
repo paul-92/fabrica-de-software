@@ -4,11 +4,13 @@ import { FetchHttpTransport } from "./http";
 import { IntelligentEngineeringClient } from "../services/intelligentEngineering";
 import { MetricsClient } from "../services/metrics";
 import { RunsClient } from "../services/runs";
+import { ProjectsClient } from "../services/projects";
 
 export type PlatformClients = Readonly<{
   intelligentEngineering: IntelligentEngineeringClient;
   runs: RunsClient;
   metrics: MetricsClient;
+  projects: ProjectsClient;
 }>;
 
 export function createPlatformClients(): PlatformClients {
@@ -17,5 +19,6 @@ export function createPlatformClients(): PlatformClients {
     intelligentEngineering: new IntelligentEngineeringClient(api),
     runs: new RunsClient(api),
     metrics: new MetricsClient(api),
+    projects: new ProjectsClient(api),
   });
 }

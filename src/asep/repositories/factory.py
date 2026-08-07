@@ -30,6 +30,11 @@ from asep.workflow_persistence import (
     SQLiteWorkflowRepository,
     WorkflowRepository,
 )
+from asep.projects import (
+    InMemoryProjectRepository,
+    ProjectRepository,
+    SQLiteProjectRepository,
+)
 
 
 RepositorySettings = ApplicationSettings
@@ -41,6 +46,9 @@ class RepositoryBundle:
     timeline_repository: TimelineRepository
     workflow_repository: WorkflowRepository
     memory_store: MemoryStore = field(default_factory=InMemoryMemoryStore)
+    project_repository: ProjectRepository = field(
+        default_factory=InMemoryProjectRepository
+    )
 
 
 class RepositoryFactory:
@@ -97,4 +105,5 @@ class RepositoryFactory:
             timeline_repository=SQLiteTimelineRepository(database),
             workflow_repository=SQLiteWorkflowRepository(database),
             memory_store=SQLiteMemoryStore(database),
+            project_repository=SQLiteProjectRepository(database),
         )

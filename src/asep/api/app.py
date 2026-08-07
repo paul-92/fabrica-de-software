@@ -8,11 +8,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from asep.application import (
     IntelligentEngineeringApplicationService,
     RunQueryService,
+    ProjectService,
 )
 from asep.api.errors import register_exception_handlers
 from asep.api.intelligent_engineering_routes import (
     create_intelligent_engineering_router,
 )
+from asep.api.project_routes import create_projects_router
 from asep.api.routes import (
     create_health_router,
     create_metrics_router,
@@ -29,6 +31,7 @@ def create_app(
         IntelligentEngineeringApplicationService | None
     ) = None,
     cors_origins: tuple[str, ...] = DEFAULT_CORS_ORIGINS,
+    project_service: ProjectService | None = None,
 ) -> FastAPI:
     app = FastAPI(
         title="ASEP Dashboard API",
@@ -44,6 +47,7 @@ def create_app(
         intelligent_engineering_service
     )
     app.state.cors_origins = cors_origins
+    app.state.project_service = project_service
     app.add_middleware(
         CORSMiddleware,
         allow_origins=list(cors_origins),
@@ -55,6 +59,8 @@ def create_app(
     app.include_router(create_health_router())
     app.include_router(create_runs_router(run_query_service))
     app.include_router(create_metrics_router(metrics_service))
+    if project_service is not None:
+        app.include_router(create_projects_router(project_service))
     if intelligent_engineering_service is not None:
         app.include_router(
             create_intelligent_engineering_router(

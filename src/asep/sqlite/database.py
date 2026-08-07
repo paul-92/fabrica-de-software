@@ -55,6 +55,11 @@ class SQLiteDatabase:
             ON memory_entries (execution_id);
         CREATE INDEX IF NOT EXISTS idx_memory_entries_workflow
             ON memory_entries (workflow_execution_id);
+        CREATE TABLE IF NOT EXISTS projects (
+            id TEXT PRIMARY KEY,
+            created_at TEXT NOT NULL,
+            payload TEXT NOT NULL
+        );
     """
     _EXPECTED_COLUMNS = {
         "runs": {"id", "started_at", "payload"},
@@ -75,6 +80,7 @@ class SQLiteDatabase:
             "created_at",
             "payload",
         },
+        "projects": {"id", "created_at", "payload"},
     }
 
     def __init__(self, path: Path) -> None:

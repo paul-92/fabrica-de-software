@@ -10,6 +10,7 @@ from asep.application.intelligent_engineering_composition import (
     create_intelligent_engineering_application_service,
 )
 from asep.application.run_query import RunQueryService
+from asep.application.projects import ProjectService
 
 __all__ = [
     "ApplicationIntelligentEngineeringRequest",
@@ -17,5 +18,6 @@ __all__ = [
     "IntelligentEngineeringApplicationService",
     "IntelligentEngineeringCapability",
     "RunQueryService",
+    "ProjectService",
     "create_intelligent_engineering_application_service",
 ]

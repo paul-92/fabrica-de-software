@@ -1,5 +1,18 @@
 export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
+export type ProjectDto = Readonly<{
+  project_id: string;
+  name: string;
+  workspace_path: string;
+  created_at: string;
+  updated_at: string;
+}>;
+
+export type CreateProjectDto = Readonly<{
+  name: string;
+  workspace_path: string;
+}>;
+
 export type MemoryEntryDto = Readonly<{
   memory_id: string;
   agent_id: string;

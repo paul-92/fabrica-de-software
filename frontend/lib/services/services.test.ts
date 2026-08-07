@@ -6,6 +6,7 @@ import type { HttpRequest, HttpResponse, HttpTransport } from "../api/http";
 import { IntelligentEngineeringClient } from "./intelligentEngineering";
 import { MetricsClient } from "./metrics";
 import { RunsClient } from "./runs";
+import { ProjectsClient } from "./projects";
 
 class RecordingTransport implements HttpTransport {
   requests: HttpRequest[] = [];
@@ -102,6 +103,27 @@ describe("specialized API clients", () => {
       "https://example.test/api/v1/metrics/summary",
       "https://example.test/api/v1/metrics/status",
       "https://example.test/api/v1/metrics/providers",
+    ]);
+  });
+
+  it("provides project create, list and encoded details", async () => {
+    const { transport, api } = setup();
+    transport.responses.push(
+      { status: 201, ok: true, body: { project_id: "project/one" } },
+      { status: 200, ok: true, body: { items: [] } },
+      { status: 200, ok: true, body: { project_id: "project/one" } },
+    );
+    const projects = new ProjectsClient(api);
+    const request = { name: "Project", workspace_path: "C:/work" };
+
+    await projects.create(request);
+    await projects.list();
+    await projects.get("project/one");
+
+    expect(transport.requests).toMatchObject([
+      { url: "https://example.test/api/v1/projects", method: "POST", body: request },
+      { url: "https://example.test/api/v1/projects", method: "GET" },
+      { url: "https://example.test/api/v1/projects/project%2Fone", method: "GET" },
     ]);
   });
 });

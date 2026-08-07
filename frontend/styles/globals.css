@@ -183,6 +183,12 @@ button:focus-visible {
 .engineering-statistics span, .engineering-steps span { color: var(--color-text-secondary); font-size: .75rem; }
 .engineering-steps li { margin-bottom: 12px; }
 .engineering-steps strong, .engineering-steps span { display: block; }
+.project-form { display: grid; gap: 18px; }
+.project-form label { display: grid; font-size: .84rem; font-weight: 750; gap: 8px; }
+.project-form input { background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: 10px; color: var(--color-text-primary); font: inherit; padding: 11px 13px; }
+.project-list { display: grid; gap: 10px; list-style: none; margin: 0; padding: 0; }
+.project-list button { background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: 12px; color: var(--color-text-primary); cursor: pointer; display: grid; gap: 5px; padding: 14px; text-align: left; width: 100%; }
+.project-list span, .project-list small { color: var(--color-text-secondary); overflow-wrap: anywhere; }
 
 @keyframes dashboard-pulse {
   to { opacity: .52; }

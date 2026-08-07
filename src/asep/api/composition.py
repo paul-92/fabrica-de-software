@@ -8,6 +8,7 @@ from asep.api.app import create_app
 from asep.application import (
     IntelligentEngineeringApplicationService,
     RunQueryService,
+    ProjectService,
     create_intelligent_engineering_application_service,
 )
 from asep.ai_planning import (
@@ -74,6 +75,7 @@ def create_default_app(
         repositories.timeline_repository,
     )
     metrics_service = MetricsService(query_service)
+    project_service = ProjectService(repositories.project_repository)
     intelligent_engineering_service = _create_intelligent_engineering_service(
         settings,
         repositories,
@@ -83,4 +85,5 @@ def create_default_app(
         metrics_service,
         intelligent_engineering_service=intelligent_engineering_service,
         cors_origins=settings.cors_origins,
+        project_service=project_service,
     )
