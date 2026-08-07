@@ -234,14 +234,18 @@ def test_package_public_api_contains_only_intentional_contracts() -> None:
         "AIRuntimeUnavailableError",
         "AIRuntimeUnexpectedError",
         "AIRuntimeUsage",
+        "CodexAIRuntime",
+        "CodexAIRuntimeConfig",
         "InMemoryAIRuntimeRegistry",
+        "create_codex_ai_runtime_registry",
     }
 
 
-def test_ai_runtime_has_no_vendor_sdk_or_real_adapter() -> None:
-    import asep.ai_runtime as api
+def test_core_ai_runtime_contracts_have_no_vendor_dependencies() -> None:
+    import asep.ai_runtime.contracts as contracts
+    import asep.ai_runtime.models as models
 
-    names = " ".join(api.__all__).lower()
+    names = " ".join((*contracts.__all__, *models.__all__)).lower()
     assert "openai" not in names
     assert "anthropic" not in names
     assert "codex" not in names

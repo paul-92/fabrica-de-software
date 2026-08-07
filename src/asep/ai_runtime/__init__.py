@@ -1,6 +1,11 @@
 """API pública provider-agnostic de AI Runtime."""
 
 from asep.ai_runtime.contracts import AIRuntime, AIRuntimeRegistry
+from asep.ai_runtime.codex import (
+    CodexAIRuntime,
+    CodexAIRuntimeConfig,
+    create_codex_ai_runtime_registry,
+)
 from asep.ai_runtime.errors import (
     AIRuntimeAlreadyRegisteredError,
     AIRuntimeAuthenticationError,
@@ -42,5 +47,8 @@ __all__ = [
     "AIRuntimeUnavailableError",
     "AIRuntimeUnexpectedError",
     "AIRuntimeUsage",
+    "CodexAIRuntime",
+    "CodexAIRuntimeConfig",
     "InMemoryAIRuntimeRegistry",
+    "create_codex_ai_runtime_registry",
 ]
