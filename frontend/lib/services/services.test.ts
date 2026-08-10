@@ -136,6 +136,7 @@ describe("specialized API clients", () => {
       { status: 200, ok: true, body: { items: [] } },
       { status: 200, ok: true, body: { items: [] } },
       { status: 200, ok: true, body: { execution_id: "e/1" } },
+      { status: 200, ok: true, body: { items: [] } },
       { status: 201, ok: true, body: { memory_id: "m/1" } },
       { status: 200, ok: true, body: { execution_id: "e/1" } },
     );
@@ -144,6 +145,7 @@ describe("specialized API clients", () => {
     await history.listSessions("p/1");
     await history.listSessionExecutions("p/1", "s/1");
     await history.getExecution("p/1", "e/1");
+    await history.listMemory("p/1", "s/1");
     await history.addMemory("p/1", "s/1", "constraint", "Use PostgreSQL for persistence.");
     await new ProjectRuntimeClient(api).execute("p/1", {
       session_id: "s/1", runtime_id: "codex", instruction: "Inspect",
@@ -153,6 +155,7 @@ describe("specialized API clients", () => {
       { url: "https://example.test/api/v1/projects/p%2F1/sessions" },
       { url: "https://example.test/api/v1/projects/p%2F1/sessions/s%2F1/executions" },
       { url: "https://example.test/api/v1/projects/p%2F1/executions/e%2F1" },
+      { url: "https://example.test/api/v1/projects/p%2F1/sessions/s%2F1/memory", method: "GET" },
       { url: "https://example.test/api/v1/projects/p%2F1/sessions/s%2F1/memory", method: "POST", body: { kind: "constraint", content: "Use PostgreSQL for persistence." } },
       { url: "https://example.test/api/v1/projects/p%2F1/ai-runtime/execute", body: { session_id: "s/1", runtime_id: "codex", instruction: "Inspect" } },
     ]);
