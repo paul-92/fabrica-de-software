@@ -1,5 +1,14 @@
 export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
+export type AgentCatalogItemDto = Readonly<{
+  agent_id: string;
+  name: string;
+  version: string;
+  lifecycle_status: string;
+  department: string;
+  capabilities: readonly string[];
+}>;
+
 export type AIRuntimeConnectionState = "not_installed" | "not_authenticated" | "ready" | "error";
 export type AIRuntimeExecutionMode = "read_only" | "workspace_write";
 export type WorkspaceChangeDto = Readonly<{

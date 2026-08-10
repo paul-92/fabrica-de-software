@@ -9,6 +9,7 @@ import { RunsClient } from "./runs";
 import { ProjectsClient } from "./projects";
 import { ProjectHistoryClient, ProjectRuntimeClient } from "./projectRuntime";
 import { ProjectWorkspaceClient } from "./projectWorkspace";
+import { AgentsClient } from "./agents";
 
 class RecordingTransport implements HttpTransport {
   requests: HttpRequest[] = [];
@@ -27,6 +28,18 @@ function setup() {
 }
 
 describe("specialized API clients", () => {
+  it("lists agents through the public catalog endpoint", async () => {
+    const { transport, api } = setup();
+    transport.responses.push({ status: 200, ok: true, body: { items: [] } });
+
+    expect(await new AgentsClient(api).list()).toEqual([]);
+
+    expect(transport.requests[0]).toMatchObject({
+      url: "https://example.test/api/v1/agents",
+      method: "GET",
+    });
+  });
+
   it("executes Intelligent Engineering through its public endpoint", async () => {
     const { transport, api } = setup();
     const request: IntelligentEngineeringRequestDto = {
