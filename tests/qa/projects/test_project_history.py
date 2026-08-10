@@ -2,6 +2,8 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
+import json
+import sqlite3
 from pydantic import ValidationError
 
 from asep.ai_runtime import AIRuntimeExecutionMode, AIRuntimeUsage
@@ -67,3 +69,20 @@ def test_sqlite_history_persists_between_instances(tmp_path: Path) -> None:
     assert restored == execution()
     assert restored.usage.total_units == 3
     assert restored.changes[0].path == "a.txt"
+
+
+def test_sqlite_loads_pre_23_8_execution_payload_with_safe_context_defaults(tmp_path: Path) -> None:
+    database = tmp_path / "asep.db"
+    SQLiteProjectRepository(database).save(WorkspaceProject(project_id="p-1", name="P", workspace_path=tmp_path, created_at=NOW, updated_at=NOW))
+    SQLiteProjectSessionRepository(database).create(session())
+    legacy_payload = execution().model_dump(mode="json")
+    legacy_payload.pop("context_entry_count")
+    legacy_payload.pop("context_truncated")
+    with sqlite3.connect(database) as connection:
+        connection.execute(
+            "INSERT INTO project_executions (id, session_id, project_id, status, created_at, payload) VALUES (?, ?, ?, ?, ?, ?)",
+            ("legacy", "s-1", "p-1", "succeeded", NOW.isoformat(), json.dumps({**legacy_payload, "execution_id": "legacy"})),
+        )
+    restored = SQLiteProjectExecutionRepository(database).get("legacy")
+    assert restored.context_entry_count == 0
+    assert restored.context_truncated is False

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from enum import StrEnum
 
-from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from asep.ai_runtime import AIRuntimeExecutionMode, AIRuntimeUsage
 from asep.workspace_changes import WorkspaceChange
@@ -56,6 +56,8 @@ class ProjectExecution(BaseModel):
     usage: AIRuntimeUsage | None = None
     changes: tuple[WorkspaceChange, ...] = ()
     error_code: str | None = None
+    context_entry_count: int = Field(default=0, ge=0)
+    context_truncated: bool = False
     created_at: datetime
     completed_at: datetime | None = None
 

@@ -46,6 +46,24 @@ class ProjectValidationError(AsepError):
     exit_code = 3
 
 
+class ProjectSessionNotFoundError(AsepError):
+    code = "PROJECT_SESSION_NOT_FOUND"
+    category = "validation"
+    exit_code = 2
+
+
+class ProjectExecutionNotFoundError(AsepError):
+    code = "PROJECT_EXECUTION_NOT_FOUND"
+    category = "validation"
+    exit_code = 2
+
+
+class ProjectHistoryConflictError(AsepError):
+    code = "PROJECT_HISTORY_CONFLICT"
+    category = "conflict"
+    exit_code = 6
+
+
 class RegistryValidationError(AsepError):
     code = "REGISTRY_INVALID"
     category = "validation"

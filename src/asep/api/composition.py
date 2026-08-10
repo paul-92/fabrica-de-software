@@ -20,6 +20,7 @@ from asep.application import (
     ProjectService,
     AIRuntimeConnectionService,
     ProjectAIRuntimeExecutionService,
+    ProjectSessionService,
     create_intelligent_engineering_application_service,
 )
 from asep.ai_planning import (
@@ -101,6 +102,17 @@ def create_default_app(
     project_runtime_execution = ProjectAIRuntimeExecutionService(
         project_service,
         runtime_registry,
+        ProjectSessionService(
+            project_service,
+            repositories.project_session_repository,
+            repositories.project_execution_repository,
+        ),
+        repositories.project_execution_repository,
+    )
+    project_session_service = ProjectSessionService(
+        project_service,
+        repositories.project_session_repository,
+        repositories.project_execution_repository,
     )
     intelligent_engineering_service = _create_intelligent_engineering_service(
         settings,
@@ -114,4 +126,5 @@ def create_default_app(
         project_service=project_service,
         ai_runtime_connection_service=ai_runtime_connection_service,
         project_ai_runtime_execution_service=project_runtime_execution,
+        project_session_service=project_session_service,
     )

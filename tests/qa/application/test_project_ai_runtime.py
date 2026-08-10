@@ -67,11 +67,11 @@ def service(tmp_path: Path):
     executions = InMemoryProjectExecutionRepository()
     session_service = ProjectSessionService(project_service, sessions, executions, id_generator=lambda: "session-1")
     session_service.create("project-1", "Test")
-    return ProjectAIRuntimeExecutionService(project_service, registry, session_service, executions), runtime
+    return ProjectAIRuntimeExecutionService(project_service, registry, session_service, executions), runtime, executions
 
 
 def test_execution_resolves_workspace_only_from_persisted_project(tmp_path: Path) -> None:
-    execution, runtime = service(tmp_path)
+    execution, runtime, _ = service(tmp_path)
     result = execution.execute(ProjectAIRuntimeExecutionRequest(
         project_id="project-1", session_id="session-1", runtime_id="codex",
         instruction=" Analyze project ", metadata={"source": "ui"},
@@ -87,10 +87,43 @@ def test_execution_resolves_workspace_only_from_persisted_project(tmp_path: Path
     assert request.instruction == "Analyze project"
     assert request.workspace == tmp_path.resolve()
     assert request.metadata["source"] == "ui"
+    assert request.context["project_session"]["session_id"] == "session-1"
+    assert request.context["project_session"]["entries"] == ()
+    assert result.execution.context_entry_count == 0
+    assert result.execution.context_truncated is False
+
+
+def test_later_execution_receives_limited_context_from_same_session(tmp_path: Path) -> None:
+    execution, runtime, _ = service(tmp_path)
+    execution.execute(ProjectAIRuntimeExecutionRequest(
+        project_id="project-1", session_id="session-1", runtime_id="codex",
+        instruction="Create a customer API",
+    ))
+    execution.execute(ProjectAIRuntimeExecutionRequest(
+        project_id="project-1", session_id="session-1", runtime_id="codex",
+        instruction="Now add CPF validation",
+    ))
+
+    context = runtime.requests[1].context["project_session"]
+    assert len(context["entries"]) == 1
+    entry = context["entries"][0]
+    assert entry["instruction"] == "Create a customer API"
+    assert entry["summary"] == "analysis"
+    assert entry["status"] == "succeeded"
+    assert "runtime_id" not in entry
+    assert "usage" not in entry
+    assert runtime.requests[1].instruction == "Now add CPF validation"
+
+    third = execution.execute(ProjectAIRuntimeExecutionRequest(
+        project_id="project-1", session_id="session-1", runtime_id="codex",
+        instruction="Explain the result",
+    ))
+    assert len(runtime.requests[2].context["project_session"]["entries"]) == 2
+    assert third.execution.context_entry_count == 2
 
 
 def test_missing_project_and_runtime_are_rejected(tmp_path: Path) -> None:
-    execution, _ = service(tmp_path)
+    execution, _, _ = service(tmp_path)
     with pytest.raises(ProjectNotFoundError):
         execution.execute(ProjectAIRuntimeExecutionRequest(
             project_id="missing", session_id="session-1", runtime_id="codex", instruction="test"
@@ -145,3 +178,17 @@ def test_failed_workspace_write_preserves_change_evidence(tmp_path: Path) -> Non
     assert persisted.status.value == "failed"
     assert persisted.error_code == "VALUE_ERROR"
     assert persisted.changes[0].path == "created.txt"
+    runtime.error = None
+    follow_up = execution.execute(ProjectAIRuntimeExecutionRequest(
+        project_id="project-1", session_id="session-1", runtime_id="codex",
+        instruction="Explain the partial failure",
+    ))
+    historical = runtime.requests[1].context["project_session"]["entries"]
+    assert len(historical) == 1
+    assert historical[0]["status"] == "failed"
+    assert historical[0]["error_code"] == "VALUE_ERROR"
+    assert historical[0]["summary"] is None
+    assert historical[0]["changes"] == (
+        {"path": "created.txt", "change_type": "created"},
+    )
+    assert follow_up.execution.context_entry_count == 1

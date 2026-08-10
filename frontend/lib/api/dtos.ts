@@ -32,6 +32,8 @@ export type ProjectAIRuntimeExecutionDto = Readonly<{
   metadata: Record<string, JsonValue>;
   execution_mode: AIRuntimeExecutionMode;
   changes: readonly WorkspaceChangeDto[];
+  context_entry_count: number;
+  context_truncated: boolean;
 }>;
 
 export type ProjectSessionDto = Readonly<{
@@ -55,6 +57,8 @@ export type ProjectExecutionDto = Readonly<{
   usage: ProjectAIRuntimeExecutionDto["usage"];
   changes: readonly WorkspaceChangeDto[];
   error_code: string | null;
+  context_entry_count: number;
+  context_truncated: boolean;
   created_at: string;
   completed_at: string | null;
 }>;

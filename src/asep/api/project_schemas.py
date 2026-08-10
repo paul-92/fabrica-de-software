@@ -85,6 +85,8 @@ class ProjectAIRuntimeExecutionResponse(ProjectHttpSchema):
     metadata: dict[str, Any]
     execution_mode: AIRuntimeExecutionMode
     changes: tuple[WorkspaceChangeResponse, ...] = ()
+    context_entry_count: int
+    context_truncated: bool
 
 
 class CreateProjectSessionRequest(ProjectHttpSchema):
@@ -128,6 +130,8 @@ class ProjectExecutionResponse(ProjectHttpSchema):
     usage: AIRuntimeUsageResponse | None
     changes: tuple[WorkspaceChangeResponse, ...]
     error_code: str | None
+    context_entry_count: int
+    context_truncated: bool
     created_at: datetime
     completed_at: datetime | None
 

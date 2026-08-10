@@ -63,12 +63,24 @@ def test_project_runtime_http_contract_excludes_workspace_and_preserves_result(t
     assert response.json() == {
         "execution_id": response.json()["execution_id"], "output": "safe result", "runtime_id": "codex", "model_id": "test-model",
         "usage": None, "metadata": {},
-        "execution_mode": "read_only", "changes": [],
+            "execution_mode": "read_only", "changes": [],
+            "context_entry_count": 0, "context_truncated": False,
     }
     assert runtime.request.workspace == tmp_path.resolve()
+    assert "prompt" not in response.json()
+    assert "context" not in response.json()
+    assert "history" not in response.json()
+    second = client.post("/api/v1/projects/p-1/ai-runtime/execute", json={
+        "session_id": "s-1", "runtime_id": "codex", "instruction": "continue",
+    })
+    assert second.status_code == 200
+    assert second.json()["context_entry_count"] == 1
+    assert second.json()["context_truncated"] is False
+    assert "context" not in second.json()
     execution_id = response.json()["execution_id"]
-    assert client.get("/api/v1/projects/p-1/executions").json()["items"][0]["execution_id"] == execution_id
-    assert client.get("/api/v1/projects/p-1/sessions/s-1/executions").json()["items"][0]["execution_id"] == execution_id
+    second_execution_id = second.json()["execution_id"]
+    assert client.get("/api/v1/projects/p-1/executions").json()["items"][0]["execution_id"] == second_execution_id
+    assert client.get("/api/v1/projects/p-1/sessions/s-1/executions").json()["items"][0]["execution_id"] == second_execution_id
     assert client.get(f"/api/v1/projects/p-1/executions/{execution_id}").json()["status"] == "succeeded"
     assert client.post("/api/v1/projects/p-1/ai-runtime/execute", json={
         "runtime_id": "codex", "instruction": "inspect"
@@ -76,7 +88,10 @@ def test_project_runtime_http_contract_excludes_workspace_and_preserves_result(t
     assert client.post("/api/v1/projects/p-1/ai-runtime/execute", json={
         "session_id": "missing", "runtime_id": "codex", "instruction": "inspect"
     }).status_code == 404
-    for forbidden in ("workspace_path", "cwd", "working_directory", "root", "sandbox"):
+    for forbidden in (
+        "workspace_path", "cwd", "working_directory", "root", "sandbox",
+        "context", "history", "previous_messages", "conversation",
+    ):
         assert client.post("/api/v1/projects/p-1/ai-runtime/execute", json={
             "session_id": "s-1", "runtime_id": "codex", "instruction": "inspect", forbidden: str(tmp_path)
         }).status_code == 422

@@ -7,6 +7,7 @@ import { IntelligentEngineeringClient } from "./intelligentEngineering";
 import { MetricsClient } from "./metrics";
 import { RunsClient } from "./runs";
 import { ProjectsClient } from "./projects";
+import { ProjectHistoryClient, ProjectRuntimeClient } from "./projectRuntime";
 
 class RecordingTransport implements HttpTransport {
   requests: HttpRequest[] = [];
@@ -124,6 +125,32 @@ describe("specialized API clients", () => {
       { url: "https://example.test/api/v1/projects", method: "POST", body: request },
       { url: "https://example.test/api/v1/projects", method: "GET" },
       { url: "https://example.test/api/v1/projects/project%2Fone", method: "GET" },
+    ]);
+  });
+
+  it("provides project sessions, history and session-bound execution", async () => {
+    const { transport, api } = setup();
+    transport.responses.push(
+      { status: 201, ok: true, body: { session_id: "s/1" } },
+      { status: 200, ok: true, body: { items: [] } },
+      { status: 200, ok: true, body: { items: [] } },
+      { status: 200, ok: true, body: { execution_id: "e/1" } },
+      { status: 200, ok: true, body: { execution_id: "e/1" } },
+    );
+    const history = new ProjectHistoryClient(api);
+    await history.createSession("p/1", "Work");
+    await history.listSessions("p/1");
+    await history.listSessionExecutions("p/1", "s/1");
+    await history.getExecution("p/1", "e/1");
+    await new ProjectRuntimeClient(api).execute("p/1", {
+      session_id: "s/1", runtime_id: "codex", instruction: "Inspect",
+    });
+    expect(transport.requests).toMatchObject([
+      { url: "https://example.test/api/v1/projects/p%2F1/sessions", method: "POST", body: { title: "Work" } },
+      { url: "https://example.test/api/v1/projects/p%2F1/sessions" },
+      { url: "https://example.test/api/v1/projects/p%2F1/sessions/s%2F1/executions" },
+      { url: "https://example.test/api/v1/projects/p%2F1/executions/e%2F1" },
+      { url: "https://example.test/api/v1/projects/p%2F1/ai-runtime/execute", body: { session_id: "s/1", runtime_id: "codex", instruction: "Inspect" } },
     ]);
   });
 });

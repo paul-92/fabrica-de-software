@@ -7,7 +7,13 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from asep.api.schemas import ErrorDetail, ErrorResponse
-from asep.errors import AsepError, ProjectNotFoundError, RunNotFoundError
+from asep.errors import (
+    AsepError,
+    ProjectExecutionNotFoundError,
+    ProjectNotFoundError,
+    ProjectSessionNotFoundError,
+    RunNotFoundError,
+)
 from asep.planning import PlanningValidationError
 from asep.ai_runtime import (
     AIRuntimeAuthenticationError,
@@ -79,6 +85,18 @@ def register_exception_handlers(app: FastAPI) -> None:
             code=error.code,
             message="Project not found.",
         )
+
+    @app.exception_handler(ProjectSessionNotFoundError)
+    async def project_session_not_found_handler(
+        request: Request, error: ProjectSessionNotFoundError,
+    ) -> JSONResponse:
+        return _error_response(status_code=404, code=error.code, message="Project session not found.")
+
+    @app.exception_handler(ProjectExecutionNotFoundError)
+    async def project_execution_not_found_handler(
+        request: Request, error: ProjectExecutionNotFoundError,
+    ) -> JSONResponse:
+        return _error_response(status_code=404, code=error.code, message="Project execution not found.")
 
     @app.exception_handler(RunNotFoundError)
     async def run_not_found_handler(

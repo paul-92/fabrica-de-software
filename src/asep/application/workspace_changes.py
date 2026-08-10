@@ -5,25 +5,10 @@ from __future__ import annotations
 import hashlib
 import os
 import stat
-from enum import StrEnum
 from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
-
-
-class WorkspaceChangeType(StrEnum):
-    CREATED = "created"
-    MODIFIED = "modified"
-    DELETED = "deleted"
-
-
-class WorkspaceChange(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    path: str
-    change_type: WorkspaceChangeType
-    size_before: int | None = Field(default=None, ge=0)
-    size_after: int | None = Field(default=None, ge=0)
+from asep.workspace_changes import WorkspaceChange, WorkspaceChangeType
 
 
 class WorkspaceSnapshotPolicy(BaseModel):

@@ -18,6 +18,13 @@ from asep.application.project_ai_runtime import (
     ProjectAIRuntimeExecutionService,
 )
 from asep.application.project_sessions import ProjectSessionService
+from asep.application.session_context import (
+    SessionContextBuilder,
+    SessionContextChange,
+    SessionContextEntry,
+    SessionContextPolicy,
+    SessionRuntimeContext,
+)
 
 __all__ = [
     "AIRuntimeConnectionService",
@@ -31,5 +38,10 @@ __all__ = [
     "ProjectAIRuntimeExecutionResult",
     "ProjectAIRuntimeExecutionService",
     "ProjectSessionService",
+    "SessionContextBuilder",
+    "SessionContextChange",
+    "SessionContextEntry",
+    "SessionContextPolicy",
+    "SessionRuntimeContext",
     "create_intelligent_engineering_application_service",
 ]

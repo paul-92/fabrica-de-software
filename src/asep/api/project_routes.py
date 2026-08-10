@@ -113,6 +113,8 @@ def create_projects_router(
                     change.model_dump(mode="json")
                     for change in result.changes
                 ),
+                context_entry_count=result.execution.context_entry_count,
+                context_truncated=result.execution.context_truncated,
             )
 
     return router

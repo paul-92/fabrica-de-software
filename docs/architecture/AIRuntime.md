@@ -1,6 +1,6 @@
 # AI Runtime provider-agnostic
 
-**Dono:** Engenharia ASEP | **Versão:** 0.1 | **Status:** vigente
+**Dono:** Engenharia ASEP | **Versão:** 0.2 | **Status:** vigente
 
 ## Objetivo
 
@@ -18,6 +18,13 @@ flowchart LR
 normaliza output, identidade extensível, consumo opcional e metadados. A
 identidade usa strings validadas para `runtime_id`, `model_id` e capabilities;
 não existe enum de fornecedores.
+
+O campo `context` pode receber projeções ASEP limitadas, como
+`SessionRuntimeContext`. O adapter apenas serializa essa projeção; ele não
+consulta histórico e não converte `ProjectSession` em conversa do provider.
+Instruções históricas são serializadas em uma seção explicitamente marcada
+como contexto não executável. A instrução atual aparece separada como a única
+tarefa ativa. O prompt final não é persistido.
 
 ## Fronteiras
 

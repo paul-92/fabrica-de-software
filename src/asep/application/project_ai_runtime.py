@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from asep._json_values import freeze_json
 from asep.ai_runtime import AIRuntimeExecutionMode, AIRuntimeRegistry, AIRuntimeRequest, AIRuntimeResult
 from asep.application.project_sessions import ProjectSessionService
+from asep.application.session_context import SessionContextBuilder
 from asep.application.projects import ProjectService
 from asep.application.workspace_changes import WorkspaceChange, WorkspaceSnapshotter
 from asep.projects import ProjectExecution, ProjectExecutionRepository, ProjectExecutionStatus
@@ -51,7 +52,8 @@ class ProjectAIRuntimeExecutionResult(BaseModel):
 class ProjectAIRuntimeExecutionService:
     def __init__(self, projects: ProjectService, runtimes: AIRuntimeRegistry,
                  sessions: ProjectSessionService, executions: ProjectExecutionRepository,
-                 snapshotter: WorkspaceSnapshotter | None = None, *,
+                 snapshotter: WorkspaceSnapshotter | None = None,
+                 context_builder: SessionContextBuilder | None = None, *,
                  clock: Callable[[], datetime] | None = None,
                  id_generator: Callable[[], str] | None = None) -> None:
         self._projects = projects
@@ -59,6 +61,7 @@ class ProjectAIRuntimeExecutionService:
         self._sessions = sessions
         self._executions = executions
         self._snapshotter = snapshotter or WorkspaceSnapshotter()
+        self._context_builder = context_builder or SessionContextBuilder(executions)
         self._clock = clock or (lambda: datetime.now(UTC))
         self._id_generator = id_generator or (lambda: str(uuid4()))
         self._locks_guard = Lock()
@@ -67,11 +70,17 @@ class ProjectAIRuntimeExecutionService:
     def execute(self, request: ProjectAIRuntimeExecutionRequest) -> ProjectAIRuntimeExecutionResult:
         project = self._projects.get(request.project_id)
         self._sessions.get(request.project_id, request.session_id)
+        session_context = self._context_builder.build(
+            request.project_id, request.session_id
+        )
         execution = ProjectExecution(
             execution_id=self._id_generator(), session_id=request.session_id,
             project_id=request.project_id, runtime_id=request.runtime_id,
             instruction=request.instruction, execution_mode=request.execution_mode,
-            status=ProjectExecutionStatus.RUNNING, created_at=self._clock(),
+            status=ProjectExecutionStatus.RUNNING,
+            context_entry_count=len(session_context.entries),
+            context_truncated=session_context.truncated,
+            created_at=self._clock(),
         )
         self._executions.create(execution)
         try:
@@ -85,6 +94,9 @@ class ProjectAIRuntimeExecutionService:
         self._executions.update(execution)
         runtime_request = AIRuntimeRequest(
             instruction=request.instruction, metadata=request.metadata,
+            context={
+                "project_session": session_context.model_dump(mode="json")
+            },
             workspace=project.workspace_path, execution_mode=request.execution_mode,
         )
         if request.execution_mode is AIRuntimeExecutionMode.READ_ONLY:
