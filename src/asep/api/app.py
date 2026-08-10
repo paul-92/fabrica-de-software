@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from asep.application import (
+    AgentCatalogService,
     IntelligentEngineeringApplicationService,
     RunQueryService,
     ProjectService,
@@ -15,6 +16,7 @@ from asep.application import (
     ProjectWorkspaceService,
 )
 from asep.api.errors import register_exception_handlers
+from asep.api.agent_routes import create_agent_catalog_router
 from asep.api.ai_runtime_routes import create_ai_runtime_router
 from asep.application import AIRuntimeConnectionService
 from asep.api.intelligent_engineering_routes import (
@@ -43,6 +45,7 @@ def create_app(
     project_session_service: ProjectSessionService | None = None,
     project_session_memory_service: ProjectSessionMemoryService | None = None,
     project_workspace_service: ProjectWorkspaceService | None = None,
+    agent_catalog_service: AgentCatalogService | None = None,
 ) -> FastAPI:
     app = FastAPI(
         title="ASEP Dashboard API",
@@ -61,6 +64,7 @@ def create_app(
     app.state.project_service = project_service
     app.state.ai_runtime_connection_service = ai_runtime_connection_service
     app.state.project_session_service = project_session_service
+    app.state.agent_catalog_service = agent_catalog_service
     app.add_middleware(
         CORSMiddleware,
         allow_origins=list(cors_origins),
@@ -72,6 +76,8 @@ def create_app(
     app.include_router(create_health_router())
     app.include_router(create_runs_router(run_query_service))
     app.include_router(create_metrics_router(metrics_service))
+    if agent_catalog_service is not None:
+        app.include_router(create_agent_catalog_router(agent_catalog_service))
     if project_service is not None:
         app.include_router(
             create_projects_router(

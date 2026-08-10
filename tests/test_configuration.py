@@ -93,6 +93,20 @@ def test_repair_workspace_is_optional() -> None:
     assert Configuration.load({}).repair_workspace is None
 
 
+def test_agent_catalog_directory_is_configurable() -> None:
+    settings = Configuration.load({
+        "ASEP_AGENT_CATALOG_DIRECTORY": "custom-registry"
+    })
+    assert settings.agent_catalog_directory == Path("custom-registry")
+
+
+def test_agent_catalog_directory_rejects_empty_value() -> None:
+    with pytest.raises(
+        ConfigurationValidationError, match="agent_catalog_directory"
+    ):
+        ApplicationSettings(agent_catalog_directory="")
+
+
 def test_repair_workspace_is_loaded_and_resolved(tmp_path: Path) -> None:
     settings = Configuration.load(
         {"ASEP_REPAIR_WORKSPACE": str(tmp_path)}

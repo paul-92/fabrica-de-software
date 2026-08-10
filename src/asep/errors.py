@@ -159,6 +159,14 @@ class AgentNotFoundError(AsepError):
     exit_code = 3
 
 
+class AgentCatalogUnavailableError(AsepError):
+    code = "AGENT_CATALOG_UNAVAILABLE"
+    category = "configuration"
+    retryable = False
+    next_action = "Corrija e valide o catÃ¡logo declarativo de agentes."
+    exit_code = 5
+
+
 class AgentContractError(AsepError):
     code = "AGENT_CONTRACT_INVALID"
     category = "validation"

@@ -20,6 +20,7 @@ class Configuration:
         "ASEP_SQLITE_DATABASE": "sqlite_database",
         "ASEP_CORS_ORIGINS": "cors_origins",
         "ASEP_REPAIR_WORKSPACE": "repair_workspace",
+        "ASEP_AGENT_CATALOG_DIRECTORY": "agent_catalog_directory",
     }
 
     @classmethod

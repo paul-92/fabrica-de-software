@@ -1,6 +1,11 @@
 """Serviços de aplicação da ASEP."""
 
 from asep.application.ai_runtime_connections import AIRuntimeConnectionService
+from asep.application.agent_catalog import (
+    AgentCatalogEntry,
+    AgentCatalogService,
+    AgentCatalogSource,
+)
 from asep.application.contracts import IntelligentEngineeringCapability
 from asep.application.intelligent_engineering import (
     ApplicationIntelligentEngineeringRequest,
@@ -41,6 +46,9 @@ from asep.application.session_memory import (
 from asep.application.project_workspace import ProjectWorkspaceService, WorkspaceBrowsingPolicy
 
 __all__ = [
+    "AgentCatalogEntry",
+    "AgentCatalogService",
+    "AgentCatalogSource",
     "AIRuntimeConnectionService",
     "ApplicationIntelligentEngineeringRequest",
     "ApplicationIntelligentEngineeringResult",

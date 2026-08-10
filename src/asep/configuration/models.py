@@ -11,6 +11,7 @@ from asep.configuration.errors import ConfigurationValidationError
 
 _DEFAULT_STORAGE_DIRECTORY = Path("storage")
 _DEFAULT_SQLITE_DATABASE = _DEFAULT_STORAGE_DIRECTORY / "asep.db"
+_DEFAULT_AGENT_CATALOG_DIRECTORY = Path("registry")
 DEFAULT_CORS_ORIGINS = (
     "http://localhost:3000",
     "http://127.0.0.1:3000",
@@ -37,6 +38,7 @@ class ApplicationSettings:
     sqlite_database: Path | str = _DEFAULT_SQLITE_DATABASE
     cors_origins: tuple[str, ...] | str = DEFAULT_CORS_ORIGINS
     repair_workspace: Path | str | None = None
+    agent_catalog_directory: Path | str = _DEFAULT_AGENT_CATALOG_DIRECTORY
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -75,6 +77,13 @@ class ApplicationSettings:
             self,
             "repair_workspace",
             self._validate_repair_workspace(self.repair_workspace),
+        )
+        object.__setattr__(
+            self,
+            "agent_catalog_directory",
+            self._validate_path(
+                "agent_catalog_directory", self.agent_catalog_directory
+            ),
         )
 
     @staticmethod

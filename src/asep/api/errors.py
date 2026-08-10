@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 
 from asep.api.schemas import ErrorDetail, ErrorResponse
 from asep.errors import (
+    AgentCatalogUnavailableError,
     AsepError,
     ProjectExecutionNotFoundError,
     ProjectNotFoundError,
@@ -27,6 +28,16 @@ from asep.ai_runtime import (
 
 
 def register_exception_handlers(app: FastAPI) -> None:
+    @app.exception_handler(AgentCatalogUnavailableError)
+    async def agent_catalog_unavailable_handler(
+        request: Request, error: AgentCatalogUnavailableError
+    ) -> JSONResponse:
+        return _error_response(
+            status_code=503,
+            code=error.code,
+            message="Agent catalog is unavailable.",
+        )
+
     @app.exception_handler(AIRuntimeNotFoundError)
     async def runtime_not_found_handler(
         request: Request, error: AIRuntimeNotFoundError

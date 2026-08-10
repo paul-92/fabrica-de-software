@@ -15,6 +15,7 @@ from asep.ai_runtime import (
 
 from asep.api.app import create_app
 from asep.application import (
+    AgentCatalogService,
     IntelligentEngineeringApplicationService,
     RunQueryService,
     ProjectService,
@@ -47,6 +48,7 @@ from asep.tools import (
     ToolExecutionService,
     WriteFileTool,
 )
+from asep.registry.agent_catalog_source import DeclarativeAgentCatalogSource
 
 
 def _create_intelligent_engineering_service(
@@ -89,6 +91,9 @@ def create_default_app(
         repositories.timeline_repository,
     )
     metrics_service = MetricsService(query_service)
+    agent_catalog_service = AgentCatalogService(
+        DeclarativeAgentCatalogSource(settings.agent_catalog_directory)
+    )
     project_service = ProjectService(repositories.project_repository)
     ai_runtime_connection_service = AIRuntimeConnectionService(
         (
@@ -134,4 +139,5 @@ def create_default_app(
         project_session_service=project_session_service,
         project_session_memory_service=project_memory_service,
         project_workspace_service=project_workspace_service,
+        agent_catalog_service=agent_catalog_service,
     )
