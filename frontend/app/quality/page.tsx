@@ -1,5 +1,5 @@
-import { SectionPlaceholder } from "../../components/layout/SectionPlaceholder";
+import { QualityWorkspace } from "../../components/quality/QualityWorkspace";
 
 export default function QualityPage() {
-  return <SectionPlaceholder eyebrow="Assurance" title="Quality" description="Observe quality gates, resultados de validação e sinais de confiança." />;
+  return <QualityWorkspace />;
 }
