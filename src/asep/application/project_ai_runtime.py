@@ -12,7 +12,10 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from asep._json_values import freeze_json
 from asep.ai_runtime import AIRuntimeExecutionMode, AIRuntimeRegistry, AIRuntimeRequest, AIRuntimeResult
 from asep.application.project_sessions import ProjectSessionService
-from asep.application.session_context import SessionContextBuilder
+from asep.application.session_context import (
+    SessionContextBuilder,
+    session_runtime_context_char_count,
+)
 from asep.application.projects import ProjectService
 from asep.application.workspace_changes import WorkspaceChange, WorkspaceSnapshotter
 from asep.projects import ProjectExecution, ProjectExecutionRepository, ProjectExecutionStatus
@@ -80,6 +83,8 @@ class ProjectAIRuntimeExecutionService:
             status=ProjectExecutionStatus.RUNNING,
             context_entry_count=len(session_context.entries),
             context_truncated=session_context.truncated,
+            context_char_count=session_runtime_context_char_count(session_context),
+            context_omitted_execution_count=session_context.omitted_execution_count,
             created_at=self._clock(),
         )
         self._executions.create(execution)

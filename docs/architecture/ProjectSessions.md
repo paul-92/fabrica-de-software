@@ -1,6 +1,6 @@
 # Project Sessions and Execution History
 
-**Dono:** Engenharia ASEP | **Versão:** 0.2 | **Status:** vigente
+**Dono:** Engenharia ASEP | **Versão:** 0.3 | **Status:** vigente
 
 ## Objetivo
 
@@ -39,12 +39,35 @@ do histórico e não cria/reutiliza thread ou session do Codex.
 
 O contexto é construído antes de persistir a execução corrente, que nunca
 entra no próprio contexto. `context_entry_count` e `context_truncated` são a
-única observabilidade adicional persistida; o prompt/contexto integral não é
-duplicado. Payloads anteriores à versão 0.2 carregam defaults `0` e `false`.
+única observabilidade de continuidade anterior; a versão 0.3 acrescenta
+`context_char_count` e `context_omitted_execution_count`. Apenas essas métricas
+são persistidas; o prompt/contexto integral não é duplicado. Payloads antigos
+carregam defaults seguros.
 
 Isolamento por projeto e sessão é obrigatório. O workspace permanece a fonte
 da verdade do estado físico atual; mudanças históricas são apenas evidência e
 nunca reconstroem arquivos.
+
+### Budget e compactação determinística
+
+`SessionContextPolicy` é o budget único: 8 entries, 20.000 caracteres totais,
+2.000 por instruction, 4.000 por summary, 50 changes por entry e 500 por path.
+A unidade de `context_char_count` é a quantidade de caracteres Unicode do JSON
+canônico provider-agnostic completo de `AIRuntimeRequest.context`, incluindo a
+chave `project_session` (`sort_keys`, UTF-8 legível e separadores compactos).
+Esse tamanho inclui chaves/labels JSON, delimitadores, IDs, status, flags,
+`error_code`, paths e contadores de omissão.
+
+O pipeline é `history elegível → projeção segura → ContextCompactor →
+SessionRuntimeContext`. Entries recentes têm prioridade. Dentro de uma entry,
+o compactor tenta preservar outcome/instruction e changes antes do summary:
+remove summary, omite changes pela cauda determinística e somente então reduz
+instruction pelo maior prefixo que cabe. Se nem o núcleo couber, omite a entry.
+`omitted_change_count`, `context_omitted_execution_count` e flags de truncation
+impedem que compactação pareça conteúdo completo.
+
+Não há deduplicação, resumo por IA, tokens estimados ou seleção semântica.
+Mesmo history e policy produzem exatamente o mesmo JSON.
 
 ## Histórico auditável
 

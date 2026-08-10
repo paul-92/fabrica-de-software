@@ -19,11 +19,14 @@ from asep.application.project_ai_runtime import (
 )
 from asep.application.project_sessions import ProjectSessionService
 from asep.application.session_context import (
+    ContextCompactor,
     SessionContextBuilder,
     SessionContextChange,
     SessionContextEntry,
     SessionContextPolicy,
     SessionRuntimeContext,
+    serialize_session_runtime_context,
+    session_runtime_context_char_count,
 )
 
 __all__ = [
@@ -38,10 +41,13 @@ __all__ = [
     "ProjectAIRuntimeExecutionResult",
     "ProjectAIRuntimeExecutionService",
     "ProjectSessionService",
+    "ContextCompactor",
     "SessionContextBuilder",
     "SessionContextChange",
     "SessionContextEntry",
     "SessionContextPolicy",
     "SessionRuntimeContext",
+    "serialize_session_runtime_context",
+    "session_runtime_context_char_count",
     "create_intelligent_engineering_application_service",
 ]

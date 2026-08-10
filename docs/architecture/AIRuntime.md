@@ -1,6 +1,6 @@
 # AI Runtime provider-agnostic
 
-**Dono:** Engenharia ASEP | **Versão:** 0.2 | **Status:** vigente
+**Dono:** Engenharia ASEP | **Versão:** 0.3 | **Status:** vigente
 
 ## Objetivo
 
@@ -25,6 +25,11 @@ consulta histórico e não converte `ProjectSession` em conversa do provider.
 Instruções históricas são serializadas em uma seção explicitamente marcada
 como contexto não executável. A instrução atual aparece separada como a única
 tarefa ativa. O prompt final não é persistido.
+
+O contexto chega ao `AIRuntime` já compactado. O contrato não conhece preço,
+tokenizer ou limite específico de modelo. `CodexAIRuntime` usa o mesmo JSON
+canônico compacto na seção histórica, mas não seleciona, reordena ou resume
+executions.
 
 ## Fronteiras
 

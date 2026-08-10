@@ -63,12 +63,22 @@ def test_sqlite_history_persists_between_instances(tmp_path: Path) -> None:
     database = tmp_path / "asep.db"
     SQLiteProjectRepository(database).save(WorkspaceProject(project_id="p-1", name="P", workspace_path=tmp_path, created_at=NOW, updated_at=NOW))
     SQLiteProjectSessionRepository(database).create(session())
-    SQLiteProjectExecutionRepository(database).create(execution())
+    observed = execution().model_copy(update={
+        "context_entry_count": 5,
+        "context_truncated": True,
+        "context_char_count": 17_432,
+        "context_omitted_execution_count": 9,
+    })
+    SQLiteProjectExecutionRepository(database).create(observed)
     assert SQLiteProjectSessionRepository(database).get("s-1") == session()
     restored = SQLiteProjectExecutionRepository(database).get("e-1")
-    assert restored == execution()
+    assert restored == observed
     assert restored.usage.total_units == 3
     assert restored.changes[0].path == "a.txt"
+    assert restored.context_entry_count == 5
+    assert restored.context_truncated is True
+    assert restored.context_char_count == 17_432
+    assert restored.context_omitted_execution_count == 9
 
 
 def test_sqlite_loads_pre_23_8_execution_payload_with_safe_context_defaults(tmp_path: Path) -> None:
@@ -78,6 +88,8 @@ def test_sqlite_loads_pre_23_8_execution_payload_with_safe_context_defaults(tmp_
     legacy_payload = execution().model_dump(mode="json")
     legacy_payload.pop("context_entry_count")
     legacy_payload.pop("context_truncated")
+    legacy_payload.pop("context_char_count")
+    legacy_payload.pop("context_omitted_execution_count")
     with sqlite3.connect(database) as connection:
         connection.execute(
             "INSERT INTO project_executions (id, session_id, project_id, status, created_at, payload) VALUES (?, ?, ?, ?, ?, ?)",
@@ -86,3 +98,5 @@ def test_sqlite_loads_pre_23_8_execution_payload_with_safe_context_defaults(tmp_
     restored = SQLiteProjectExecutionRepository(database).get("legacy")
     assert restored.context_entry_count == 0
     assert restored.context_truncated is False
+    assert restored.context_char_count == 0
+    assert restored.context_omitted_execution_count == 0

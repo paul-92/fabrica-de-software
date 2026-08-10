@@ -87,6 +87,8 @@ class ProjectAIRuntimeExecutionResponse(ProjectHttpSchema):
     changes: tuple[WorkspaceChangeResponse, ...] = ()
     context_entry_count: int
     context_truncated: bool
+    context_char_count: int
+    context_omitted_execution_count: int
 
 
 class CreateProjectSessionRequest(ProjectHttpSchema):
@@ -132,6 +134,8 @@ class ProjectExecutionResponse(ProjectHttpSchema):
     error_code: str | None
     context_entry_count: int
     context_truncated: bool
+    context_char_count: int
+    context_omitted_execution_count: int
     created_at: datetime
     completed_at: datetime | None
 

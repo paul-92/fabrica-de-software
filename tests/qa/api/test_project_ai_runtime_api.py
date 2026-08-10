@@ -65,6 +65,8 @@ def test_project_runtime_http_contract_excludes_workspace_and_preserves_result(t
         "usage": None, "metadata": {},
             "execution_mode": "read_only", "changes": [],
             "context_entry_count": 0, "context_truncated": False,
+            "context_char_count": response.json()["context_char_count"],
+            "context_omitted_execution_count": 0,
     }
     assert runtime.request.workspace == tmp_path.resolve()
     assert "prompt" not in response.json()
@@ -76,6 +78,8 @@ def test_project_runtime_http_contract_excludes_workspace_and_preserves_result(t
     assert second.status_code == 200
     assert second.json()["context_entry_count"] == 1
     assert second.json()["context_truncated"] is False
+    assert second.json()["context_char_count"] > 0
+    assert second.json()["context_omitted_execution_count"] == 0
     assert "context" not in second.json()
     execution_id = response.json()["execution_id"]
     second_execution_id = second.json()["execution_id"]

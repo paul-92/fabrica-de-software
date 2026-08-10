@@ -34,6 +34,8 @@ export type ProjectAIRuntimeExecutionDto = Readonly<{
   changes: readonly WorkspaceChangeDto[];
   context_entry_count: number;
   context_truncated: boolean;
+  context_char_count: number;
+  context_omitted_execution_count: number;
 }>;
 
 export type ProjectSessionDto = Readonly<{
@@ -59,6 +61,8 @@ export type ProjectExecutionDto = Readonly<{
   error_code: string | null;
   context_entry_count: number;
   context_truncated: boolean;
+  context_char_count: number;
+  context_omitted_execution_count: number;
   created_at: string;
   completed_at: string | null;
 }>;

@@ -1,7 +1,11 @@
 from datetime import UTC, datetime, timedelta
 
 from asep.ai_runtime import AIRuntimeExecutionMode
-from asep.application import SessionContextBuilder, SessionContextPolicy
+from asep.application import (
+    SessionContextBuilder,
+    SessionContextPolicy,
+    session_runtime_context_char_count,
+)
 from asep.projects import InMemoryProjectExecutionRepository, ProjectExecution, ProjectExecutionStatus
 from asep.workspace_changes import WorkspaceChange, WorkspaceChangeType
 import pytest
@@ -90,15 +94,17 @@ def test_project_and_session_isolation_is_explicit() -> None:
 
 def test_individual_and_total_limits_report_truncation_and_favor_recency() -> None:
     context = build(
-        execution("old", "old instruction", "old summary", offset=1),
-        execution("new", "new instruction", "new summary", offset=2),
+        execution("old", "old instruction" * 30, "old summary" * 30, offset=1),
+        execution("new", "new instruction" * 30, "new summary" * 30, offset=2),
         policy=SessionContextPolicy(max_instruction_chars_per_entry=3,
-                                    max_summary_chars_per_entry=4, max_total_chars=7),
+                                    max_summary_chars_per_entry=4, max_total_chars=400),
     )
     assert len(context.entries) == 1
     entry = context.entries[0]
-    assert (entry.execution_id, entry.instruction, entry.summary) == ("new", "new", "new ")
+    assert entry.execution_id == "new"
+    assert entry.instruction == "new"
     assert entry.instruction_truncated and entry.summary_truncated and context.truncated
+    assert session_runtime_context_char_count(context) <= 400
 
 
 def test_unicode_multiline_is_preserved_and_invalid_surrogate_is_replaced() -> None:
@@ -124,3 +130,65 @@ def test_change_count_and_path_limits_are_explicit() -> None:
     ))
     assert context.entries[0].changes[0].path == "aaa"
     assert context.entries[0].changes_truncated and context.truncated
+
+
+def test_serialized_context_below_and_exactly_at_budget() -> None:
+    item = execution("one", "short instruction", "short summary")
+    below = build(item)
+    exact_size = session_runtime_context_char_count(below)
+    exact = build(item, policy=SessionContextPolicy(max_total_chars=exact_size))
+    assert exact == below
+    assert session_runtime_context_char_count(exact) == exact_size
+
+
+def test_one_enormous_entry_is_compacted_to_real_serialized_budget() -> None:
+    context = build(
+        execution("huge", "🚀" * 10_000, "summary" * 10_000),
+        policy=SessionContextPolicy(
+            max_total_chars=512,
+            max_instruction_chars_per_entry=20_000,
+            max_summary_chars_per_entry=40_000,
+        ),
+    )
+    assert len(context.entries) == 1
+    assert context.entries[0].summary is None
+    assert context.entries[0].summary_truncated is True
+    assert context.entries[0].instruction_truncated is True
+    assert context.truncated is True
+    assert session_runtime_context_char_count(context) <= 512
+    context.model_dump_json()
+
+
+def test_many_changes_are_deterministic_and_report_exact_omitted_count() -> None:
+    changes = tuple(
+        WorkspaceChange(
+            path=f"src/{index:03d}-" + ("x" * 100),
+            change_type=WorkspaceChangeType.MODIFIED,
+        )
+        for index in range(20)
+    )
+    policy = SessionContextPolicy(
+        max_total_chars=900,
+        max_changes_per_entry=10,
+        max_change_path_chars=20,
+    )
+    first = build(execution("changes", changes=changes), policy=policy)
+    second = build(execution("changes", changes=tuple(reversed(changes))), policy=policy)
+    entry = first.entries[0]
+    assert first == second
+    assert entry.omitted_change_count >= 10
+    assert entry.changes_truncated is True
+    assert [item.path for item in entry.changes] == sorted(item.path for item in entry.changes)
+    assert session_runtime_context_char_count(first) <= 900
+
+
+def test_many_executions_report_omitted_count_and_keep_recent_entries() -> None:
+    items = tuple(execution(f"e-{index}", offset=index) for index in range(12))
+    context = build(*items, policy=SessionContextPolicy(max_entries=8))
+    assert len(context.entries) == 8
+    assert context.omitted_execution_count == 4
+    assert context.truncated is True
+    assert [entry.execution_id for entry in context.entries] == [
+        f"e-{index}" for index in range(4, 12)
+    ]
+    assert session_runtime_context_char_count(context) <= 20_000

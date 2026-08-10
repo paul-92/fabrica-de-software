@@ -115,6 +115,10 @@ def create_projects_router(
                 ),
                 context_entry_count=result.execution.context_entry_count,
                 context_truncated=result.execution.context_truncated,
+                context_char_count=result.execution.context_char_count,
+                context_omitted_execution_count=(
+                    result.execution.context_omitted_execution_count
+                ),
             )
 
     return router

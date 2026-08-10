@@ -139,8 +139,8 @@ def test_runtime_maps_request_to_controlled_codex_exec(tmp_path: Path) -> None:
     ]
     process_input = str(runner.calls[0]["input_text"])
     assert process_input.startswith("ASEP SESSION CONTEXT")
-    assert '"summary": "broken test"' in process_input
-    assert '"correlation_id": "run-1"' in process_input
+    assert '"summary":"broken test"' in process_input
+    assert '"correlation_id":"run-1"' in process_input
     assert process_input.endswith("Analyze this project\n")
     assert process_input.index("ASEP SESSION CONTEXT") < process_input.index(
         "CURRENT USER INSTRUCTION"
@@ -193,8 +193,8 @@ def test_multiple_failed_truncated_entries_remain_structured_history(tmp_path: P
         instruction="Tarefa atual", context=context,
     ))
     process_input = str(runner.calls[0]["input_text"])
-    assert '"status": "failed"' in process_input
-    assert '"truncated": true' in process_input
+    assert '"status":"failed"' in process_input
+    assert '"truncated":true' in process_input
     assert "Primeira\\nlinha" in process_input
     assert "Falhou com ação" in process_input
     assert process_input.endswith("Tarefa atual\n")
@@ -279,7 +279,7 @@ def test_metadata_cannot_control_git_check_or_sandbox(tmp_path: Path) -> None:
     assert command.count("--skip-git-repo-check") == 1
     assert command[command.index("--sandbox") + 1] == "read-only"
     assert "danger-full-access" not in command
-    assert '"skip_git_repo_check": false' in runner.calls[0]["input_text"]
+    assert '"skip_git_repo_check":false' in runner.calls[0]["input_text"]
 
 
 def test_parser_maps_structured_usage_only_when_present(tmp_path: Path) -> None:

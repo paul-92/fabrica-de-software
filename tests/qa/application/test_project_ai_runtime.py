@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+import json
 from pathlib import Path
 
 import pytest
@@ -16,6 +17,8 @@ from asep.application import (
     ProjectAIRuntimeExecutionService,
     ProjectService,
     ProjectSessionService,
+    SessionContextBuilder,
+    SessionContextPolicy,
 )
 from asep.errors import ProjectNotFoundError
 from asep.projects import (
@@ -52,7 +55,7 @@ class WritingRuntime(Runtime):
         return AIRuntimeResult(output="written", identity=self.identity)
 
 
-def service(tmp_path: Path):
+def service(tmp_path: Path, context_policy: SessionContextPolicy | None = None):
     projects = InMemoryProjectRepository()
     project = WorkspaceProject(
         project_id="project-1", name="Project", workspace_path=tmp_path,
@@ -67,7 +70,13 @@ def service(tmp_path: Path):
     executions = InMemoryProjectExecutionRepository()
     session_service = ProjectSessionService(project_service, sessions, executions, id_generator=lambda: "session-1")
     session_service.create("project-1", "Test")
-    return ProjectAIRuntimeExecutionService(project_service, registry, session_service, executions), runtime, executions
+    return ProjectAIRuntimeExecutionService(
+        project_service,
+        registry,
+        session_service,
+        executions,
+        context_builder=SessionContextBuilder(executions, context_policy),
+    ), runtime, executions
 
 
 def test_execution_resolves_workspace_only_from_persisted_project(tmp_path: Path) -> None:
@@ -91,6 +100,15 @@ def test_execution_resolves_workspace_only_from_persisted_project(tmp_path: Path
     assert request.context["project_session"]["entries"] == ()
     assert result.execution.context_entry_count == 0
     assert result.execution.context_truncated is False
+    assert result.execution.context_char_count > 0
+    assert result.execution.context_omitted_execution_count == 0
+    serialized_context = json.dumps(
+        request.model_dump(mode="json")["context"],
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+    assert result.execution.context_char_count == len(serialized_context)
 
 
 def test_later_execution_receives_limited_context_from_same_session(tmp_path: Path) -> None:
@@ -120,6 +138,24 @@ def test_later_execution_receives_limited_context_from_same_session(tmp_path: Pa
     ))
     assert len(runtime.requests[2].context["project_session"]["entries"]) == 2
     assert third.execution.context_entry_count == 2
+
+
+def test_long_session_persists_budget_metrics_and_omits_old_history(tmp_path: Path) -> None:
+    execution, runtime, repository = service(
+        tmp_path, SessionContextPolicy(max_entries=2)
+    )
+    for index in range(4):
+        result = execution.execute(ProjectAIRuntimeExecutionRequest(
+            project_id="project-1", session_id="session-1", runtime_id="codex",
+            instruction=f"step {index}",
+        ))
+    persisted = repository.get(result.execution.execution_id)
+    assert persisted.context_entry_count == 2
+    assert persisted.context_omitted_execution_count == 1
+    assert persisted.context_truncated is True
+    assert 0 < persisted.context_char_count <= 20_000
+    entries = runtime.requests[-1].context["project_session"]["entries"]
+    assert [entry["instruction"] for entry in entries] == ["step 1", "step 2"]
 
 
 def test_missing_project_and_runtime_are_rejected(tmp_path: Path) -> None:

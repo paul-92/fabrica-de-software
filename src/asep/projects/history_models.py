@@ -58,6 +58,8 @@ class ProjectExecution(BaseModel):
     error_code: str | None = None
     context_entry_count: int = Field(default=0, ge=0)
     context_truncated: bool = False
+    context_char_count: int = Field(default=0, ge=0)
+    context_omitted_execution_count: int = Field(default=0, ge=0)
     created_at: datetime
     completed_at: datetime | None = None
 

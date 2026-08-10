@@ -6,9 +6,9 @@ import { ProjectRuntimePanel } from "./ProjectRuntimePanel";
 
 afterEach(cleanup);
 const ready = { runtime_id: "codex", installed: true, authenticated: true, ready: true, state: "ready" as const, version: "1", message: "Ready", authentication_command: null };
-const result = { execution_id: "e-1", output: "Project structure", runtime_id: "codex", model_id: "model", usage: { input_units: 4, output_units: 2, total_units: 6, cost: null }, metadata: {}, execution_mode: "read_only" as const, changes: [], context_entry_count: 0, context_truncated: false };
+const result = { execution_id: "e-1", output: "Project structure", runtime_id: "codex", model_id: "model", usage: { input_units: 4, output_units: 2, total_units: 6, cost: null }, metadata: {}, execution_mode: "read_only" as const, changes: [], context_entry_count: 0, context_truncated: false, context_char_count: 79, context_omitted_execution_count: 0 };
 const session = { session_id: "s-1", project_id: "p-1", title: "Pilot session", created_at: "2026-08-07T00:00:00Z", updated_at: "2026-08-07T00:00:00Z" };
-const failedExecution = { execution_id: "e-failed", session_id: "s-1", project_id: "p-1", runtime_id: "codex", instruction: "Change file", execution_mode: "workspace_write" as const, status: "failed" as const, output: null, model: null, usage: { input_units: 10, output_units: 2, total_units: 12, cost: null }, changes: [{ path: "partial.txt", change_type: "created" as const, size_before: null, size_after: 2 }], error_code: "AI_RUNTIME_TIMEOUT", context_entry_count: 2, context_truncated: true, created_at: "2026-08-07T00:00:00Z", completed_at: "2026-08-07T00:00:01Z" };
+const failedExecution = { execution_id: "e-failed", session_id: "s-1", project_id: "p-1", runtime_id: "codex", instruction: "Change file", execution_mode: "workspace_write" as const, status: "failed" as const, output: null, model: null, usage: { input_units: 10, output_units: 2, total_units: 12, cost: null }, changes: [{ path: "partial.txt", change_type: "created" as const, size_before: null, size_after: 2 }], error_code: "AI_RUNTIME_TIMEOUT", context_entry_count: 2, context_truncated: true, context_char_count: 17432, context_omitted_execution_count: 9, created_at: "2026-08-07T00:00:00Z", completed_at: "2026-08-07T00:00:01Z" };
 const props = { projectId: "p-1", projectName: "Pilot", workspacePath: "C:/pilot" };
 function service(overrides: Partial<ProjectRuntimeWorkspaceService> = {}): ProjectRuntimeWorkspaceService {
   return { status: vi.fn().mockResolvedValue(ready), execute: vi.fn().mockResolvedValue(result), listSessions: vi.fn().mockResolvedValue([session]), createSession: vi.fn().mockResolvedValue(session), listExecutions: vi.fn().mockResolvedValue([]), getExecution: vi.fn(), ...overrides };
@@ -110,7 +110,9 @@ describe("ProjectRuntimePanel", () => {
     expect(await screen.findByText("AI_RUNTIME_TIMEOUT")).toBeTruthy();
     expect(screen.getByText("partial.txt")).toBeTruthy();
     expect(screen.getByText(/Using context from 2 previous executions/)).toBeTruthy();
-    expect(screen.getByText(/Context limited to recent history/)).toBeTruthy();
+    expect(screen.getByText(/Context size: 17.4k chars/)).toBeTruthy();
+    expect(screen.getByText(/9 older executions omitted/)).toBeTruthy();
+    expect(screen.getByText(/Recent context was compacted/)).toBeTruthy();
   });
 
   it("shows context observability without sending history from the frontend", async () => {
@@ -120,7 +122,8 @@ describe("ProjectRuntimePanel", () => {
     fireEvent.change(screen.getByLabelText("Task"), { target: { value: "Continue" } });
     fireEvent.click(screen.getByRole("button", { name: "Run with Codex" }));
     expect(await screen.findByText(/Using context from 1 previous execution/)).toBeTruthy();
-    expect(screen.getByText(/Context limited to recent history/)).toBeTruthy();
+    expect(screen.getByText(/Context size: 79 chars/)).toBeTruthy();
+    expect(screen.getByText(/Recent context was compacted/)).toBeTruthy();
     expect(execute).toHaveBeenCalledWith("p-1", "s-1", "Continue", "read_only");
   });
 
