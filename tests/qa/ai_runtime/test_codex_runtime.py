@@ -138,11 +138,11 @@ def test_runtime_maps_request_to_controlled_codex_exec(tmp_path: Path) -> None:
         }
     ]
     process_input = str(runner.calls[0]["input_text"])
-    assert process_input.startswith("ASEP SESSION CONTEXT")
+    assert process_input.startswith("ASEP SESSION MEMORY")
     assert '"summary":"broken test"' in process_input
     assert '"correlation_id":"run-1"' in process_input
     assert process_input.endswith("Analyze this project\n")
-    assert process_input.index("ASEP SESSION CONTEXT") < process_input.index(
+    assert process_input.index("ASEP RECENT CONTEXT") < process_input.index(
         "CURRENT USER INSTRUCTION"
     )
     assert result.output == "Completed"
@@ -174,7 +174,8 @@ def test_empty_context_and_unicode_multiline_keep_current_boundary(tmp_path: Pat
         context={},
     ))
     process_input = str(runner.calls[0]["input_text"])
-    assert "ASEP SESSION CONTEXT" in process_input
+    assert "ASEP SESSION MEMORY" in process_input
+    assert "ASEP RECENT CONTEXT" in process_input
     assert "{}" in process_input
     assert process_input.endswith("Explique\nAção atual\n")
 

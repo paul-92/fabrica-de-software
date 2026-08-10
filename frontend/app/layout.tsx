@@ -9,7 +9,7 @@ const brand = loadBrandConfig();
 
 export const metadata: Metadata = {
   title: brand.productName,
-  description: "Configurable engineering operations platform.",
+  description: "Plataforma de operações de engenharia de software.",
   icons: brand.faviconUrl ? { icon: brand.faviconUrl } : undefined,
 };
 

@@ -1,5 +1,5 @@
 import { createPlatformClients, type PlatformClients } from "../api";
-import type { AIRuntimeExecutionMode, AIRuntimeStatusDto, ProjectAIRuntimeExecutionDto, ProjectExecutionDto, ProjectSessionDto } from "../api/dtos";
+import type { AIRuntimeExecutionMode, AIRuntimeStatusDto, ProjectAIRuntimeExecutionDto, ProjectExecutionDto, ProjectSessionDto, SessionMemoryDto, SessionMemoryKind } from "../api/dtos";
 
 export interface ProjectRuntimeWorkspaceService {
   status(): Promise<AIRuntimeStatusDto>;
@@ -8,6 +8,8 @@ export interface ProjectRuntimeWorkspaceService {
   createSession(projectId: string, title: string): Promise<ProjectSessionDto>;
   listExecutions(projectId: string, sessionId: string): Promise<readonly ProjectExecutionDto[]>;
   getExecution(projectId: string, executionId: string): Promise<ProjectExecutionDto>;
+  listMemory(projectId: string, sessionId: string): Promise<readonly SessionMemoryDto[]>;
+  addMemory(projectId: string, sessionId: string, kind: SessionMemoryKind, content: string): Promise<SessionMemoryDto>;
 }
 
 export function createProjectRuntimeWorkspaceService(
@@ -24,5 +26,7 @@ export function createProjectRuntimeWorkspaceService(
     createSession: (projectId, title) => get().projectHistory.createSession(projectId, title),
     listExecutions: (projectId, sessionId) => get().projectHistory.listSessionExecutions(projectId, sessionId),
     getExecution: (projectId, executionId) => get().projectHistory.getExecution(projectId, executionId),
+    listMemory: (projectId, sessionId) => get().projectHistory.listMemory(projectId, sessionId),
+    addMemory: (projectId, sessionId, kind, content) => get().projectHistory.addMemory(projectId, sessionId, kind, content),
   };
 }

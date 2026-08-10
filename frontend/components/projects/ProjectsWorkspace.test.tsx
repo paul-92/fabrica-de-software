@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ProjectsWorkspaceService } from "../../lib/services/projectsWorkspace";
 import type { ProjectRuntimeWorkspaceService } from "../../lib/services/projectRuntimeWorkspace";
+import type { ProjectWorkspaceService } from "../../lib/services/projectWorkspaceService";
 import { ProjectsWorkspace } from "./ProjectsWorkspace";
 
 afterEach(cleanup);
@@ -18,47 +19,69 @@ function runtimeService(): ProjectRuntimeWorkspaceService {
     createSession: vi.fn(),
     listExecutions: vi.fn().mockResolvedValue([]),
     getExecution: vi.fn(),
+    listMemory: vi.fn().mockResolvedValue([]),
+    addMemory: vi.fn(),
   };
 }
+function workspaceService(): ProjectWorkspaceService { return { listDirectory: vi.fn().mockResolvedValue({ path: "", entries: [] }), readFile: vi.fn() }; }
 
 describe("ProjectsWorkspace", () => {
   it("shows loading and empty states", async () => {
     const view = render(<ProjectsWorkspace service={service({ list: () => new Promise(() => undefined) })} runtimeService={runtimeService()} />);
-    expect(screen.getByRole("status").textContent).toContain("Loading projects");
+    expect(screen.getByRole("status").textContent).toContain("Carregando projetos");
     view.unmount();
     render(<ProjectsWorkspace service={service()} runtimeService={runtimeService()} />);
-    expect(await screen.findByText("No projects yet")).toBeTruthy();
+    expect(await screen.findByText("Nenhum projeto ainda")).toBeTruthy();
   });
 
   it("shows list error and retries", async () => {
     const list = vi.fn().mockRejectedValueOnce(new Error()).mockResolvedValueOnce([]);
     render(<ProjectsWorkspace service={service({ list })} runtimeService={runtimeService()} />);
-    fireEvent.click(await screen.findByRole("button", { name: "Try again" }));
-    expect(await screen.findByText("No projects yet")).toBeTruthy();
+    fireEvent.click(await screen.findByRole("button", { name: "Tentar novamente" }));
+    expect(await screen.findByText("Nenhum projeto ainda")).toBeTruthy();
+  });
+
+  it("opens a listed project and mounts its runtime panel", async () => {
+    const runtime = runtimeService();
+    render(<ProjectsWorkspace service={service({ list: vi.fn().mockResolvedValue([project]) })} runtimeService={runtime} workspaceService={workspaceService()} />);
+    const projectButton = await screen.findByRole("button", { name: /Project.*C:\/work.*p-1/i });
+    expect(screen.queryByText("Detalhes do projeto")).toBeNull();
+    fireEvent.click(projectButton);
+    expect(await screen.findByText("Detalhes do projeto")).toBeTruthy();
+    expect(projectButton.getAttribute("aria-pressed")).toBe("true");
+    expect(await screen.findByText("Nenhuma sessão ainda.")).toBeTruthy();
+    expect(runtime.status).toHaveBeenCalledOnce();
+    expect(runtime.listSessions).toHaveBeenCalledWith("p-1");
   });
 
   it("validates and creates a project that appears in the list", async () => {
     const api = service();
     const runtime = runtimeService();
-    render(<ProjectsWorkspace service={api} runtimeService={runtime} />);
-    fireEvent.click(screen.getByRole("button", { name: "Create Project" }));
+    render(<ProjectsWorkspace service={api} runtimeService={runtime} workspaceService={workspaceService()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Criar projeto" }));
     expect(await screen.findByRole("alert")).toBeTruthy();
-    fireEvent.change(screen.getByLabelText("Project name"), { target: { value: " Project " } });
-    fireEvent.change(screen.getByLabelText("Workspace path"), { target: { value: " C:/work " } });
-    fireEvent.click(screen.getByRole("button", { name: "Create Project" }));
+    fireEvent.change(screen.getByLabelText("Nome do projeto"), { target: { value: " Project " } });
+    fireEvent.change(screen.getByLabelText("Pasta do projeto"), { target: { value: " C:/work " } });
+    fireEvent.click(screen.getByRole("button", { name: "Criar projeto" }));
     expect((await screen.findAllByText("p-1")).length).toBe(2);
-    expect(await screen.findByText("No sessions yet.")).toBeTruthy();
+    expect(await screen.findByText("Nenhuma sessão ainda.")).toBeTruthy();
     expect(api.create).toHaveBeenCalledWith({ name: "Project", workspace_path: "C:/work" });
     expect(runtime.status).toHaveBeenCalledOnce();
     expect(runtime.listSessions).toHaveBeenCalledWith("p-1");
   });
 
   it("preserves input after creation error", async () => {
-    render(<ProjectsWorkspace service={service({ create: vi.fn().mockRejectedValue(new Error()) })} runtimeService={runtimeService()} />);
-    fireEvent.change(screen.getByLabelText("Project name"), { target: { value: "Project" } });
-    fireEvent.change(screen.getByLabelText("Workspace path"), { target: { value: "C:/bad" } });
-    fireEvent.click(screen.getByRole("button", { name: "Create Project" }));
-    expect(await screen.findByText(/could not be created/)).toBeTruthy();
-    expect((screen.getByLabelText("Project name") as HTMLInputElement).value).toBe("Project");
+    const create = vi.fn().mockRejectedValueOnce(new Error()).mockResolvedValueOnce(project);
+    render(<ProjectsWorkspace service={service({ create })} runtimeService={runtimeService()} workspaceService={workspaceService()} />);
+    fireEvent.change(screen.getByLabelText("Nome do projeto"), { target: { value: "Project" } });
+    fireEvent.change(screen.getByLabelText("Pasta do projeto"), { target: { value: "C:/bad" } });
+    fireEvent.click(screen.getByRole("button", { name: "Criar projeto" }));
+    expect((await screen.findByRole("alert")).textContent).toContain("Não foi possível criar o projeto");
+    expect((screen.getByLabelText("Nome do projeto") as HTMLInputElement).value).toBe("Project");
+    expect((screen.getByLabelText("Pasta do projeto") as HTMLInputElement).value).toBe("C:/bad");
+    fireEvent.change(screen.getByLabelText("Pasta do projeto"), { target: { value: "C:/work" } });
+    fireEvent.click(screen.getByRole("button", { name: "Criar projeto" }));
+    expect(await screen.findByText("Detalhes do projeto")).toBeTruthy();
+    expect(create).toHaveBeenNthCalledWith(2, { name: "Project", workspace_path: "C:/work" });
   });
 });

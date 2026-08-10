@@ -46,9 +46,9 @@ export function OperationalDashboard({ loader }: { loader?: DashboardLoader }) {
   return (
     <div className="page-stack">
       <PageHeader
-        eyebrow="Operations"
-        title="Dashboard"
-        description="Current execution health, throughput and recent operational activity."
+        eyebrow="Operações"
+        title="Visão geral"
+        description="Acompanhe a saúde das execuções e a atividade recente da plataforma."
       />
       {state.status === "loading" ? <DashboardSkeleton /> : null}
       {state.status === "error" ? <DashboardError retry={retry} /> : null}

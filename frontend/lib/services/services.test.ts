@@ -8,6 +8,7 @@ import { MetricsClient } from "./metrics";
 import { RunsClient } from "./runs";
 import { ProjectsClient } from "./projects";
 import { ProjectHistoryClient, ProjectRuntimeClient } from "./projectRuntime";
+import { ProjectWorkspaceClient } from "./projectWorkspace";
 
 class RecordingTransport implements HttpTransport {
   requests: HttpRequest[] = [];
@@ -135,6 +136,7 @@ describe("specialized API clients", () => {
       { status: 200, ok: true, body: { items: [] } },
       { status: 200, ok: true, body: { items: [] } },
       { status: 200, ok: true, body: { execution_id: "e/1" } },
+      { status: 201, ok: true, body: { memory_id: "m/1" } },
       { status: 200, ok: true, body: { execution_id: "e/1" } },
     );
     const history = new ProjectHistoryClient(api);
@@ -142,6 +144,7 @@ describe("specialized API clients", () => {
     await history.listSessions("p/1");
     await history.listSessionExecutions("p/1", "s/1");
     await history.getExecution("p/1", "e/1");
+    await history.addMemory("p/1", "s/1", "constraint", "Use PostgreSQL for persistence.");
     await new ProjectRuntimeClient(api).execute("p/1", {
       session_id: "s/1", runtime_id: "codex", instruction: "Inspect",
     });
@@ -150,7 +153,23 @@ describe("specialized API clients", () => {
       { url: "https://example.test/api/v1/projects/p%2F1/sessions" },
       { url: "https://example.test/api/v1/projects/p%2F1/sessions/s%2F1/executions" },
       { url: "https://example.test/api/v1/projects/p%2F1/executions/e%2F1" },
+      { url: "https://example.test/api/v1/projects/p%2F1/sessions/s%2F1/memory", method: "POST", body: { kind: "constraint", content: "Use PostgreSQL for persistence." } },
       { url: "https://example.test/api/v1/projects/p%2F1/ai-runtime/execute", body: { session_id: "s/1", runtime_id: "codex", instruction: "Inspect" } },
+    ]);
+  });
+
+  it("browses workspace using only project id and encoded relative path", async () => {
+    const { transport, api } = setup();
+    transport.responses.push(
+      { status: 200, ok: true, body: { path: "src", entries: [] } },
+      { status: 200, ok: true, body: { path: "src/a.py", content: "x" } },
+    );
+    const workspace = new ProjectWorkspaceClient(api);
+    await workspace.listDirectory("p/1", "src/sub dir");
+    await workspace.readFile("p/1", "src/a.py");
+    expect(transport.requests).toMatchObject([
+      { url: "https://example.test/api/v1/projects/p%2F1/workspace?path=src%2Fsub%20dir", method: "GET" },
+      { url: "https://example.test/api/v1/projects/p%2F1/workspace/file?path=src%2Fa.py", method: "GET" },
     ]);
   });
 });

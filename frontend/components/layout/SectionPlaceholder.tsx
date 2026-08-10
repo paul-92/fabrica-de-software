@@ -20,7 +20,7 @@ export function SectionPlaceholder({
         <Card
           title="Foundation ready"
           eyebrow="Sprint 22.2"
-          action={<StatusBadge status="success">Available</StatusBadge>}
+          action={<StatusBadge status="success">Disponível</StatusBadge>}
         >
           Esta área já compartilha navegação, tema e identidade configurável.
           Os dados funcionais serão adicionados nas próximas sprints.

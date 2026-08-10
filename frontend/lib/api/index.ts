@@ -7,6 +7,7 @@ import { RunsClient } from "../services/runs";
 import { ProjectsClient } from "../services/projects";
 import { AIRuntimesClient } from "../services/aiRuntimes";
 import { ProjectHistoryClient, ProjectRuntimeClient } from "../services/projectRuntime";
+import { ProjectWorkspaceClient } from "../services/projectWorkspace";
 
 export type PlatformClients = Readonly<{
   intelligentEngineering: IntelligentEngineeringClient;
@@ -16,6 +17,7 @@ export type PlatformClients = Readonly<{
   aiRuntimes: AIRuntimesClient;
   projectRuntime: ProjectRuntimeClient;
   projectHistory: ProjectHistoryClient;
+  projectWorkspace: ProjectWorkspaceClient;
 }>;
 
 export function createPlatformClients(): PlatformClients {
@@ -28,5 +30,6 @@ export function createPlatformClients(): PlatformClients {
     aiRuntimes: new AIRuntimesClient(api),
     projectRuntime: new ProjectRuntimeClient(api),
     projectHistory: new ProjectHistoryClient(api),
+    projectWorkspace: new ProjectWorkspaceClient(api),
   });
 }

@@ -4,7 +4,7 @@ import { RunStatusBadge } from "./RunStatusBadge";
 
 function formatDate(value: string | null) {
   if (value === null) return "—";
-  return new Intl.DateTimeFormat("en", {
+  return new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
@@ -12,18 +12,18 @@ function formatDate(value: string | null) {
 
 export function RecentRuns({ runs }: { runs: readonly RunDto[] }) {
   return (
-    <Card title="Recent executions" eyebrow="Runs">
+    <Card title="Execuções recentes" eyebrow="Atividade">
       <div className="runs-table-wrap">
         <table className="runs-table">
           <thead>
             <tr>
-              <th scope="col">Run</th>
+              <th scope="col">Execução</th>
               <th scope="col">Status</th>
-              <th scope="col">Project</th>
-              <th scope="col">Started</th>
-              <th scope="col">Finished</th>
-              <th scope="col">Provider</th>
-              <th scope="col">Result</th>
+              <th scope="col">Projeto</th>
+              <th scope="col">Início</th>
+              <th scope="col">Fim</th>
+              <th scope="col">Provedor</th>
+              <th scope="col">Resultado</th>
             </tr>
           </thead>
           <tbody>

@@ -43,7 +43,7 @@ export function Sidebar({
           );
         })}
       </nav>
-      <p className="sidebar__footer">Interface foundation</p>
+      <p className="sidebar__footer">Engenharia com segurança</p>
     </aside>
   );
 }

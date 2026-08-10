@@ -64,6 +64,28 @@ class ProjectHistoryConflictError(AsepError):
     exit_code = 6
 
 
+class SessionMemoryNotFoundError(AsepError):
+    code = "SESSION_MEMORY_NOT_FOUND"
+    category = "validation"
+    exit_code = 2
+
+
+class WorkspaceBrowsingError(AsepError):
+    category = "validation"
+    exit_code = 2
+
+
+class WorkspaceNotFoundError(WorkspaceBrowsingError): code = "WORKSPACE_NOT_FOUND"
+class WorkspacePathInvalidError(WorkspaceBrowsingError): code = "WORKSPACE_PATH_INVALID"
+class WorkspacePathForbiddenError(WorkspaceBrowsingError): code = "WORKSPACE_PATH_FORBIDDEN"
+class WorkspaceEntryNotFoundError(WorkspaceBrowsingError): code = "WORKSPACE_ENTRY_NOT_FOUND"
+class WorkspaceEntryNotFileError(WorkspaceBrowsingError): code = "WORKSPACE_ENTRY_NOT_FILE"
+class WorkspaceEntryNotDirectoryError(WorkspaceBrowsingError): code = "WORKSPACE_ENTRY_NOT_DIRECTORY"
+class WorkspaceFileTooLargeError(WorkspaceBrowsingError): code = "WORKSPACE_FILE_TOO_LARGE"
+class WorkspaceBinaryFileError(WorkspaceBrowsingError): code = "WORKSPACE_BINARY_FILE"
+class WorkspaceDirectoryTooLargeError(WorkspaceBrowsingError): code = "WORKSPACE_DIRECTORY_TOO_LARGE"
+
+
 class RegistryValidationError(AsepError):
     code = "REGISTRY_INVALID"
     category = "validation"

@@ -26,7 +26,7 @@ export function IntelligentEngineeringWorkspace({ executor }: { executor?: Intel
     event.preventDefault();
     if (state === "submitting") return;
     if (![goal, objective, failureSummary, targetPath, replacementContent].every((value) => value.trim())) {
-      setValidationError("Complete all required fields before running Intelligent Engineering.");
+      setValidationError("Preencha todos os campos obrigatórios antes de executar.");
       return;
     }
     setValidationError(null); setState("submitting"); setResponse(null);
@@ -54,20 +54,20 @@ export function IntelligentEngineeringWorkspace({ executor }: { executor?: Intel
   }
 
   return <div className="page-stack">
-    <PageHeader eyebrow="Engineering" title="Intelligent Engineering" description="Provide an engineering objective for controlled planning, repair and reflection by the platform." />
-    <Card title="Engineering request" eyebrow="Execute">
+    <PageHeader eyebrow="Engenharia" title="Engenharia inteligente" description="Defina um objetivo para planejamento, reparo e reflexão controlados pela plataforma." />
+    <Card title="Solicitação de engenharia" eyebrow="Executar">
       <form className="engineering-form" onSubmit={submit}>
-        <label>Engineering goal<span>Required</span><textarea value={goal} onChange={(event) => setGoal(event.target.value)} disabled={state === "submitting"} /></label>
-        <label>Planning objective<span>Required</span><textarea value={objective} onChange={(event) => setObjective(event.target.value)} disabled={state === "submitting"} /></label>
-        <label>Failure analysis summary<span>Required</span><textarea value={failureSummary} onChange={(event) => setFailureSummary(event.target.value)} disabled={state === "submitting"} /></label>
+        <label>Objetivo de engenharia<span>Obrigatório</span><textarea value={goal} onChange={(event) => setGoal(event.target.value)} disabled={state === "submitting"} /></label>
+        <label>Objetivo do planejamento<span>Obrigatório</span><textarea value={objective} onChange={(event) => setObjective(event.target.value)} disabled={state === "submitting"} /></label>
+        <label>Resumo da análise da falha<span>Obrigatório</span><textarea value={failureSummary} onChange={(event) => setFailureSummary(event.target.value)} disabled={state === "submitting"} /></label>
         <div className="engineering-form__columns">
-          <label>Replacement target path<span>Required</span><input value={targetPath} onChange={(event) => setTargetPath(event.target.value)} disabled={state === "submitting"} /></label>
-          <label>Test paths<span>Comma-separated</span><input value={testPaths} onChange={(event) => setTestPaths(event.target.value)} disabled={state === "submitting"} /></label>
+          <label>Caminho do arquivo a substituir<span>Obrigatório</span><input value={targetPath} onChange={(event) => setTargetPath(event.target.value)} disabled={state === "submitting"} /></label>
+          <label>Caminhos de teste<span>Separados por vírgulas</span><input value={testPaths} onChange={(event) => setTestPaths(event.target.value)} disabled={state === "submitting"} /></label>
         </div>
-        <label>Explicit replacement content<span>Required</span><textarea className="engineering-form__code" value={replacementContent} onChange={(event) => setReplacementContent(event.target.value)} disabled={state === "submitting"} /></label>
+        <label>Conteúdo explícito da substituição<span>Obrigatório</span><textarea className="engineering-form__code" value={replacementContent} onChange={(event) => setReplacementContent(event.target.value)} disabled={state === "submitting"} /></label>
         {validationError ? <p className="engineering-form__error" role="alert">{validationError}</p> : null}
-        {state === "error" ? <p className="engineering-form__error" role="alert">The request could not be completed. Review the input and try again.</p> : null}
-        <Button type="submit" disabled={state === "submitting"}>{state === "submitting" ? "Running…" : state === "error" ? "Try again" : "Run Intelligent Engineering"}</Button>
+        {state === "error" ? <p className="engineering-form__error" role="alert">Não foi possível concluir a solicitação. Revise os dados e tente novamente.</p> : null}
+        <Button type="submit" disabled={state === "submitting"}>{state === "submitting" ? "Executando…" : state === "error" ? "Tentar novamente" : "Executar engenharia inteligente"}</Button>
       </form>
     </Card>
     {state === "success" && response ? <EngineeringResult response={response} /> : null}

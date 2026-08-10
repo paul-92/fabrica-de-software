@@ -26,28 +26,28 @@ function response(): IntelligentEngineeringResponseDto {
 }
 
 function fillForm() {
-  fireEvent.change(screen.getByLabelText(/Engineering goal/), { target: { value: "Repair application" } });
-  fireEvent.change(screen.getByLabelText(/Planning objective/), { target: { value: "Restore behavior" } });
-  fireEvent.change(screen.getByLabelText(/Failure analysis summary/), { target: { value: "Broken behavior" } });
-  fireEvent.change(screen.getByLabelText(/Replacement target path/), { target: { value: "  app.py  " } });
-  fireEvent.change(screen.getByLabelText(/Explicit replacement content/), { target: { value: "fixed" } });
-  fireEvent.change(screen.getByLabelText(/Test paths/), { target: { value: "tests/unit, tests/integration" } });
+  fireEvent.change(screen.getByLabelText(/Objetivo de engenharia/), { target: { value: "Repair application" } });
+  fireEvent.change(screen.getByLabelText(/Objetivo do planejamento/), { target: { value: "Restore behavior" } });
+  fireEvent.change(screen.getByLabelText(/Resumo da análise da falha/), { target: { value: "Broken behavior" } });
+  fireEvent.change(screen.getByLabelText(/Caminho do arquivo a substituir/), { target: { value: "  app.py  " } });
+  fireEvent.change(screen.getByLabelText(/Conteúdo explícito da substituição/), { target: { value: "fixed" } });
+  fireEvent.change(screen.getByLabelText(/Caminhos de teste/), { target: { value: "tests/unit, tests/integration" } });
 }
 
 describe("IntelligentEngineeringWorkspace", () => {
   it("starts idle and validates required fields", async () => {
     const executor = { execute: vi.fn() };
     render(<IntelligentEngineeringWorkspace executor={executor} />);
-    expect(screen.getByRole("heading", { name: "Intelligent Engineering" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Run Intelligent Engineering" }));
-    expect((await screen.findByRole("alert")).textContent).toContain("Complete all required fields");
+    expect(screen.getByRole("heading", { name: "Engenharia inteligente" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Executar engenharia inteligente" }));
+    expect((await screen.findByRole("alert")).textContent).toContain("Preencha todos os campos obrigatórios");
     expect(executor.execute).not.toHaveBeenCalled();
   });
 
   it("submits the real DTO while preserving explicit values", async () => {
     const executor = { execute: vi.fn().mockResolvedValue(response()) };
     render(<IntelligentEngineeringWorkspace executor={executor} />); fillForm();
-    fireEvent.click(screen.getByRole("button", { name: "Run Intelligent Engineering" }));
+    fireEvent.click(screen.getByRole("button", { name: "Executar engenharia inteligente" }));
     await waitFor(() => expect(executor.execute).toHaveBeenCalledOnce());
     expect(executor.execute.mock.calls[0][0]).toEqual({
       planning_request: { goal: "Repair application", context: { objective: "Restore behavior" } },
@@ -74,32 +74,32 @@ describe("IntelligentEngineeringWorkspace", () => {
     let resolve!: (value: IntelligentEngineeringResponseDto) => void;
     const execute = vi.fn(() => new Promise<IntelligentEngineeringResponseDto>((done) => { resolve = done; }));
     render(<IntelligentEngineeringWorkspace executor={{ execute }} />); fillForm();
-    const form = screen.getByRole("button", { name: "Run Intelligent Engineering" }).closest("form")!;
+    const form = screen.getByRole("button", { name: "Executar engenharia inteligente" }).closest("form")!;
     fireEvent.submit(form); fireEvent.submit(form);
-    expect((await screen.findByRole("button", { name: "Running…" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((await screen.findByRole("button", { name: "Executando…" }) as HTMLButtonElement).disabled).toBe(true);
     expect(execute).toHaveBeenCalledOnce();
     resolve(response());
-    expect(await screen.findByText("Execution result")).toBeTruthy();
+    expect(await screen.findByText("Resultado da execução")).toBeTruthy();
   });
 
   it("renders real planning, repair and reflection response fields", async () => {
     render(<IntelligentEngineeringWorkspace executor={{ execute: vi.fn().mockResolvedValue(response()) }} />); fillForm();
-    fireEvent.click(screen.getByRole("button", { name: "Run Intelligent Engineering" }));
+    fireEvent.click(screen.getByRole("button", { name: "Executar engenharia inteligente" }));
     expect(await screen.findByText("Apply controlled repair")).toBeTruthy();
     expect(screen.getByText("Repair proposal")).toBeTruthy();
     expect(screen.getByText("Tests passed")).toBeTruthy();
     expect(screen.getByText("Repair succeeded")).toBeTruthy();
-    expect(screen.getByText("Retry recommended: No")).toBeTruthy();
+    expect(screen.getByText("Nova tentativa recomendada: Não")).toBeTruthy();
   });
 
   it("shows an error, preserves input and permits a new submission", async () => {
     const execute = vi.fn().mockRejectedValueOnce(new Error("offline")).mockResolvedValueOnce(response());
     render(<IntelligentEngineeringWorkspace executor={{ execute }} />); fillForm();
-    fireEvent.click(screen.getByRole("button", { name: "Run Intelligent Engineering" }));
-    expect((await screen.findByRole("alert")).textContent).toContain("could not be completed");
-    expect((screen.getByLabelText(/Engineering goal/) as HTMLTextAreaElement).value).toBe("Repair application");
-    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
-    expect(await screen.findByText("Execution result")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Executar engenharia inteligente" }));
+    expect((await screen.findByRole("alert")).textContent).toContain("Não foi possível concluir");
+    expect((screen.getByLabelText(/Objetivo de engenharia/) as HTMLTextAreaElement).value).toBe("Repair application");
+    fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
+    expect(await screen.findByText("Resultado da execução")).toBeTruthy();
     expect(execute).toHaveBeenCalledTimes(2);
   });
 });

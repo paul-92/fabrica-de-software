@@ -15,14 +15,14 @@ export type NavigationIcon =
   | "settings";
 
 export const navigationItems: readonly NavigationItem[] = [
-  { label: "Dashboard", href: "/", icon: "dashboard" },
-  { label: "Projects", href: "/projects", icon: "projects" },
-  { label: "Executions", href: "/executions", icon: "executions" },
-  { label: "Agents", href: "/agents", icon: "agents" },
-  { label: "Planning", href: "/planning", icon: "planning" },
-  { label: "Knowledge", href: "/knowledge", icon: "knowledge" },
-  { label: "Quality", href: "/quality", icon: "quality" },
-  { label: "Settings", href: "/settings", icon: "settings" },
+  { label: "Visão geral", href: "/", icon: "dashboard" },
+  { label: "Projetos", href: "/projects", icon: "projects" },
+  { label: "Execuções", href: "/executions", icon: "executions" },
+  { label: "Agentes", href: "/agents", icon: "agents" },
+  { label: "Planejamento", href: "/planning", icon: "planning" },
+  { label: "Conhecimento", href: "/knowledge", icon: "knowledge" },
+  { label: "Qualidade", href: "/quality", icon: "quality" },
+  { label: "Configurações", href: "/settings", icon: "settings" },
 ];
 
 export function isNavigationItemActive(pathname: string, href: string) {
@@ -34,6 +34,6 @@ export function isNavigationItemActive(pathname: string, href: string) {
 export function titleForPath(pathname: string) {
   return (
     navigationItems.find((item) => isNavigationItemActive(pathname, item.href))
-      ?.label ?? "Workspace"
+      ?.label ?? "Área de trabalho"
   );
 }

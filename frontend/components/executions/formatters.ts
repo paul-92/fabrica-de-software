@@ -2,7 +2,7 @@ export function formatTimestamp(value: string | null): string {
   if (value === null) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(date);
+  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
 export function formatDuration(startedAt: string, finishedAt: string | null): string {

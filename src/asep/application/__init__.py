@@ -28,6 +28,17 @@ from asep.application.session_context import (
     serialize_session_runtime_context,
     session_runtime_context_char_count,
 )
+from asep.application.session_memory import (
+    ProjectSessionMemoryService,
+    SessionMemoryContext,
+    SessionMemoryContextEntry,
+    SessionMemoryDraft,
+    SessionMemoryExtractor,
+    SessionMemoryPolicy,
+    SessionMemorySelector,
+    serialize_session_memory_context,
+)
+from asep.application.project_workspace import ProjectWorkspaceService, WorkspaceBrowsingPolicy
 
 __all__ = [
     "AIRuntimeConnectionService",
@@ -49,5 +60,14 @@ __all__ = [
     "SessionRuntimeContext",
     "serialize_session_runtime_context",
     "session_runtime_context_char_count",
+    "ProjectSessionMemoryService",
+    "SessionMemoryContext",
+    "SessionMemoryContextEntry",
+    "SessionMemoryDraft",
+    "SessionMemoryExtractor",
+    "SessionMemoryPolicy",
+    "SessionMemorySelector",
+    "serialize_session_memory_context",
+    "ProjectWorkspaceService", "WorkspaceBrowsingPolicy",
     "create_intelligent_engineering_application_service",
 ]

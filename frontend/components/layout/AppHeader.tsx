@@ -20,7 +20,7 @@ export function AppHeader({ title, onOpenNavigation }: AppHeaderProps) {
           <span />
         </button>
         <div>
-          <p className="app-header__eyebrow">Workspace</p>
+          <p className="app-header__eyebrow">Área de trabalho</p>
           <p className="app-header__title">{title}</p>
         </div>
       </div>

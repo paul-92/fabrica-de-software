@@ -21,6 +21,8 @@ from asep.application import (
     AIRuntimeConnectionService,
     ProjectAIRuntimeExecutionService,
     ProjectSessionService,
+    ProjectSessionMemoryService,
+    ProjectWorkspaceService,
     create_intelligent_engineering_application_service,
 )
 from asep.ai_planning import (
@@ -99,20 +101,23 @@ def create_default_app(
     runtime_registry.register(
         CodexAIRuntime(CodexAIRuntimeConfig(workspace=Path.cwd()))
     )
-    project_runtime_execution = ProjectAIRuntimeExecutionService(
-        project_service,
-        runtime_registry,
-        ProjectSessionService(
-            project_service,
-            repositories.project_session_repository,
-            repositories.project_execution_repository,
-        ),
-        repositories.project_execution_repository,
-    )
     project_session_service = ProjectSessionService(
         project_service,
         repositories.project_session_repository,
         repositories.project_execution_repository,
+    )
+    project_memory_service = ProjectSessionMemoryService(
+        project_service,
+        project_session_service,
+        repositories.session_memory_repository,
+    )
+    project_workspace_service = ProjectWorkspaceService(project_service)
+    project_runtime_execution = ProjectAIRuntimeExecutionService(
+        project_service,
+        runtime_registry,
+        project_session_service,
+        repositories.project_execution_repository,
+        memory_service=project_memory_service,
     )
     intelligent_engineering_service = _create_intelligent_engineering_service(
         settings,
@@ -127,4 +132,6 @@ def create_default_app(
         ai_runtime_connection_service=ai_runtime_connection_service,
         project_ai_runtime_execution_service=project_runtime_execution,
         project_session_service=project_session_service,
+        project_session_memory_service=project_memory_service,
+        project_workspace_service=project_workspace_service,
     )

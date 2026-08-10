@@ -56,3 +56,6 @@ projects/*/logs/runs/
 projects/*/logs/*.jsonl
 projects/*/artifacts/runs/
 estrutura.txt
+
+# Local manual QA evidence
+manual-evidence/

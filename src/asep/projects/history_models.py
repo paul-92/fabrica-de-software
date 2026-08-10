@@ -60,6 +60,9 @@ class ProjectExecution(BaseModel):
     context_truncated: bool = False
     context_char_count: int = Field(default=0, ge=0)
     context_omitted_execution_count: int = Field(default=0, ge=0)
+    memory_entry_count: int = Field(default=0, ge=0)
+    memory_char_count: int = Field(default=0, ge=0)
+    memory_truncated: bool = False
     created_at: datetime
     completed_at: datetime | None = None
 

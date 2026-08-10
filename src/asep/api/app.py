@@ -11,6 +11,8 @@ from asep.application import (
     ProjectService,
     ProjectAIRuntimeExecutionService,
     ProjectSessionService,
+    ProjectSessionMemoryService,
+    ProjectWorkspaceService,
 )
 from asep.api.errors import register_exception_handlers
 from asep.api.ai_runtime_routes import create_ai_runtime_router
@@ -39,6 +41,8 @@ def create_app(
     ai_runtime_connection_service: AIRuntimeConnectionService | None = None,
     project_ai_runtime_execution_service: ProjectAIRuntimeExecutionService | None = None,
     project_session_service: ProjectSessionService | None = None,
+    project_session_memory_service: ProjectSessionMemoryService | None = None,
+    project_workspace_service: ProjectWorkspaceService | None = None,
 ) -> FastAPI:
     app = FastAPI(
         title="ASEP Dashboard API",
@@ -74,6 +78,8 @@ def create_app(
                 project_service,
                 project_ai_runtime_execution_service,
                 project_session_service,
+                project_session_memory_service,
+                project_workspace_service,
             )
         )
     if ai_runtime_connection_service is not None:

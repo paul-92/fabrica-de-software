@@ -36,6 +36,9 @@ export type ProjectAIRuntimeExecutionDto = Readonly<{
   context_truncated: boolean;
   context_char_count: number;
   context_omitted_execution_count: number;
+  memory_entry_count: number;
+  memory_char_count: number;
+  memory_truncated: boolean;
 }>;
 
 export type ProjectSessionDto = Readonly<{
@@ -44,6 +47,17 @@ export type ProjectSessionDto = Readonly<{
   title: string;
   created_at: string;
   updated_at: string;
+}>;
+
+export type SessionMemoryKind = "decision" | "constraint" | "fact" | "artifact" | "goal";
+export type SessionMemoryDto = Readonly<{
+  memory_id: string;
+  session_id: string;
+  project_id: string;
+  kind: SessionMemoryKind;
+  content: string;
+  source_execution_id: string | null;
+  created_at: string;
 }>;
 
 export type ProjectExecutionDto = Readonly<{
@@ -63,6 +77,9 @@ export type ProjectExecutionDto = Readonly<{
   context_truncated: boolean;
   context_char_count: number;
   context_omitted_execution_count: number;
+  memory_entry_count: number;
+  memory_char_count: number;
+  memory_truncated: boolean;
   created_at: string;
   completed_at: string | null;
 }>;
@@ -74,6 +91,10 @@ export type ProjectDto = Readonly<{
   created_at: string;
   updated_at: string;
 }>;
+
+export type WorkspaceEntryDto = Readonly<{ path: string; name: string; kind: "file" | "directory"; size: number | null }>;
+export type WorkspaceDirectoryDto = Readonly<{ path: string; entries: readonly WorkspaceEntryDto[] }>;
+export type WorkspaceFileContentDto = Readonly<{ path: string; name: string; content: string; size: number; language: string; truncated: false }>;
 
 export type CreateProjectDto = Readonly<{
   name: string;

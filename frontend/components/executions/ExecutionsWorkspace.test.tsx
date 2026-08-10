@@ -26,27 +26,27 @@ function loader(overrides: Partial<ExecutionsLoader> = {}): ExecutionsLoader {
 describe("ExecutionsWorkspace", () => {
   it("shows list loading", () => {
     render(<ExecutionsWorkspace loader={loader({ list: () => new Promise(() => undefined) })} />);
-    expect(screen.getByRole("status").textContent).toContain("Loading executions");
+    expect(screen.getByRole("status").textContent).toContain("Carregando execuções");
   });
 
   it("renders runs, duration and textual status", async () => {
     render(<ExecutionsWorkspace loader={loader()} />);
-    expect(await screen.findByRole("button", { name: "Open execution run-1" })).toBeTruthy();
-    expect(screen.getByText("Completed")).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "Abrir execução run-1" })).toBeTruthy();
+    expect(screen.getByText("Concluído")).toBeTruthy();
     expect(screen.getByText("1m 30s")).toBeTruthy();
     expect(screen.getByText("provider-1")).toBeTruthy();
   });
 
   it("shows the empty list state", async () => {
     render(<ExecutionsWorkspace loader={loader({ list: vi.fn().mockResolvedValue([]) })} />);
-    expect(await screen.findByText("No executions yet")).toBeTruthy();
+    expect(await screen.findByText("Nenhuma execução ainda")).toBeTruthy();
   });
 
   it("shows list errors and retries", async () => {
     const list = vi.fn().mockRejectedValueOnce(new Error("offline")).mockResolvedValueOnce([run()]);
     render(<ExecutionsWorkspace loader={loader({ list })} />);
-    fireEvent.click(await screen.findByRole("button", { name: "Try again" }));
-    expect(await screen.findByRole("button", { name: "Open execution run-1" })).toBeTruthy();
+    fireEvent.click(await screen.findByRole("button", { name: "Tentar novamente" }));
+    expect(await screen.findByRole("button", { name: "Abrir execução run-1" })).toBeTruthy();
     expect(list).toHaveBeenCalledTimes(2);
   });
 
@@ -54,29 +54,29 @@ describe("ExecutionsWorkspace", () => {
     const get = vi.fn().mockResolvedValue(run("run/a ?"));
     const timeline = vi.fn().mockResolvedValue([{ ...event, run_id: "run/a ?" }]);
     render(<ExecutionsWorkspace loader={loader({ list: vi.fn().mockResolvedValue([run("run/a ?")]), get, timeline })} />);
-    fireEvent.click(await screen.findByRole("button", { name: "Open execution run/a ?" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Abrir execução run/a ?" }));
 
-    expect(await screen.findByText("Execution details")).toBeTruthy();
+    expect(await screen.findByText("Detalhes da execução")).toBeTruthy();
     expect(await screen.findByText("Analysis started")).toBeTruthy();
-    expect(screen.getByText("Stage: analysis")).toBeTruthy();
+    expect(screen.getByText("Etapa: analysis")).toBeTruthy();
     expect(get).toHaveBeenCalledWith("run/a ?");
     expect(timeline).toHaveBeenCalledWith("run/a ?");
   });
 
   it("keeps the list visible when details fail", async () => {
     render(<ExecutionsWorkspace loader={loader({ get: vi.fn().mockRejectedValue(new Error("detail")) })} />);
-    fireEvent.click(await screen.findByRole("button", { name: "Open execution run-1" }));
-    expect(await screen.findByText("Execution details unavailable")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Open execution run-1" })).toBeTruthy();
+    fireEvent.click(await screen.findByRole("button", { name: "Abrir execução run-1" }));
+    expect(await screen.findByText("Detalhes indisponíveis")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Abrir execução run-1" })).toBeTruthy();
   });
 
   it("isolates timeline failure and retries it", async () => {
     const timeline = vi.fn().mockRejectedValueOnce(new Error("timeline")).mockResolvedValueOnce([event]);
     render(<ExecutionsWorkspace loader={loader({ timeline })} />);
-    fireEvent.click(await screen.findByRole("button", { name: "Open execution run-1" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Try timeline again" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Abrir execução run-1" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Tentar novamente" }));
     expect(await screen.findByText("Analysis started")).toBeTruthy();
     await waitFor(() => expect(timeline).toHaveBeenCalledTimes(2));
-    expect(screen.getByRole("button", { name: "Open execution run-1" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Abrir execução run-1" })).toBeTruthy();
   });
 });

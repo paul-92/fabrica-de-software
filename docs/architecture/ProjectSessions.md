@@ -1,6 +1,6 @@
 # Project Sessions and Execution History
 
-**Dono:** Engenharia ASEP | **Versão:** 0.3 | **Status:** vigente
+**Dono:** Engenharia ASEP | **Versão:** 0.4 | **Status:** vigente
 
 ## Objetivo
 
@@ -69,6 +69,29 @@ impedem que compactação pareça conteúdo completo.
 Não há deduplicação, resumo por IA, tokens estimados ou seleção semântica.
 Mesmo history e policy produzem exatamente o mesmo JSON.
 
+## Memória durável da sessão
+
+`ProjectExecution History`, `SessionRuntimeContext`, `SessionMemory` e workspace
+são conceitos distintos. History é auditoria; recent context é uma projeção
+efêmera; memory guarda fatos duráveis selecionados da sessão; o workspace é a
+fonte da verdade para o código atual. A memória não é uma thread do Codex e não
+é compartilhada entre sessões ou projetos.
+
+`SessionMemoryEntry` é imutável e provider-agnostic. Entradas manuais têm
+`source_execution_id = null`; a extração automática, sem IA, cria apenas
+`artifact` para `WorkspaceChange created` de uma execução bem-sucedida. Não há
+NLP heurístico, embeddings, busca semântica ou resolução de contradições.
+
+O backend limita cada conteúdo a 2.000 caracteres, considera as 50 entradas
+mais recentes e limita a projeção enviada ao runtime a 8.000 caracteres.
+Igualdade normalizada exata por projeto, sessão, tipo e conteúdo é deduplicada.
+Contradições permanecem em ordem determinística. A prioridade é: instrução
+atual, workspace, contexto recente e memória da sessão.
+
+Somente `memory_entry_count`, `memory_char_count` e `memory_truncated` ficam na
+execução. O prompt final e a projeção completa não são persistidos. Registros
+antigos usam `0`, `0` e `false`.
+
 ## Histórico auditável
 
 Antes da chamada síncrona, a execução é persistida como `running`. Ela é
@@ -83,7 +106,8 @@ consulta: ele não dispara replay, retry, rollback ou execução automática.
 ## Persistência
 
 Os contratos `ProjectSessionRepository` e `ProjectExecutionRepository` têm
-implementações em memória e SQLite. SQLite usa o banco ASEP existente, tabelas
+implementações em memória e SQLite. `SessionMemoryRepository` segue a mesma
+fronteira, com implementações InMemory e SQLite. SQLite usa o banco ASEP existente, tabelas
 aditivas com foreign keys para `projects` e `project_sessions`, e payload JSON
 determinístico validado novamente pelos modelos na leitura. Nenhum reset ou
 migration destrutiva é executado.

@@ -103,12 +103,15 @@ def test_execution_resolves_workspace_only_from_persisted_project(tmp_path: Path
     assert result.execution.context_char_count > 0
     assert result.execution.context_omitted_execution_count == 0
     serialized_context = json.dumps(
-        request.model_dump(mode="json")["context"],
+        {"project_session": request.model_dump(mode="json")["context"]["project_session"]},
         ensure_ascii=False,
         separators=(",", ":"),
         sort_keys=True,
     )
     assert result.execution.context_char_count == len(serialized_context)
+    assert result.execution.memory_entry_count == 0
+    assert result.execution.memory_char_count > 0
+    assert result.execution.memory_truncated is False
 
 
 def test_later_execution_receives_limited_context_from_same_session(tmp_path: Path) -> None:

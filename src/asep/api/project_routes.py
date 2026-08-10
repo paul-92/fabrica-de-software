@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 
 from asep.api.project_schemas import (
     CreateProjectRequest,
@@ -13,12 +13,19 @@ from asep.api.project_schemas import (
     ProjectSessionListResponse,
     ProjectExecutionResponse,
     ProjectExecutionListResponse,
+    CreateSessionMemoryRequest,
+    SessionMemoryListResponse,
+    SessionMemoryResponse,
+    WorkspaceDirectoryResponse,
+    WorkspaceFileContentResponse,
 )
 from asep.application import (
     ProjectAIRuntimeExecutionRequest,
     ProjectAIRuntimeExecutionService,
     ProjectService,
     ProjectSessionService,
+    ProjectSessionMemoryService,
+    ProjectWorkspaceService,
 )
 
 
@@ -26,6 +33,8 @@ def create_projects_router(
     service: ProjectService,
     runtime_execution: ProjectAIRuntimeExecutionService | None = None,
     session_service: ProjectSessionService | None = None,
+    memory_service: ProjectSessionMemoryService | None = None,
+    workspace_service: ProjectWorkspaceService | None = None,
 ) -> APIRouter:
     router = APIRouter(prefix="/api/v1/projects", tags=["projects"])
 
@@ -44,6 +53,15 @@ def create_projects_router(
     @router.get("/{project_id}", response_model=ProjectResponse)
     def get_project(project_id: str) -> ProjectResponse:
         return ProjectResponse.from_domain(service.get(project_id))
+
+    if workspace_service is not None:
+        @router.get("/{project_id}/workspace", response_model=WorkspaceDirectoryResponse)
+        def list_workspace(project_id: str, path: str = Query(default="")) -> WorkspaceDirectoryResponse:
+            return WorkspaceDirectoryResponse.from_domain(workspace_service.list_directory(project_id, path))
+
+        @router.get("/{project_id}/workspace/file", response_model=WorkspaceFileContentResponse)
+        def read_workspace_file(project_id: str, path: str = Query(..., min_length=1)) -> WorkspaceFileContentResponse:
+            return WorkspaceFileContentResponse.from_domain(workspace_service.read_file(project_id, path))
 
     if session_service is not None:
         @router.post("/{project_id}/sessions", response_model=ProjectSessionResponse, status_code=201)
@@ -119,6 +137,34 @@ def create_projects_router(
                 context_omitted_execution_count=(
                     result.execution.context_omitted_execution_count
                 ),
+                memory_entry_count=result.execution.memory_entry_count,
+                memory_char_count=result.execution.memory_char_count,
+                memory_truncated=result.execution.memory_truncated,
             )
+
+    if memory_service is not None:
+        @router.get(
+            "/{project_id}/sessions/{session_id}/memory",
+            response_model=SessionMemoryListResponse,
+        )
+        def list_memory(project_id: str, session_id: str) -> SessionMemoryListResponse:
+            return SessionMemoryListResponse(items=tuple(
+                SessionMemoryResponse.from_domain(item)
+                for item in memory_service.list(project_id, session_id)
+            ))
+
+        @router.post(
+            "/{project_id}/sessions/{session_id}/memory",
+            response_model=SessionMemoryResponse,
+            status_code=201,
+        )
+        def add_memory(
+            project_id: str,
+            session_id: str,
+            body: CreateSessionMemoryRequest,
+        ) -> SessionMemoryResponse:
+            return SessionMemoryResponse.from_domain(memory_service.add(
+                project_id, session_id, body.kind, body.content
+            ))
 
     return router

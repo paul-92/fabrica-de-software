@@ -65,15 +65,15 @@ export function ExecutionsWorkspace({ loader }: { loader?: ExecutionsLoader }) {
   }
 
   return <div className="page-stack">
-    <PageHeader eyebrow="Operations" title="Executions" description="Inspect execution status, evidence and chronological events." />
-    {listState.status === "loading" ? <div className="executions-skeleton" role="status"><span className="sr-only">Loading executions</span></div> : null}
-    {listState.status === "error" ? <div className="dashboard-state dashboard-state--error" role="alert"><h2>Executions unavailable</h2><p>The execution list could not be loaded.</p><Button onClick={retryList}>Try again</Button></div> : null}
-    {listState.status === "ready" && listState.runs.length === 0 ? <div className="dashboard-state"><h2>No executions yet</h2><p>Runs will appear here when they become available.</p></div> : null}
+    <PageHeader eyebrow="Operações" title="Execuções" description="Consulte status, evidências e eventos em ordem cronológica." />
+    {listState.status === "loading" ? <div className="executions-skeleton" role="status"><span className="sr-only">Carregando execuções</span></div> : null}
+    {listState.status === "error" ? <div className="dashboard-state dashboard-state--error" role="alert"><h2>Execuções indisponíveis</h2><p>Não foi possível carregar a lista de execuções.</p><Button onClick={retryList}>Tentar novamente</Button></div> : null}
+    {listState.status === "ready" && listState.runs.length === 0 ? <div className="dashboard-state"><h2>Nenhuma execução ainda</h2><p>As execuções aparecerão aqui quando estiverem disponíveis.</p></div> : null}
     {listState.status === "ready" && listState.runs.length > 0 ? <>
-      <Card title="Execution history" eyebrow="Runs"><ExecutionsTable runs={listState.runs} selectedId={selectedId} onSelect={selectExecution} /></Card>
-      {selectedId === null ? <div className="dashboard-state"><h2>Select an execution</h2><p>Open a run to inspect its details and timeline.</p></div> : null}
-      {detailLoading ? <div className="execution-detail-skeleton" role="status">Loading execution details</div> : null}
-      {detailError ? <div className="dashboard-state dashboard-state--error" role="alert"><h2>Execution details unavailable</h2><p>The selected execution could not be loaded.</p></div> : null}
+      <Card title="Histórico de execuções" eyebrow="Execuções"><ExecutionsTable runs={listState.runs} selectedId={selectedId} onSelect={selectExecution} /></Card>
+      {selectedId === null ? <div className="dashboard-state"><h2>Selecione uma execução</h2><p>Abra uma execução para consultar seus detalhes e sua linha do tempo.</p></div> : null}
+      {detailLoading ? <div className="execution-detail-skeleton" role="status">Carregando detalhes da execução</div> : null}
+      {detailError ? <div className="dashboard-state dashboard-state--error" role="alert"><h2>Detalhes indisponíveis</h2><p>Não foi possível carregar a execução selecionada.</p></div> : null}
       {details ? <ExecutionDetails run={details} timeline={timeline} timelineLoading={timelineLoading} timelineError={timelineError} retryTimeline={retryTimeline} /> : null}
     </> : null}
   </div>;

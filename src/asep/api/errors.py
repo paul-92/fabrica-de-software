@@ -13,6 +13,8 @@ from asep.errors import (
     ProjectNotFoundError,
     ProjectSessionNotFoundError,
     RunNotFoundError,
+    WorkspaceEntryNotFoundError,
+    WorkspaceNotFoundError,
 )
 from asep.planning import PlanningValidationError
 from asep.ai_runtime import (
@@ -108,6 +110,11 @@ def register_exception_handlers(app: FastAPI) -> None:
             code=error.code,
             message="Run not found.",
         )
+
+    @app.exception_handler(WorkspaceNotFoundError)
+    @app.exception_handler(WorkspaceEntryNotFoundError)
+    async def workspace_not_found_handler(request: Request, error: AsepError) -> JSONResponse:
+        return _error_response(status_code=404, code=error.code, message="Workspace entry not found.")
 
     @app.exception_handler(ValueError)
     async def invalid_value_handler(

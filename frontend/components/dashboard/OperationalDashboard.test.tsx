@@ -68,7 +68,7 @@ describe("OperationalDashboard", () => {
 
     render(<OperationalDashboard loader={loader} />);
 
-    expect(screen.getByRole("status").textContent).toContain("Loading dashboard");
+    expect(screen.getByRole("status").textContent).toContain("Carregando painel");
   });
 
   it("renders API metrics and recent runs", async () => {
@@ -92,9 +92,9 @@ describe("OperationalDashboard", () => {
       <OperationalDashboard loader={loaderWith({ metrics, recentRuns: [] })} />,
     );
 
-    expect(await screen.findByText("No executions yet")).toBeTruthy();
+    expect(await screen.findByText("Nenhuma execução ainda")).toBeTruthy();
     expect(screen.getByText("12")).toBeTruthy();
-    expect(screen.queryByText("Dashboard unavailable")).toBeNull();
+    expect(screen.queryByText("Visão geral indisponível")).toBeNull();
   });
 
   it("shows a safe error without exposing internal details", async () => {
@@ -103,7 +103,7 @@ describe("OperationalDashboard", () => {
     );
 
     expect(await screen.findByRole("alert")).toBeTruthy();
-    expect(screen.getByText("Dashboard unavailable")).toBeTruthy();
+    expect(screen.getByText("Visão geral indisponível")).toBeTruthy();
     expect(document.body.textContent).not.toContain("secret stack");
   });
 
@@ -114,7 +114,7 @@ describe("OperationalDashboard", () => {
     render(<OperationalDashboard loader={loaderWith(error)} />);
 
     expect(await screen.findByRole("alert")).toBeTruthy();
-    expect(screen.queryByText("Loading dashboard")).toBeNull();
+    expect(screen.queryByText("Carregando painel")).toBeNull();
   });
 
   it("loads again when the user retries", async () => {
@@ -123,7 +123,7 @@ describe("OperationalDashboard", () => {
       { metrics, recentRuns: [run("run-after-retry", "succeeded")] },
     );
     render(<OperationalDashboard loader={loader} />);
-    fireEvent.click(await screen.findByRole("button", { name: "Try again" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Tentar novamente" }));
 
     expect(await screen.findByText("run-after-retry")).toBeTruthy();
     await waitFor(() => expect(loader.load).toHaveBeenCalledTimes(2));
@@ -132,6 +132,6 @@ describe("OperationalDashboard", () => {
   it("renders status as text rather than color alone", () => {
     render(<RunStatusBadge status="failed" />);
 
-    expect(screen.getByText("Failed").textContent).toBe("Failed");
+    expect(screen.getByText("Falhou").textContent).toBe("Falhou");
   });
 });

@@ -4,7 +4,15 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from asep.projects import ProjectExecution, ProjectSession, WorkspaceProject
+from asep.projects import (
+    ProjectExecution,
+    ProjectSession,
+    SessionMemoryEntry,
+    SessionMemoryKind,
+    WorkspaceProject,
+    WorkspaceDirectory,
+    WorkspaceFileContent,
+)
 from asep.ai_runtime import AIRuntimeExecutionMode
 from asep.workspace_changes import WorkspaceChangeType
 
@@ -45,6 +53,35 @@ class ProjectResponse(ProjectHttpSchema):
 
 class ProjectListResponse(ProjectHttpSchema):
     items: tuple[ProjectResponse, ...]
+
+
+class WorkspaceEntryResponse(ProjectHttpSchema):
+    path: str
+    name: str
+    kind: str
+    size: int | None
+
+
+class WorkspaceDirectoryResponse(ProjectHttpSchema):
+    path: str
+    entries: tuple[WorkspaceEntryResponse, ...]
+
+    @classmethod
+    def from_domain(cls, directory: WorkspaceDirectory) -> "WorkspaceDirectoryResponse":
+        return cls.model_validate(directory.model_dump(mode="json"))
+
+
+class WorkspaceFileContentResponse(ProjectHttpSchema):
+    path: str
+    name: str
+    content: str
+    size: int
+    language: str
+    truncated: bool
+
+    @classmethod
+    def from_domain(cls, content: WorkspaceFileContent) -> "WorkspaceFileContentResponse":
+        return cls.model_validate(content.model_dump(mode="json"))
 
 
 class ProjectAIRuntimeExecutionRequestBody(ProjectHttpSchema):
@@ -89,6 +126,9 @@ class ProjectAIRuntimeExecutionResponse(ProjectHttpSchema):
     context_truncated: bool
     context_char_count: int
     context_omitted_execution_count: int
+    memory_entry_count: int
+    memory_char_count: int
+    memory_truncated: bool
 
 
 class CreateProjectSessionRequest(ProjectHttpSchema):
@@ -119,6 +159,37 @@ class ProjectSessionListResponse(ProjectHttpSchema):
     items: tuple[ProjectSessionResponse, ...]
 
 
+class CreateSessionMemoryRequest(ProjectHttpSchema):
+    kind: SessionMemoryKind
+    content: str
+
+    @field_validator("content")
+    @classmethod
+    def content_not_blank(cls, value: str) -> str:
+        normalized = " ".join(value.split())
+        if not normalized:
+            raise ValueError("memory content must not be blank")
+        return normalized
+
+
+class SessionMemoryResponse(ProjectHttpSchema):
+    memory_id: str
+    session_id: str
+    project_id: str
+    kind: SessionMemoryKind
+    content: str
+    source_execution_id: str | None
+    created_at: datetime
+
+    @classmethod
+    def from_domain(cls, entry: SessionMemoryEntry) -> "SessionMemoryResponse":
+        return cls.model_validate(entry.model_dump(mode="json"))
+
+
+class SessionMemoryListResponse(ProjectHttpSchema):
+    items: tuple[SessionMemoryResponse, ...]
+
+
 class ProjectExecutionResponse(ProjectHttpSchema):
     execution_id: str
     session_id: str
@@ -136,6 +207,9 @@ class ProjectExecutionResponse(ProjectHttpSchema):
     context_truncated: bool
     context_char_count: int
     context_omitted_execution_count: int
+    memory_entry_count: int
+    memory_char_count: int
+    memory_truncated: bool
     created_at: datetime
     completed_at: datetime | None
 

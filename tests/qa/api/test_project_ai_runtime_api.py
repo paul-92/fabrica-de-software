@@ -67,6 +67,8 @@ def test_project_runtime_http_contract_excludes_workspace_and_preserves_result(t
             "context_entry_count": 0, "context_truncated": False,
             "context_char_count": response.json()["context_char_count"],
             "context_omitted_execution_count": 0,
+            "memory_entry_count": 0, "memory_char_count": response.json()["memory_char_count"],
+            "memory_truncated": False,
     }
     assert runtime.request.workspace == tmp_path.resolve()
     assert "prompt" not in response.json()

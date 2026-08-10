@@ -1,12 +1,12 @@
 import { StatusBadge } from "../StatusBadge";
 
 const statusPresentation = {
-  succeeded: { label: "Succeeded", tone: "success" },
-  completed: { label: "Completed", tone: "success" },
-  failed: { label: "Failed", tone: "danger" },
-  running: { label: "Running", tone: "warning" },
-  pending: { label: "Pending", tone: "neutral" },
-  cancelled: { label: "Cancelled", tone: "neutral" },
+  succeeded: { label: "Concluído", tone: "success" },
+  completed: { label: "Concluído", tone: "success" },
+  failed: { label: "Falhou", tone: "danger" },
+  running: { label: "Executando", tone: "warning" },
+  pending: { label: "Pendente", tone: "neutral" },
+  cancelled: { label: "Cancelado", tone: "neutral" },
 } as const;
 
 export function RunStatusBadge({ status }: { status: string }) {

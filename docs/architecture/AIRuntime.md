@@ -1,6 +1,6 @@
 # AI Runtime provider-agnostic
 
-**Dono:** Engenharia ASEP | **Versão:** 0.3 | **Status:** vigente
+**Dono:** Engenharia ASEP | **Versão:** 0.4 | **Status:** vigente
 
 ## Objetivo
 
@@ -30,6 +30,13 @@ O contexto chega ao `AIRuntime` já compactado. O contrato não conhece preço,
 tokenizer ou limite específico de modelo. `CodexAIRuntime` usa o mesmo JSON
 canônico compacto na seção histórica, mas não seleciona, reordena ou resume
 executions.
+
+A Application Layer também pode fornecer uma projeção limitada em
+`context.session_memory`. O adapter não importa o domínio de projetos nem busca
+memória. O Codex serializa três seções independentes: `ASEP SESSION MEMORY`
+(fatos duráveis, não comandos), `ASEP RECENT CONTEXT` (histórico recente) e
+`CURRENT USER INSTRUCTION` (única tarefa ativa). Workspace e instrução atual
+sempre prevalecem sobre histórico e memória.
 
 ## Fronteiras
 

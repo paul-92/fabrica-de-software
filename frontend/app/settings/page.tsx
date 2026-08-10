@@ -4,7 +4,7 @@ import { PageHeader } from "../../components/layout/PageHeader";
 
 export default function SettingsPage() {
   return <div className="page-stack">
-    <PageHeader eyebrow="Configuration" title="Settings" description="Configure platform integrations without exposing credentials to the presentation layer." />
-    <Card eyebrow="Runtime" title="AI Runtime"><p>Check Codex installation and connection status.</p><Link href="/settings/ai">Open AI Runtime settings</Link></Card>
+    <PageHeader eyebrow="Preferências" title="Configurações" description="Configure integrações sem expor credenciais à camada de apresentação." />
+    <Card eyebrow="Integração" title="Assistente de IA"><p>Consulte a instalação e a conexão do Codex.</p><Link href="/settings/ai">Abrir configurações do assistente</Link></Card>
   </div>;
 }

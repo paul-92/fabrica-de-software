@@ -83,6 +83,20 @@ class SQLiteDatabase:
             ON project_executions (session_id, created_at);
         CREATE INDEX IF NOT EXISTS idx_project_executions_project
             ON project_executions (project_id, created_at);
+        CREATE TABLE IF NOT EXISTS project_session_memory (
+            id TEXT PRIMARY KEY,
+            project_id TEXT NOT NULL,
+            session_id TEXT NOT NULL,
+            kind TEXT NOT NULL,
+            normalized_content TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            payload TEXT NOT NULL,
+            FOREIGN KEY(project_id) REFERENCES projects(id),
+            FOREIGN KEY(session_id) REFERENCES project_sessions(id),
+            UNIQUE(project_id, session_id, kind, normalized_content)
+        );
+        CREATE INDEX IF NOT EXISTS idx_project_session_memory_session
+            ON project_session_memory (session_id, created_at);
     """
     _EXPECTED_COLUMNS = {
         "runs": {"id", "started_at", "payload"},
@@ -107,6 +121,10 @@ class SQLiteDatabase:
         "project_sessions": {"id", "project_id", "created_at", "payload"},
         "project_executions": {
             "id", "session_id", "project_id", "status", "created_at", "payload"
+        },
+        "project_session_memory": {
+            "id", "project_id", "session_id", "kind", "normalized_content",
+            "created_at", "payload"
         },
     }
 

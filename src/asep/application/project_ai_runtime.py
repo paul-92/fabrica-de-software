@@ -17,6 +17,11 @@ from asep.application.session_context import (
     session_runtime_context_char_count,
 )
 from asep.application.projects import ProjectService
+from asep.application.session_memory import (
+    ProjectSessionMemoryService,
+    SessionMemoryContext,
+    serialize_session_memory_context,
+)
 from asep.application.workspace_changes import WorkspaceChange, WorkspaceSnapshotter
 from asep.projects import ProjectExecution, ProjectExecutionRepository, ProjectExecutionStatus
 
@@ -57,6 +62,7 @@ class ProjectAIRuntimeExecutionService:
                  sessions: ProjectSessionService, executions: ProjectExecutionRepository,
                  snapshotter: WorkspaceSnapshotter | None = None,
                  context_builder: SessionContextBuilder | None = None, *,
+                 memory_service: ProjectSessionMemoryService | None = None,
                  clock: Callable[[], datetime] | None = None,
                  id_generator: Callable[[], str] | None = None) -> None:
         self._projects = projects
@@ -65,6 +71,7 @@ class ProjectAIRuntimeExecutionService:
         self._executions = executions
         self._snapshotter = snapshotter or WorkspaceSnapshotter()
         self._context_builder = context_builder or SessionContextBuilder(executions)
+        self._memory = memory_service
         self._clock = clock or (lambda: datetime.now(UTC))
         self._id_generator = id_generator or (lambda: str(uuid4()))
         self._locks_guard = Lock()
@@ -76,6 +83,11 @@ class ProjectAIRuntimeExecutionService:
         session_context = self._context_builder.build(
             request.project_id, request.session_id
         )
+        memory_context = (
+            self._memory.context(request.project_id, request.session_id)
+            if self._memory is not None
+            else SessionMemoryContext()
+        )
         execution = ProjectExecution(
             execution_id=self._id_generator(), session_id=request.session_id,
             project_id=request.project_id, runtime_id=request.runtime_id,
@@ -85,6 +97,9 @@ class ProjectAIRuntimeExecutionService:
             context_truncated=session_context.truncated,
             context_char_count=session_runtime_context_char_count(session_context),
             context_omitted_execution_count=session_context.omitted_execution_count,
+            memory_entry_count=len(memory_context.entries),
+            memory_char_count=len(serialize_session_memory_context(memory_context)),
+            memory_truncated=memory_context.truncated,
             created_at=self._clock(),
         )
         self._executions.create(execution)
@@ -100,7 +115,8 @@ class ProjectAIRuntimeExecutionService:
         runtime_request = AIRuntimeRequest(
             instruction=request.instruction, metadata=request.metadata,
             context={
-                "project_session": session_context.model_dump(mode="json")
+                "project_session": session_context.model_dump(mode="json"),
+                "session_memory": memory_context.model_dump(mode="json"),
             },
             workspace=project.workspace_path, execution_mode=request.execution_mode,
         )
@@ -147,6 +163,8 @@ class ProjectAIRuntimeExecutionService:
             "changes": changes, "completed_at": self._clock(),
         }})
         self._executions.update(completed)
+        if self._memory is not None:
+            self._memory.extract_and_add(completed)
         return ProjectAIRuntimeExecutionResult(runtime_result=result, changes=changes,
                                                execution_mode=execution.execution_mode,
                                                execution=completed)
