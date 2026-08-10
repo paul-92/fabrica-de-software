@@ -13,6 +13,9 @@ const alternativeBrand = createBrandConfig({
   shortName: "NS",
   primaryColor: "#123456",
   secondaryColor: "#abcdef",
+  defaultTheme: "dark",
+  workspaceLabel: "Northstar Workspace",
+  footerText: "Built for Northstar",
 });
 
 function renderSidebar(pathname = "/") {
@@ -34,6 +37,13 @@ describe("application shell structure", () => {
     expect(markup).toContain("NS");
   });
 
+  it("renders the configured institutional footer", () => {
+    const markup = renderSidebar();
+
+    expect(markup).toContain("Built for Northstar");
+    expect(markup).not.toContain("Engenharia com segurança");
+  });
+
   it("offers every expected navigation destination", () => {
     const markup = renderSidebar();
 
@@ -41,28 +51,40 @@ describe("application shell structure", () => {
       expect(markup).toContain(`href="${href}"`);
       expect(markup).toContain(`>${label}</span>`);
     });
+
     expect(navigationItems).toHaveLength(8);
   });
 
   it("marks the current route accessibly", () => {
     const markup = renderSidebar("/knowledge");
-    const activeLink = markup.match(/<a[^>]*href="\/knowledge"[^>]*>/)?.[0];
+    const activeLink = markup.match(
+      /<a[^>]*href="\/knowledge"[^>]*>/,
+    )?.[0];
 
     expect(activeLink).toContain('class="nav-link nav-link--active"');
     expect(activeLink).toContain('aria-current="page"');
   });
 
-  it("keeps ThemeToggle available in the global header", () => {
+  it("renders white-label workspace identity in the global header", () => {
     const markup = renderToStaticMarkup(
-      <AppHeader title="Knowledge" onOpenNavigation={() => undefined} />,
+      <AppHeader
+        title="Knowledge"
+        brand={alternativeBrand}
+        onOpenNavigation={() => undefined}
+      />,
     );
 
+    expect(markup).toContain("Northstar Workspace");
+    expect(markup).toContain("Knowledge");
     expect(markup).toContain("Alternar tema");
-    expect(markup).toContain("Tema escuro");
+
+    // The configured default is dark, so the action offered is switching to light.
+    expect(markup).toContain("Tema claro");
   });
 
   it("does not bind shell components to a fixed product identity", () => {
     const files = ["AppShell.tsx", "Sidebar.tsx", "AppHeader.tsx"];
+
     const source = files
       .map((file) =>
         readFileSync(
@@ -74,5 +96,6 @@ describe("application shell structure", () => {
 
     expect(source).not.toContain("ASEP");
     expect(source).not.toContain("Engineering Platform");
+    expect(source).not.toContain("Engenharia com segurança");
   });
 });

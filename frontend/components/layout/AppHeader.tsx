@@ -1,11 +1,17 @@
+import type { BrandConfig } from "../../branding/types";
 import { ThemeToggle } from "../ThemeToggle";
 
 type AppHeaderProps = {
   title: string;
+  brand: BrandConfig;
   onOpenNavigation: () => void;
 };
 
-export function AppHeader({ title, onOpenNavigation }: AppHeaderProps) {
+export function AppHeader({
+  title,
+  brand,
+  onOpenNavigation,
+}: AppHeaderProps) {
   return (
     <header className="app-header">
       <div className="app-header__context">
@@ -19,13 +25,15 @@ export function AppHeader({ title, onOpenNavigation }: AppHeaderProps) {
           <span />
           <span />
         </button>
+
         <div>
-          <p className="app-header__eyebrow">Área de trabalho</p>
+          <p className="app-header__eyebrow">{brand.workspaceLabel}</p>
           <p className="app-header__title">{title}</p>
         </div>
       </div>
+
       <div className="app-header__actions" aria-label="Ações globais">
-        <ThemeToggle />
+        <ThemeToggle defaultTheme={brand.defaultTheme} />
       </div>
     </header>
   );

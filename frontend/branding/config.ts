@@ -5,6 +5,9 @@ export const defaultBrandConfig: BrandConfig = Object.freeze({
   shortName: "EP",
   primaryColor: "#6750e8",
   secondaryColor: "#20b8a6",
+  defaultTheme: "light",
+  workspaceLabel: "Área de trabalho",
+  footerText: "Engenharia com segurança",
 });
 
 export function createBrandConfig(
@@ -14,6 +17,8 @@ export function createBrandConfig(
 }
 
 export function loadBrandConfig(): BrandConfig {
+  const configuredTheme = process.env.NEXT_PUBLIC_DEFAULT_THEME;
+
   return createBrandConfig({
     productName:
       process.env.NEXT_PUBLIC_PRODUCT_NAME ?? defaultBrandConfig.productName,
@@ -26,5 +31,14 @@ export function loadBrandConfig(): BrandConfig {
     secondaryColor:
       process.env.NEXT_PUBLIC_SECONDARY_COLOR ??
       defaultBrandConfig.secondaryColor,
+    defaultTheme:
+      configuredTheme === "dark" || configuredTheme === "light"
+        ? configuredTheme
+        : defaultBrandConfig.defaultTheme,
+    workspaceLabel:
+      process.env.NEXT_PUBLIC_WORKSPACE_LABEL ??
+      defaultBrandConfig.workspaceLabel,
+    footerText:
+      process.env.NEXT_PUBLIC_FOOTER_TEXT ?? defaultBrandConfig.footerText,
   });
 }

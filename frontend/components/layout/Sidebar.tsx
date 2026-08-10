@@ -43,7 +43,7 @@ export function Sidebar({
           );
         })}
       </nav>
-      <p className="sidebar__footer">Engenharia com segurança</p>
+      <p className="sidebar__footer">{brand.footerText}</p>
     </aside>
   );
 }

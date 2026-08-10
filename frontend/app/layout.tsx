@@ -13,9 +13,15 @@ export const metadata: Metadata = {
   icons: brand.faviconUrl ? { icon: brand.faviconUrl } : undefined,
 };
 
-export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+export default function RootLayout({
+  children,
+}: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
+    <html
+      lang="pt-BR"
+      data-theme={brand.defaultTheme}
+      suppressHydrationWarning
+    >
       <body>
         <AppShell brand={brand}>{children}</AppShell>
       </body>
