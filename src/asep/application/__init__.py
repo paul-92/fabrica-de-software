@@ -6,6 +6,12 @@ from asep.application.agent_catalog import (
     AgentCatalogService,
     AgentCatalogSource,
 )
+from asep.application.agent_runtime_projection import (
+    AgentRuntimeMetricsSnapshot,
+    AgentRuntimeMetricsSource,
+    AgentRuntimeProjection,
+    AgentRuntimeProjectionService,
+)
 from asep.application.contracts import IntelligentEngineeringCapability
 from asep.application.intelligent_engineering import (
     ApplicationIntelligentEngineeringRequest,
@@ -49,6 +55,10 @@ __all__ = [
     "AgentCatalogEntry",
     "AgentCatalogService",
     "AgentCatalogSource",
+    "AgentRuntimeMetricsSnapshot",
+    "AgentRuntimeMetricsSource",
+    "AgentRuntimeProjection",
+    "AgentRuntimeProjectionService",
     "AIRuntimeConnectionService",
     "ApplicationIntelligentEngineeringRequest",
     "ApplicationIntelligentEngineeringResult",

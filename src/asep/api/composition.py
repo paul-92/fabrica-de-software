@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from fastapi import FastAPI
 from pathlib import Path
 
@@ -16,6 +17,7 @@ from asep.ai_runtime import (
 from asep.api.app import create_app
 from asep.application import (
     AgentCatalogService,
+    AgentRuntimeProjectionService,
     IntelligentEngineeringApplicationService,
     RunQueryService,
     ProjectService,
@@ -39,6 +41,7 @@ from asep.intelligence import (
     ToolAwarePlanningAdapter,
 )
 from asep.planning import PlanningEngine
+from asep.pipeline import ASEPEngine, PipelineBuilder
 from asep.repair import ControlledRepairExecutor
 from asep.repositories import RepositoryBundle, RepositoryFactory
 from asep.timeline import TimelineRecorder
@@ -49,6 +52,12 @@ from asep.tools import (
     WriteFileTool,
 )
 from asep.registry.agent_catalog_source import DeclarativeAgentCatalogSource
+
+
+@dataclass(frozen=True, slots=True)
+class OperationalComposition:
+    app: FastAPI
+    engine: ASEPEngine
 
 
 def _create_intelligent_engineering_service(
@@ -81,10 +90,11 @@ def _create_intelligent_engineering_service(
     )
 
 
-def create_default_app(
-    repository_settings: ApplicationSettings | None = None,
+def _create_configured_app(
+    settings: ApplicationSettings,
+    *,
+    agent_runtime_projection_service: AgentRuntimeProjectionService | None = None,
 ) -> FastAPI:
-    settings = repository_settings or Configuration.load()
     repositories = RepositoryFactory(settings).create()
     query_service = RunQueryService(
         repositories.run_repository,
@@ -140,4 +150,37 @@ def create_default_app(
         project_session_memory_service=project_memory_service,
         project_workspace_service=project_workspace_service,
         agent_catalog_service=agent_catalog_service,
+        agent_runtime_projection_service=agent_runtime_projection_service,
     )
+
+
+def create_default_app(
+    repository_settings: ApplicationSettings | None = None,
+) -> FastAPI:
+    settings = repository_settings or Configuration.load()
+    return _create_configured_app(settings)
+
+
+def create_default_operational_composition(
+    repository_settings: ApplicationSettings | None = None,
+) -> OperationalComposition:
+    settings = repository_settings or Configuration.load()
+    pipeline = PipelineBuilder().build_composition()
+    projection = AgentRuntimeProjectionService(
+        pipeline.agent_registry,
+        pipeline.agent_metrics,
+    )
+    return OperationalComposition(
+        app=_create_configured_app(
+            settings,
+            agent_runtime_projection_service=projection,
+        ),
+        engine=pipeline.engine,
+    )
+
+
+__all__ = [
+    "OperationalComposition",
+    "create_default_app",
+    "create_default_operational_composition",
+]

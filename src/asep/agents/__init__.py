@@ -39,6 +39,7 @@ from asep.agents.runtime_metrics import (
     AgentExecutionMetricsRecorder,
     AgentExecutionMetricsSnapshot,
     InMemoryAgentExecutionMetrics,
+    PerAgentExecutionMetricsSnapshot,
 )
 from asep.agents.runtime_models import (
     AgentExecutionContext,
@@ -88,6 +89,7 @@ __all__ = [
     "AgentValidationException",
     "InMemoryAgentRegistry",
     "InMemoryAgentExecutionMetrics",
+    "PerAgentExecutionMetricsSnapshot",
     "InvalidAgentRegistrationException",
 ]
 

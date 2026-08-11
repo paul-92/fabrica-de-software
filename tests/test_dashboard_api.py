@@ -510,6 +510,8 @@ def test_public_api_exports_are_intentional() -> None:
     import asep.api as api_module
 
     assert set(api_module.__all__) == {
+        "OperationalComposition",
         "create_app",
         "create_default_app",
+        "create_default_operational_composition",
     }

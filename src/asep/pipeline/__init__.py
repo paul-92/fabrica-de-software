@@ -1,6 +1,6 @@
 """API pública do pipeline ponta a ponta ASEP."""
 
-from asep.pipeline.builder import PipelineBuilder
+from asep.pipeline.builder import PipelineBuilder, PipelineComposition
 from asep.pipeline.engine import ASEPEngine
 from asep.pipeline.exceptions import (
     PipelineComponentUnavailableError,
@@ -26,6 +26,7 @@ __all__ = [
     "GoalResult",
     "GoalStatus",
     "PipelineBuilder",
+    "PipelineComposition",
     "PipelineComponentUnavailableError",
     "PipelineComponents",
     "PipelineError",

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict
 
-from asep.application import AgentCatalogEntry
+from asep.application import AgentCatalogEntry, AgentRuntimeProjection
 
 
 class AgentCatalogItemResponse(BaseModel):
@@ -30,4 +30,29 @@ class AgentCatalogListResponse(BaseModel):
     items: tuple[AgentCatalogItemResponse, ...]
 
 
-__all__ = ["AgentCatalogItemResponse", "AgentCatalogListResponse"]
+class AgentRuntimeProjectionItemResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    agent_id: str
+    registered: bool
+    execution_count: int
+
+    @classmethod
+    def from_application(
+        cls, projection: AgentRuntimeProjection
+    ) -> AgentRuntimeProjectionItemResponse:
+        return cls.model_validate(projection.model_dump(mode="json"))
+
+
+class AgentRuntimeProjectionListResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    items: tuple[AgentRuntimeProjectionItemResponse, ...]
+
+
+__all__ = [
+    "AgentCatalogItemResponse",
+    "AgentCatalogListResponse",
+    "AgentRuntimeProjectionItemResponse",
+    "AgentRuntimeProjectionListResponse",
+]

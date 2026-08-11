@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from dataclasses import dataclass
 
 from asep.agents import (
     AgentExecutionPolicy,
     AgentExecutionService,
+    AgentRegistry,
     InMemoryAgentExecutionMetrics,
     InMemoryAgentRegistry,
 )
@@ -15,6 +17,7 @@ from asep.agents.coordination import (
     InMemoryCoordinationMetrics,
 )
 from asep.agents.developer import DeveloperAgent
+from asep.application import AgentRuntimeMetricsSource
 from asep.memory import (
     ContextBuilder,
     InMemoryMemoryMetrics,
@@ -49,6 +52,13 @@ from asep.workflow import WorkflowEngine, WorkflowExecutor, WorkflowValidator
 from asep.workflow.orchestrator import WorkflowOrchestrator
 
 
+@dataclass(frozen=True, slots=True)
+class PipelineComposition:
+    engine: ASEPEngine
+    agent_registry: AgentRegistry
+    agent_metrics: AgentRuntimeMetricsSource
+
+
 class PipelineBuilder:
     def __init__(
         self,
@@ -60,6 +70,9 @@ class PipelineBuilder:
         self._recovery_policy = recovery_policy
 
     def build(self) -> ASEPEngine:
+        return self.build_composition().engine
+
+    def build_composition(self) -> PipelineComposition:
         repositories = RepositoryFactory(
             ApplicationSettings(storage_backend="memory")
         ).create()
@@ -159,7 +172,11 @@ class PipelineBuilder:
                 memory=memory_metrics,
             ),
         )
-        return ASEPEngine(pipeline)
+        return PipelineComposition(
+            engine=ASEPEngine(pipeline),
+            agent_registry=agent_registry,
+            agent_metrics=agent_metrics,
+        )
 
 
-__all__ = ["PipelineBuilder"]
+__all__ = ["PipelineBuilder", "PipelineComposition"]
