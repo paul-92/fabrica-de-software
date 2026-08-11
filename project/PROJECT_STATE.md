@@ -21,7 +21,8 @@ Business Engineering e execução avançou por implementação e testes:
 - Fase 18 — Intelligent Engineering: blocos 18.1–18.4 concluídos.
 - Fase 20 — Intelligent Integration: blocos 20.1–20.4 concluídos.
 - Fase 21 — Application/API Layer: blocos 21.1–21.4 concluídos.
-- Fase 22 — White-label Presentation Layer: implementação funcional concluída;
+- Fase 22 — White-label Presentation Layer: concluída; gate frontend
+  consolidado aprovado em 2026-08-11.
   Em 2026-08-11, 11 testes focados do contrato Application/API de Agents
 passaram. A inspeção estática do frontend não encontrou imports para módulos
 Python internos.
@@ -90,8 +91,17 @@ novo desta revisão.
 
 Em 2026-08-11, 11 testes focados do contrato Application/API de Agents
 passaram. A inspeção estática do frontend não encontrou imports para módulos
-internos. O gate frontend (`test`, `typecheck`, `lint` e `build`) não pôde ser
-executado porque Node/npm não está instalado ou acessível no `PATH`.
+internos.
+
+Em 2026-08-11, o gate frontend consolidado da Fase 22 foi executado com Node.js
+portátil em ambiente de usuário, sem necessidade de privilégios administrativos.
+
+A suíte Vitest aprovou 25 arquivos e 117 testes, sem falhas. Typecheck e lint
+foram aprovados. O build de produção Next.js foi concluído com sucesso e gerou
+11 páginas estáticas, incluindo `/agents`, `/knowledge`, `/quality` e
+`/planning`.
+
+Com essas evidências, a Fase 22 está formalmente concluída.
 
 ## Limitações e pendências
 
@@ -102,7 +112,6 @@ executado porque Node/npm não está instalado ou acessível no `PATH`.
 - Intelligent Integration reutiliza a Memory existente; `recommended_actions`
   e `should_retry` continuam informativos e não executáveis;
 - Application/API expõe Intelligent Engineering sem construir infraestrutura;
-- o fechamento formal da Fase 22 depende do gate frontend consolidado;
 - no Windows, o teste legado de multiprocessing pode falhar com `WinError 5`
   ao criar named pipe; essa limitação ambiental não é regressão da Fase 21;
 - timeout do runtime não interrompe chamada bloqueada;

@@ -6,7 +6,7 @@
 
 **Versão:** 1.0
 
-**Status:** implementação funcional concluída; gate consolidado final pendente
+**Status:** concluída; gate consolidado aprovado em 2026-08-11
 
 ## Objetivo e fronteira
 
@@ -64,43 +64,27 @@ foram evitadas enquanto o gate executável permanece indisponível.
 
 ## Evidências e gate consolidado
 
-Durante o desenvolvimento da Presentation Layer, os gates frontend foram
-executados em ambiente com Node/npm disponível. Typecheck, lint e build Next.js
-foram aprovados.
+O gate consolidado final da Fase 22 foi executado em 2026-08-11 sobre o estado
+final da implementação.
 
-A última falha identificada estava restrita ao isolamento entre testes de
-`ThemeToggle.test.tsx`. Após a correção, os 3 testes focados desse componente
-passaram.
-
-Em 2026-08-11 também foram aprovados 11 testes focados dos contratos
-Application/API de Agents e a inspeção estática não encontrou imports do
-frontend para módulos Python internos.
-
-| Verificação | Evidência |
+| Verificação | Resultado |
 | --- | --- |
-| Fronteira estática do frontend | passou |
-| Contratos Application/API de Agents | `11 passed` |
-| Typecheck durante o desenvolvimento | passou |
-| Lint durante o desenvolvimento | passou |
-| Build Next.js durante o desenvolvimento | passou |
-| `ThemeToggle.test.tsx` após correção final | `3 passed` |
-| Gate frontend consolidado sobre o estado final | pendente |
+| `npm test` | aprovado — 25 arquivos, 117 testes |
+| `npm run typecheck` | aprovado |
+| `npm run lint` | aprovado |
+| `npm run build` | aprovado |
+| Build Next.js | compilado com sucesso |
+| Páginas estáticas | 11/11 geradas |
+| `/agents` | gerada com sucesso |
+| `/knowledge` | gerada com sucesso |
+| `/quality` | gerada com sucesso |
+| `/planning` | gerada com sucesso |
 
-O fechamento formal exige uma nova execução consolidada de:
+Não foram observadas falhas de teste no gate consolidado.
 
-```text
-npm test
-npm run typecheck
-npm run lint
-npm run build
-## Limitações conhecidas
-
-- branding dinâmico por API ainda não existe;
-- preferências visuais não possuem persistência server-side;
-- Agents não expõe runtime health ou métricas por agente;
-- Quality não expõe critérios detalhados dos Quality Gates;
-- Knowledge não possui busca, paginação ou agregação global;
-- runtime e workflows preservam as limitações das fases anteriores.
+Com os quatro gates frontend aprovados, a implementação funcional, o hardening
+arquitetural e a documentação sincronizada, a Fase 22 está formalmente
+concluída.
 
 ## Próxima fase proposta
 
@@ -116,11 +100,11 @@ contratos; Qualidade define os critérios de aceite.
 - [x] entregas e limitações sincronizadas;
 - [x] hardening estático e testes focados de Agents executados;
 - [x] proposta de continuidade registrada sem aprovação implícita;
-- [ ] `npm test` aprovado;
-- [ ] `npm run typecheck` aprovado;
-- [ ] `npm run lint` aprovado;
-- [ ] `npm run build` aprovado;
-- [ ] aceite formal do gate por Qualidade;
+- [x] `npm test` aprovado;
+- [x] `npm run typecheck` aprovado;
+- [x] `npm run lint` aprovado;
+- [x] `npm run build` aprovado;
+- [x] aceite formal do gate por Qualidade;
 - [ ] priorização da próxima fase por Produto.
 
 ## Retomada e responsabilidade
