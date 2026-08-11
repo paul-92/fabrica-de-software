@@ -9,6 +9,7 @@ import { AIRuntimesClient } from "../services/aiRuntimes";
 import { ProjectHistoryClient, ProjectRuntimeClient } from "../services/projectRuntime";
 import { ProjectWorkspaceClient } from "../services/projectWorkspace";
 import { AgentsClient } from "../services/agents";
+import { SequentialQualityClient } from "../services/sequentialQuality";
 
 export type PlatformClients = Readonly<{
   intelligentEngineering: IntelligentEngineeringClient;
@@ -20,6 +21,7 @@ export type PlatformClients = Readonly<{
   projectHistory: ProjectHistoryClient;
   projectWorkspace: ProjectWorkspaceClient;
   agents: AgentsClient;
+  sequentialQuality: SequentialQualityClient;
 }>;
 
 export function createPlatformClients(): PlatformClients {
@@ -34,5 +36,6 @@ export function createPlatformClients(): PlatformClients {
     projectHistory: new ProjectHistoryClient(api),
     projectWorkspace: new ProjectWorkspaceClient(api),
     agents: new AgentsClient(api),
+    sequentialQuality: new SequentialQualityClient(api),
   });
 }

@@ -14,8 +14,20 @@ from asep.errors import (
     ProjectNotFoundError,
     ProjectSessionNotFoundError,
     RunNotFoundError,
+    StatePersistenceError,
     WorkspaceEntryNotFoundError,
     WorkspaceNotFoundError,
+)
+from asep.application import (
+    SequentialExecutionNotFoundError,
+    SequentialExecutionOwnershipError,
+    SequentialProjectIdentityMismatchError,
+    SequentialProjectNotFoundError,
+    SequentialProjectPathError,
+)
+from asep.quality_results import (
+    InvalidQualityGateResultStorageFormatError,
+    QualityGateResultStorageReadError,
 )
 from asep.planning import PlanningValidationError
 from asep.ai_runtime import (
@@ -28,6 +40,34 @@ from asep.ai_runtime import (
 
 
 def register_exception_handlers(app: FastAPI) -> None:
+    @app.exception_handler(SequentialProjectNotFoundError)
+    @app.exception_handler(SequentialProjectPathError)
+    @app.exception_handler(SequentialProjectIdentityMismatchError)
+    @app.exception_handler(SequentialExecutionNotFoundError)
+    @app.exception_handler(SequentialExecutionOwnershipError)
+    async def sequential_quality_not_found_handler(
+        request: Request,
+        error: AsepError,
+    ) -> JSONResponse:
+        return _error_response(
+            status_code=404,
+            code="SEQUENTIAL_QUALITY_RESOURCE_NOT_FOUND",
+            message="Sequential execution quality results not found.",
+        )
+
+    @app.exception_handler(StatePersistenceError)
+    @app.exception_handler(QualityGateResultStorageReadError)
+    @app.exception_handler(InvalidQualityGateResultStorageFormatError)
+    async def sequential_quality_storage_failure_handler(
+        request: Request,
+        error: AsepError,
+    ) -> JSONResponse:
+        return _error_response(
+            status_code=500,
+            code="SEQUENTIAL_QUALITY_INTERNAL_ERROR",
+            message="Sequential quality results could not be read.",
+        )
+
     @app.exception_handler(AgentCatalogUnavailableError)
     async def agent_catalog_unavailable_handler(
         request: Request, error: AgentCatalogUnavailableError

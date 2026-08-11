@@ -15,6 +15,7 @@ from asep.application import (
     ProjectSessionService,
     ProjectSessionMemoryService,
     ProjectWorkspaceService,
+    SequentialQualityGateQueryService,
 )
 from asep.api.errors import register_exception_handlers
 from asep.api.agent_routes import (
@@ -27,6 +28,7 @@ from asep.api.intelligent_engineering_routes import (
     create_intelligent_engineering_router,
 )
 from asep.api.project_routes import create_projects_router
+from asep.api.sequential_quality_routes import create_sequential_quality_router
 from asep.api.routes import (
     create_health_router,
     create_metrics_router,
@@ -51,6 +53,7 @@ def create_app(
     project_workspace_service: ProjectWorkspaceService | None = None,
     agent_catalog_service: AgentCatalogService | None = None,
     agent_runtime_projection_service: AgentRuntimeProjectionService | None = None,
+    sequential_quality_gate_service: SequentialQualityGateQueryService | None = None,
 ) -> FastAPI:
     app = FastAPI(
         title="ASEP Dashboard API",
@@ -89,6 +92,10 @@ def create_app(
             create_agent_runtime_projection_router(
                 agent_runtime_projection_service
             )
+        )
+    if sequential_quality_gate_service is not None:
+        app.include_router(
+            create_sequential_quality_router(sequential_quality_gate_service)
         )
     if project_service is not None:
         app.include_router(

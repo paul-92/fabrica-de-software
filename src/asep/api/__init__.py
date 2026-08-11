@@ -3,13 +3,17 @@
 from asep.api.app import create_app
 from asep.api.composition import (
     OperationalComposition,
+    SequentialOperationalApiComposition,
     create_default_app,
     create_default_operational_composition,
+    create_sequential_operational_api_composition,
 )
 
 __all__ = [
     "OperationalComposition",
+    "SequentialOperationalApiComposition",
     "create_app",
     "create_default_app",
     "create_default_operational_composition",
+    "create_sequential_operational_api_composition",
 ]

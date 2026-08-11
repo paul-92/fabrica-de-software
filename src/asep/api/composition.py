@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from fastapi import FastAPI
 from pathlib import Path
@@ -26,6 +27,9 @@ from asep.application import (
     ProjectSessionService,
     ProjectSessionMemoryService,
     ProjectWorkspaceService,
+    AuthorizedSequentialProject,
+    SequentialProjectResolver,
+    SequentialQualityGateQueryService,
     create_intelligent_engineering_application_service,
 )
 from asep.ai_planning import (
@@ -42,6 +46,10 @@ from asep.intelligence import (
 )
 from asep.planning import PlanningEngine
 from asep.pipeline import ASEPEngine, PipelineBuilder
+from asep.orchestrator import (
+    Orchestrator,
+    create_sequential_operational_composition,
+)
 from asep.repair import ControlledRepairExecutor
 from asep.repositories import RepositoryBundle, RepositoryFactory
 from asep.timeline import TimelineRecorder
@@ -58,6 +66,12 @@ from asep.registry.agent_catalog_source import DeclarativeAgentCatalogSource
 class OperationalComposition:
     app: FastAPI
     engine: ASEPEngine
+
+
+@dataclass(frozen=True, slots=True)
+class SequentialOperationalApiComposition:
+    app: FastAPI
+    orchestrator: Orchestrator
 
 
 def _create_intelligent_engineering_service(
@@ -94,6 +108,7 @@ def _create_configured_app(
     settings: ApplicationSettings,
     *,
     agent_runtime_projection_service: AgentRuntimeProjectionService | None = None,
+    sequential_quality_gate_service: SequentialQualityGateQueryService | None = None,
 ) -> FastAPI:
     repositories = RepositoryFactory(settings).create()
     query_service = RunQueryService(
@@ -151,6 +166,7 @@ def _create_configured_app(
         project_workspace_service=project_workspace_service,
         agent_catalog_service=agent_catalog_service,
         agent_runtime_projection_service=agent_runtime_projection_service,
+        sequential_quality_gate_service=sequential_quality_gate_service,
     )
 
 
@@ -179,8 +195,33 @@ def create_default_operational_composition(
     )
 
 
+def create_sequential_operational_api_composition(
+    repository_settings: ApplicationSettings | None = None,
+    *,
+    authorized_projects: Iterable[AuthorizedSequentialProject] = (),
+    authorized_roots: Iterable[Path] = (),
+    project_resolver: SequentialProjectResolver | None = None,
+) -> SequentialOperationalApiComposition:
+    settings = repository_settings or Configuration.load()
+    sequential = create_sequential_operational_composition(
+        settings,
+        authorized_projects=authorized_projects,
+        authorized_roots=authorized_roots,
+        project_resolver=project_resolver,
+    )
+    return SequentialOperationalApiComposition(
+        app=_create_configured_app(
+            settings,
+            sequential_quality_gate_service=sequential.quality_gate_query,
+        ),
+        orchestrator=sequential.orchestrator,
+    )
+
+
 __all__ = [
     "OperationalComposition",
+    "SequentialOperationalApiComposition",
     "create_default_app",
     "create_default_operational_composition",
+    "create_sequential_operational_api_composition",
 ]

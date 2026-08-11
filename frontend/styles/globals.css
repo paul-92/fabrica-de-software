@@ -136,6 +136,34 @@ button:focus-visible {
 .quality-list dt { color: var(--color-text-primary); }
 .quality-list dd { font-weight: var(--font-weight-semibold); margin: 0; }
 .quality-provider-table { min-width: 520px; }
+.sequential-quality__description { color: var(--color-text-secondary); margin: 0 0 var(--space-4); }
+.sequential-quality__form { align-items: end; display: grid; gap: var(--space-2) var(--space-3); grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
+.sequential-quality__form label { color: var(--color-text-secondary); font-size: var(--font-size-small); font-weight: var(--font-weight-semibold); }
+.sequential-quality__form label:first-of-type { grid-column: 1; }
+.sequential-quality__form label:nth-of-type(2) { grid-column: 2; }
+.sequential-quality__form input { background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-sm); color: var(--color-text-primary); font: inherit; min-width: 0; overflow-wrap: anywhere; padding: 9px 11px; }
+.sequential-quality__form input:focus-visible { border-color: var(--color-brand-primary); outline: 3px solid color-mix(in srgb, var(--color-brand-primary) 24%, transparent); }
+.sequential-quality__form input:first-of-type { grid-column: 1; }
+.sequential-quality__form input:nth-of-type(2) { grid-column: 2; }
+.sequential-quality__form .button { grid-column: 3; grid-row: 2; }
+.sequential-quality__form .sequential-quality__message { grid-column: 1 / -1; }
+.sequential-quality__idle, .sequential-quality__message { border: 1px dashed var(--color-border); border-radius: var(--radius-sm); color: var(--color-text-secondary); margin: var(--space-4) 0 0; overflow-wrap: anywhere; padding: var(--space-3); }
+.sequential-quality__message .button { margin-top: var(--space-2); }
+.sequential-quality__message p { margin: 0; }
+.sequential-quality__results { display: grid; gap: var(--space-3); margin-top: var(--space-4); }
+.sequential-quality__gate { background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); min-width: 0; padding: var(--space-4); }
+.sequential-quality__gate > header { align-items: start; display: flex; gap: var(--space-3); justify-content: space-between; }
+.sequential-quality__gate h3 { margin: var(--space-1) 0 0; overflow-wrap: anywhere; }
+.sequential-quality__gate dl { display: grid; gap: var(--space-2); margin: var(--space-3) 0; }
+.sequential-quality__gate dl div { display: grid; gap: var(--space-1); grid-template-columns: 90px minmax(0, 1fr); }
+.sequential-quality__gate dt { color: var(--color-text-secondary); font-size: var(--font-size-small); }
+.sequential-quality__gate dd { font-family: var(--font-family-mono); margin: 0; overflow-wrap: anywhere; }
+.sequential-quality__criteria { display: grid; gap: var(--space-3); grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.sequential-quality__criteria section { border-top: 1px solid var(--color-border); min-width: 0; padding-top: var(--space-3); }
+.sequential-quality__criteria h4 { margin: 0 0 var(--space-2); }
+.sequential-quality__criteria p, .sequential-quality__criteria ul { color: var(--color-text-secondary); margin: 0; overflow-wrap: anywhere; }
+.sequential-quality__criteria ul { padding-left: var(--space-4); }
+.sequential-quality__criteria li + li { margin-top: var(--space-1); }
 .agents-grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
 .agent-details { display: grid; gap: var(--space-2); margin: 0; }
 .agent-details div { align-items: baseline; display: flex; gap: var(--space-3); justify-content: space-between; }
@@ -324,6 +352,14 @@ h1 { font-size: clamp(2.8rem, 7vw, 5.6rem); letter-spacing: -.07em; line-height:
   .content-grid { grid-template-columns: 1fr; }
   .dashboard-metrics, .dashboard-skeleton__metrics { grid-template-columns: repeat(2, 1fr); }
   .quality-rates { grid-template-columns: 1fr; }
+  .sequential-quality__form { align-items: stretch; grid-template-columns: 1fr; }
+  .sequential-quality__form label,
+  .sequential-quality__form label:first-of-type,
+  .sequential-quality__form label:nth-of-type(2),
+  .sequential-quality__form input:first-of-type,
+  .sequential-quality__form input:nth-of-type(2),
+  .sequential-quality__form .button { grid-column: 1; grid-row: auto; }
+  .sequential-quality__criteria { grid-template-columns: 1fr; }
   .page-header { align-items: start; flex-direction: column; }
   .execution-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .engineering-form__columns, .engineering-statistics { grid-template-columns: 1fr; }

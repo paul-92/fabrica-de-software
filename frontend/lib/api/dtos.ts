@@ -21,6 +21,21 @@ export type AgentRuntimeProjectionDto = Readonly<{
   retries: number;
 }>;
 
+export type SequentialQualityGateDecision =
+  | "approved"
+  | "approved_with_pending"
+  | "blocked";
+
+export type SequentialQualityGateDto = Readonly<{
+  gate_id: string;
+  execution_id: string;
+  stage_id: string;
+  decision: SequentialQualityGateDecision;
+  satisfied_criteria: readonly string[];
+  unsatisfied_criteria: readonly string[];
+  evaluated_at: string;
+}>;
+
 export type AIRuntimeConnectionState = "not_installed" | "not_authenticated" | "ready" | "error";
 export type AIRuntimeExecutionMode = "read_only" | "workspace_write";
 export type WorkspaceChangeDto = Readonly<{

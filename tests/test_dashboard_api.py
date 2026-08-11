@@ -511,7 +511,9 @@ def test_public_api_exports_are_intentional() -> None:
 
     assert set(api_module.__all__) == {
         "OperationalComposition",
+        "SequentialOperationalApiComposition",
         "create_app",
         "create_default_app",
         "create_default_operational_composition",
+        "create_sequential_operational_api_composition",
     }
