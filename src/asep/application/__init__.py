@@ -32,6 +32,14 @@ from asep.application.sequential_executions import (
     SequentialQualityGateQueryService,
     SequentialStageSummary,
 )
+from asep.application.sequential_projects import (
+    AuthorizedSequentialProject,
+    SequentialProjectIdentityMismatchError,
+    SequentialProjectNotFoundError,
+    SequentialProjectPathError,
+    SequentialProjectResolutionError,
+    SequentialProjectResolver,
+)
 from asep.application.projects import ProjectService
 from asep.application.project_ai_runtime import (
     ProjectAIRuntimeExecutionRequest,
@@ -83,6 +91,12 @@ __all__ = [
     "SequentialQualityGateProjection",
     "SequentialQualityGateQueryService",
     "SequentialStageSummary",
+    "AuthorizedSequentialProject",
+    "SequentialProjectIdentityMismatchError",
+    "SequentialProjectNotFoundError",
+    "SequentialProjectPathError",
+    "SequentialProjectResolutionError",
+    "SequentialProjectResolver",
     "ProjectService",
     "ProjectAIRuntimeExecutionRequest",
     "ProjectAIRuntimeExecutionResult",

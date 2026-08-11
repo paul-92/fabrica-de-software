@@ -8,9 +8,11 @@ from pathlib import Path
 import pytest
 
 from asep.application import (
+    AuthorizedSequentialProject,
     SequentialExecution,
     SequentialExecutionNotFoundError,
     SequentialExecutionOwnershipError,
+    SequentialProjectNotFoundError,
     SequentialExecutionSource,
     SequentialQualityGateQueryService,
 )
@@ -28,9 +30,28 @@ from asep.quality_results import (
     InMemoryQualityGateResultRepository,
     StoredQualityGateResult,
 )
+from asep.project.sequential_resolver import ConfiguredSequentialProjectResolver
 
 RUN_ID = "f2f1a9f1-2c60-4fa0-9120-6b9197589488"
 NOW = datetime(2026, 8, 11, 12, 0, tzinfo=UTC)
+
+
+def resolver(
+    project_id: str,
+    project_path: Path,
+) -> ConfiguredSequentialProjectResolver:
+    project_path.mkdir(parents=True, exist_ok=True)
+    (project_path / "project.yaml").write_text(
+        "\n".join((
+            f"id: {project_id}", "name: Test", "version: 0.1.0",
+            "status: active", "project_type: software",
+            "workflow_id: software-project", "data_classification: internal",
+        )),
+        encoding="utf-8",
+    )
+    return ConfiguredSequentialProjectResolver((
+        AuthorizedSequentialProject(project_id, project_path),
+    ))
 
 
 def state(status: ExecutionStatus = ExecutionStatus.RUNNING) -> ExecutionState:
@@ -64,7 +85,7 @@ def persisted_source(
     StateManager().save(execution_state or state(), state_path)
     return (
         ProjectScopedSequentialExecutionSource(
-            {"sample": project_path}, StateManager()
+            resolver("sample", project_path), StateManager()
         ),
         state_path,
     )
@@ -114,7 +135,7 @@ def test_source_resolves_direct_path_without_glob(
 
 def test_unknown_execution_has_typed_error(tmp_path: Path) -> None:
     source = ProjectScopedSequentialExecutionSource(
-        {"sample": tmp_path / "project"}, StateManager()
+        resolver("sample", tmp_path / "project"), StateManager()
     )
     with pytest.raises(SequentialExecutionNotFoundError):
         source.get("sample", RUN_ID)
@@ -124,7 +145,7 @@ def test_unknown_project_and_state_project_mismatch_are_rejected(
     tmp_path: Path,
 ) -> None:
     source, state_path = persisted_source(tmp_path)
-    with pytest.raises(SequentialExecutionOwnershipError):
+    with pytest.raises(SequentialProjectNotFoundError):
         source.get("other", RUN_ID)
 
     mismatched = state().model_copy(update={"project_id": "other"})
@@ -143,7 +164,7 @@ def test_malformed_yaml_remains_explicit(tmp_path: Path) -> None:
 def test_persistence_survives_source_reconstruction(tmp_path: Path) -> None:
     _, state_path = persisted_source(tmp_path)
     reconstructed = ProjectScopedSequentialExecutionSource(
-        {"sample": state_path.parents[3]}, StateManager()
+        resolver("sample", state_path.parents[3]), StateManager()
     )
     assert reconstructed.get("sample", RUN_ID).execution_id == RUN_ID
 
@@ -188,7 +209,7 @@ def test_query_preserves_deterministic_gate_facts(tmp_path: Path) -> None:
 
 def test_orphan_gate_is_not_exposed_for_unknown_execution(tmp_path: Path) -> None:
     source = ProjectScopedSequentialExecutionSource(
-        {"sample": tmp_path / "project"}, StateManager()
+        resolver("sample", tmp_path / "project"), StateManager()
     )
     gates = InMemoryQualityGateResultRepository()
     gates.record(StoredQualityGateResult(
@@ -201,7 +222,9 @@ def test_orphan_gate_is_not_exposed_for_unknown_execution(tmp_path: Path) -> Non
 
 def test_application_service_depends_on_protocols() -> None:
     assert isinstance(
-        ProjectScopedSequentialExecutionSource({}, StateManager()),
+        ProjectScopedSequentialExecutionSource(
+            ConfiguredSequentialProjectResolver(), StateManager()
+        ),
         SequentialExecutionSource,
     )
     source = inspect.getsource(SequentialQualityGateQueryService)

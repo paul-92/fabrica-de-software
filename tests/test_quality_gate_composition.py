@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pytest
 
+from asep.application import AuthorizedSequentialProject
+
 from asep.orchestrator import (
     SequentialOperationalComposition,
     create_sequential_operational_composition,
@@ -46,7 +48,8 @@ def test_orchestrator_state_is_observable_through_composed_source(
     project_path = sample_repository / "projects" / "sample"
     run_id = "f2f1a9f1-2c60-4fa0-9120-6b9197589488"
     composition = create_sequential_operational_composition(
-        project_paths={"sample": project_path}
+        authorized_projects=(AuthorizedSequentialProject("sample", project_path),),
+        authorized_roots=(sample_repository / "projects",),
     )
 
     outcome = composition.orchestrator.execute(
