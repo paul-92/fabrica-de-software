@@ -9,6 +9,18 @@ export type AgentCatalogItemDto = Readonly<{
   capabilities: readonly string[];
 }>;
 
+export type AgentRuntimeProjectionDto = Readonly<{
+  agent_id: string;
+  registered: boolean;
+  execution_count: number;
+  succeeded: number;
+  failed: number;
+  rejected: number;
+  cancelled: number;
+  timed_out: number;
+  retries: number;
+}>;
+
 export type AIRuntimeConnectionState = "not_installed" | "not_authenticated" | "ready" | "error";
 export type AIRuntimeExecutionMode = "read_only" | "workspace_write";
 export type WorkspaceChangeDto = Readonly<{
