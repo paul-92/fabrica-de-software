@@ -36,6 +36,12 @@ class AgentRuntimeProjectionItemResponse(BaseModel):
     agent_id: str
     registered: bool
     execution_count: int
+    succeeded: int
+    failed: int
+    rejected: int
+    cancelled: int
+    timed_out: int
+    retries: int
 
     @classmethod
     def from_application(

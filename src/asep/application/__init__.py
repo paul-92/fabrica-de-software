@@ -11,6 +11,7 @@ from asep.application.agent_runtime_projection import (
     AgentRuntimeMetricsSource,
     AgentRuntimeProjection,
     AgentRuntimeProjectionService,
+    PerAgentRuntimeMetricsSnapshot,
 )
 from asep.application.contracts import IntelligentEngineeringCapability
 from asep.application.intelligent_engineering import (
@@ -59,6 +60,7 @@ __all__ = [
     "AgentRuntimeMetricsSource",
     "AgentRuntimeProjection",
     "AgentRuntimeProjectionService",
+    "PerAgentRuntimeMetricsSnapshot",
     "AIRuntimeConnectionService",
     "ApplicationIntelligentEngineeringRequest",
     "ApplicationIntelligentEngineeringResult",

@@ -62,6 +62,14 @@ def test_http_projection_observes_execution_from_same_graph(
     assert runtime_count(client) == 0
     composition.engine.execute("Inspect.", workspace=workspace(tmp_path))
     assert runtime_count(client) == 4
+    item = client.get(ENDPOINT).json()["items"][0]
+    assert item["succeeded"] == 4
+    assert item["failed"] == 0
+    assert item["rejected"] == 0
+    assert item["cancelled"] == 0
+    assert item["timed_out"] == 0
+    assert item["retries"] == 0
+    assert "duration_seconds" not in item
 
 
 def test_factory_builds_once_and_shares_the_pipeline_metrics(

@@ -18,6 +18,12 @@ class AgentRuntimeProjection(BaseModel):
     agent_id: str
     registered: bool
     execution_count: int = Field(ge=0)
+    succeeded: int = Field(default=0, ge=0)
+    failed: int = Field(default=0, ge=0)
+    rejected: int = Field(default=0, ge=0)
+    cancelled: int = Field(default=0, ge=0)
+    timed_out: int = Field(default=0, ge=0)
+    retries: int = Field(default=0, ge=0)
 
     @field_validator("agent_id")
     @classmethod
@@ -28,11 +34,39 @@ class AgentRuntimeProjection(BaseModel):
 
 
 @runtime_checkable
+class PerAgentRuntimeMetricsSnapshot(Protocol):
+    """Counters approved for the public per-agent projection."""
+
+    @property
+    def succeeded(self) -> int: ...
+
+    @property
+    def failed(self) -> int: ...
+
+    @property
+    def rejected(self) -> int: ...
+
+    @property
+    def cancelled(self) -> int: ...
+
+    @property
+    def timed_out(self) -> int: ...
+
+    @property
+    def retries(self) -> int: ...
+
+
+@runtime_checkable
 class AgentRuntimeMetricsSnapshot(Protocol):
     """Narrow view of the existing agent execution metrics snapshot."""
 
     @property
     def by_agent(self) -> Mapping[str, int]: ...
+
+    @property
+    def by_agent_metrics(
+        self,
+    ) -> Mapping[str, PerAgentRuntimeMetricsSnapshot]: ...
 
 
 @runtime_checkable
@@ -52,14 +86,31 @@ class AgentRuntimeProjectionService:
         self._metrics = metrics
 
     def list_agents(self) -> tuple[AgentRuntimeProjection, ...]:
-        counts = self._metrics.snapshot().by_agent
+        snapshot = self._metrics.snapshot()
+        counts = snapshot.by_agent
+        details = snapshot.by_agent_metrics
         return tuple(
-            AgentRuntimeProjection(
-                agent_id=agent.metadata.id.value,
-                registered=True,
-                execution_count=counts.get(agent.metadata.id.value, 0),
-            )
+            self._project(agent.metadata.id.value, counts, details)
             for agent in self._registry.list_all()
+        )
+
+    @staticmethod
+    def _project(
+        agent_id: str,
+        counts: Mapping[str, int],
+        details: Mapping[str, PerAgentRuntimeMetricsSnapshot],
+    ) -> AgentRuntimeProjection:
+        detail = details.get(agent_id)
+        return AgentRuntimeProjection(
+            agent_id=agent_id,
+            registered=True,
+            execution_count=counts.get(agent_id, 0),
+            succeeded=detail.succeeded if detail is not None else 0,
+            failed=detail.failed if detail is not None else 0,
+            rejected=detail.rejected if detail is not None else 0,
+            cancelled=detail.cancelled if detail is not None else 0,
+            timed_out=detail.timed_out if detail is not None else 0,
+            retries=detail.retries if detail is not None else 0,
         )
 
 
@@ -68,4 +119,5 @@ __all__ = [
     "AgentRuntimeMetricsSource",
     "AgentRuntimeProjection",
     "AgentRuntimeProjectionService",
+    "PerAgentRuntimeMetricsSnapshot",
 ]
