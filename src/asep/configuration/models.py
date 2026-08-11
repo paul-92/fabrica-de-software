@@ -35,6 +35,7 @@ class ApplicationSettings:
     runs_filename: str = "runs.json"
     timeline_filename: str = "timeline-events.json"
     workflows_filename: str = "workflow-snapshots.json"
+    quality_gate_results_filename: str = "quality-gate-results.json"
     sqlite_database: Path | str = _DEFAULT_SQLITE_DATABASE
     cors_origins: tuple[str, ...] | str = DEFAULT_CORS_ORIGINS
     repair_workspace: Path | str | None = None
@@ -59,6 +60,10 @@ class ApplicationSettings:
         self._validate_filename(
             "workflows_filename",
             self.workflows_filename,
+        )
+        self._validate_filename(
+            "quality_gate_results_filename",
+            self.quality_gate_results_filename,
         )
         object.__setattr__(
             self,

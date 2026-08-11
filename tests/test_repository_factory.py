@@ -33,6 +33,12 @@ from asep.timeline import (
     TimelineRepository,
     SQLiteTimelineRepository,
 )
+from asep.quality_results import (
+    FileQualityGateResultRepository,
+    InMemoryQualityGateResultRepository,
+    QualityGateResultRepository,
+    SQLiteQualityGateResultRepository,
+)
 
 NOW = datetime(2026, 7, 30, 12, 0, tzinfo=UTC)
 
@@ -60,6 +66,14 @@ def test_factory_creates_memory_repositories() -> None:
         repositories.timeline_repository,
         TimelineRepository,
     )
+    assert isinstance(
+        repositories.quality_gate_result_repository,
+        InMemoryQualityGateResultRepository,
+    )
+    assert isinstance(
+        repositories.quality_gate_result_repository,
+        QualityGateResultRepository,
+    )
 
 
 def test_factory_creates_file_repositories_at_stable_paths(
@@ -78,6 +92,11 @@ def test_factory_creates_file_repositories_at_stable_paths(
         FileTimelineRepository,
     )
     assert (tmp_path / "storage/runs.json").exists()
+    assert isinstance(
+        repositories.quality_gate_result_repository,
+        FileQualityGateResultRepository,
+    )
+    assert (tmp_path / "storage/quality-gate-results.json").exists()
     repositories.timeline_repository.append(
         TimelineEvent(
             id="event",
@@ -130,6 +149,10 @@ def test_factory_calls_return_isolated_repository_sets() -> None:
     assert first is not second
     assert first.run_repository is not second.run_repository
     assert first.timeline_repository is not second.timeline_repository
+    assert (
+        first.quality_gate_result_repository
+        is not second.quality_gate_result_repository
+    )
 
 
 def test_factory_creates_sqlite_repositories(tmp_path: Path) -> None:
@@ -145,6 +168,10 @@ def test_factory_creates_sqlite_repositories(tmp_path: Path) -> None:
     assert isinstance(
         repositories.timeline_repository,
         SQLiteTimelineRepository,
+    )
+    assert isinstance(
+        repositories.quality_gate_result_repository,
+        SQLiteQualityGateResultRepository,
     )
     assert database.exists()
 

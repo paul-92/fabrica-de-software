@@ -23,6 +23,15 @@ from asep.application.intelligent_engineering_composition import (
     create_intelligent_engineering_application_service,
 )
 from asep.application.run_query import RunQueryService
+from asep.application.sequential_executions import (
+    SequentialExecution,
+    SequentialExecutionNotFoundError,
+    SequentialExecutionOwnershipError,
+    SequentialExecutionSource,
+    SequentialQualityGateProjection,
+    SequentialQualityGateQueryService,
+    SequentialStageSummary,
+)
 from asep.application.projects import ProjectService
 from asep.application.project_ai_runtime import (
     ProjectAIRuntimeExecutionRequest,
@@ -67,6 +76,13 @@ __all__ = [
     "IntelligentEngineeringApplicationService",
     "IntelligentEngineeringCapability",
     "RunQueryService",
+    "SequentialExecution",
+    "SequentialExecutionNotFoundError",
+    "SequentialExecutionOwnershipError",
+    "SequentialExecutionSource",
+    "SequentialQualityGateProjection",
+    "SequentialQualityGateQueryService",
+    "SequentialStageSummary",
     "ProjectService",
     "ProjectAIRuntimeExecutionRequest",
     "ProjectAIRuntimeExecutionResult",

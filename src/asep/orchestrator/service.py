@@ -26,6 +26,7 @@ from asep.execution.state import StateManager
 from asep.models import LoadedProject, PreparationResult, RegistrySnapshot, WorkflowDefinition
 from asep.project.loader import ProjectLoader
 from asep.quality.engine import QualityGateEngine
+from asep.quality_results import QualityGateResultRepository
 from asep.registry.loader import RegistryLoader
 from asep.providers import AgentProvider
 from asep.runtime.agent_runtime import AgentRuntime
@@ -48,6 +49,7 @@ class Orchestrator:
         agent_provider: AgentProvider | None = None,
         stage_execution_service: StageExecutionService | None = None,
         execution_bootstrap: ExecutionBootstrap | None = None,
+        quality_gate_results: QualityGateResultRepository | None = None,
     ) -> None:
         self._project_loader = project_loader or ProjectLoader()
         self._registry_loader = registry_loader or RegistryLoader()
@@ -66,6 +68,7 @@ class Orchestrator:
                 self._artifact_manager,
                 self._gate_engine,
                 provider=agent_provider,
+                quality_gate_results=quality_gate_results,
             )
         )
         self._execution_bootstrap = (

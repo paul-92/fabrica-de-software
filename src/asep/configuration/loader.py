@@ -17,6 +17,7 @@ class Configuration:
         "ASEP_RUNS_FILENAME": "runs_filename",
         "ASEP_TIMELINE_FILENAME": "timeline_filename",
         "ASEP_WORKFLOWS_FILENAME": "workflows_filename",
+        "ASEP_QUALITY_GATE_RESULTS_FILENAME": "quality_gate_results_filename",
         "ASEP_SQLITE_DATABASE": "sqlite_database",
         "ASEP_CORS_ORIGINS": "cors_origins",
         "ASEP_REPAIR_WORKSPACE": "repair_workspace",

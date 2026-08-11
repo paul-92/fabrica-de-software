@@ -41,6 +41,16 @@ class SQLiteDatabase:
             ON workflow_snapshots (run_id);
         CREATE INDEX IF NOT EXISTS idx_workflow_snapshots_status
             ON workflow_snapshots (status);
+        CREATE TABLE IF NOT EXISTS quality_gate_results (
+            run_id TEXT NOT NULL,
+            stage_id TEXT NOT NULL,
+            gate_id TEXT NOT NULL,
+            evaluated_at TEXT NOT NULL,
+            payload TEXT NOT NULL,
+            PRIMARY KEY (run_id, stage_id, gate_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_quality_gate_results_run
+            ON quality_gate_results (run_id, stage_id, gate_id, evaluated_at);
         CREATE TABLE IF NOT EXISTS memory_entries (
             id TEXT PRIMARY KEY,
             agent_id TEXT NOT NULL,
@@ -107,6 +117,13 @@ class SQLiteDatabase:
             "run_id",
             "status",
             "started_at",
+            "payload",
+        },
+        "quality_gate_results": {
+            "run_id",
+            "stage_id",
+            "gate_id",
+            "evaluated_at",
             "payload",
         },
         "memory_entries": {

@@ -44,6 +44,10 @@ from asep.providers import (
     ProviderError,
 )
 from asep.quality.engine import QualityGateEngine
+from asep.quality_results import (
+    QualityGateResultRepository,
+    StoredQualityGateResult,
+)
 from asep.runtime.agent_runtime import AgentRuntime
 from asep.yaml_io import load_yaml
 
@@ -71,6 +75,7 @@ class StageExecutionService:
         provider: AgentProvider | None = None,
         prompt_builder: PromptBuilder | None = None,
         package_builder: ExecutionPackageBuilder | None = None,
+        quality_gate_results: QualityGateResultRepository | None = None,
     ) -> None:
         self._agent_runtime = agent_runtime
         self._artifact_manager = artifact_manager
@@ -78,6 +83,7 @@ class StageExecutionService:
         self._provider = provider
         self._prompt_builder = prompt_builder or PromptBuilder()
         self._package_builder = package_builder or ExecutionPackageBuilder()
+        self._quality_gate_results = quality_gate_results
 
     def execute(
         self,
@@ -166,6 +172,10 @@ class StageExecutionService:
             stage_id=context.stage_id,
             agent_id="quality-gate-engine",
         )
+        if self._quality_gate_results is not None:
+            self._quality_gate_results.record(
+                StoredQualityGateResult.from_gate_result(gate)
+            )
         logger.info(
             f"Quality gate concluído: {gate.decision}.",
             extra={

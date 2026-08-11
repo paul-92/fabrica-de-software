@@ -44,6 +44,12 @@ from asep.projects import (
     InMemorySessionMemoryRepository,
     SQLiteSessionMemoryRepository,
 )
+from asep.quality_results import (
+    FileQualityGateResultRepository,
+    InMemoryQualityGateResultRepository,
+    QualityGateResultRepository,
+    SQLiteQualityGateResultRepository,
+)
 
 
 RepositorySettings = ApplicationSettings
@@ -54,6 +60,9 @@ class RepositoryBundle:
     run_repository: RunRepository
     timeline_repository: TimelineRepository
     workflow_repository: WorkflowRepository
+    quality_gate_result_repository: QualityGateResultRepository = field(
+        default_factory=InMemoryQualityGateResultRepository
+    )
     memory_store: MemoryStore = field(default_factory=InMemoryMemoryStore)
     project_repository: ProjectRepository = field(
         default_factory=InMemoryProjectRepository
@@ -98,6 +107,7 @@ class RepositoryFactory:
             run_repository=InMemoryRunRepository(),
             timeline_repository=InMemoryTimelineRepository(),
             workflow_repository=InMemoryWorkflowRepository(),
+            quality_gate_result_repository=InMemoryQualityGateResultRepository(),
             memory_store=InMemoryMemoryStore(),
         )
 
@@ -113,6 +123,10 @@ class RepositoryFactory:
             workflow_repository=FileWorkflowRepository(
                 storage_directory / self._configuration.workflows_filename
             ),
+            quality_gate_result_repository=FileQualityGateResultRepository(
+                storage_directory
+                / self._configuration.quality_gate_results_filename
+            ),
             memory_store=InMemoryMemoryStore(),
         )
 
@@ -122,6 +136,9 @@ class RepositoryFactory:
             run_repository=SQLiteRunRepository(database),
             timeline_repository=SQLiteTimelineRepository(database),
             workflow_repository=SQLiteWorkflowRepository(database),
+            quality_gate_result_repository=SQLiteQualityGateResultRepository(
+                database
+            ),
             memory_store=SQLiteMemoryStore(database),
             project_repository=SQLiteProjectRepository(database),
             project_session_repository=SQLiteProjectSessionRepository(database),

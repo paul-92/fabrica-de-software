@@ -4,6 +4,7 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import yaml
+import pytest
 
 from asep.application.stage_execution import StageExecutionService
 from asep.execution.models import (
@@ -17,6 +18,7 @@ from asep.execution.models import (
     StageStatus,
 )
 from asep.registry.loader import RegistryLoader
+from asep.quality_results import InMemoryQualityGateResultRepository
 
 RUN_ID = "f2f1a9f1-2c60-4fa0-9120-6b9197589488"
 NOW = datetime(2026, 7, 29, tzinfo=UTC)
@@ -119,7 +121,10 @@ def test_completed_result_persists_artifacts_evaluates_and_persists_gate(
     gates.evaluate.return_value = gate
     registry = RegistryLoader().load(sample_repository / "registry")
 
-    report = StageExecutionService(runtime, artifacts, gates).execute(
+    quality_results = InMemoryQualityGateResultRepository()
+    report = StageExecutionService(
+        runtime, artifacts, gates, quality_gate_results=quality_results
+    ).execute(
         context(),
         registry,
         tmp_path,
@@ -147,3 +152,68 @@ def test_completed_result_persists_artifacts_evaluates_and_persists_gate(
     assert artifacts.persist.call_args_list[1].kwargs["agent_id"] == (
         "quality-gate-engine"
     )
+    stored = quality_results.list_by_run(RUN_ID)
+    assert len(stored) == 1
+    assert stored[0].model_dump(mode="json") == gate.model_dump(mode="json")
+
+
+def test_gate_artifact_failure_does_not_record_structured_result(
+    sample_repository: Path, tmp_path: Path
+) -> None:
+    completed = result(AgentResultStatus.COMPLETED)
+    runtime = Mock()
+    runtime.execute.return_value = completed
+    artifacts = Mock()
+    artifacts.persist.side_effect = [
+        reference("summary.md", "business-analyst"),
+        RuntimeError("artifact failed"),
+    ]
+    gates = Mock()
+    gates.evaluate.return_value = GateResult(
+        gate_id="QG-INTAKE", run_id=RUN_ID, stage_id="intake",
+        decision=GateDecision.APPROVED, satisfied_criteria=[],
+        unsatisfied_criteria=[], evaluated_at=NOW,
+    )
+    quality_results = Mock()
+    registry = RegistryLoader().load(sample_repository / "registry")
+
+    with pytest.raises(RuntimeError, match="artifact failed"):
+        StageExecutionService(
+            runtime, artifacts, gates, quality_gate_results=quality_results
+        ).execute(
+            context(), registry, tmp_path, "QG-INTAKE", StageStatus.RUNNING,
+            logging.getLogger("test"),
+        )
+    quality_results.record.assert_not_called()
+
+
+def test_repository_failure_is_propagated_after_audit_artifact(
+    sample_repository: Path, tmp_path: Path
+) -> None:
+    completed = result(AgentResultStatus.COMPLETED)
+    runtime = Mock()
+    runtime.execute.return_value = completed
+    artifacts = Mock()
+    artifacts.persist.side_effect = [
+        reference("summary.md", "business-analyst"),
+        reference("quality-gates/intake-result.yaml", "quality-gate-engine"),
+    ]
+    gates = Mock()
+    gates.evaluate.return_value = GateResult(
+        gate_id="QG-INTAKE", run_id=RUN_ID, stage_id="intake",
+        decision=GateDecision.APPROVED, satisfied_criteria=[],
+        unsatisfied_criteria=[], evaluated_at=NOW,
+    )
+    quality_results = Mock()
+    quality_results.record.side_effect = RuntimeError("repository failed")
+    registry = RegistryLoader().load(sample_repository / "registry")
+
+    with pytest.raises(RuntimeError, match="repository failed"):
+        StageExecutionService(
+            runtime, artifacts, gates, quality_gate_results=quality_results
+        ).execute(
+            context(), registry, tmp_path, "QG-INTAKE", StageStatus.RUNNING,
+            logging.getLogger("test"),
+        )
+    assert artifacts.persist.call_count == 2
+    quality_results.record.assert_called_once()
