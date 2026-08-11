@@ -1,62 +1,67 @@
 # Próximos passos
 
-**Estado:** Sprint 10.1 implementada; validação final e publicação pendentes
+**Estado:** Fase 22 funcionalmente concluída; fechamento formal pendente
 
-## Sprint atual
+**Atualizado em:** 2026-08-11
 
-Sprint 10.1 — Project Analyzer: análise determinística de estrutura,
-tecnologias, arquitetura, dependências e estatísticas.
+**Dono:** Engenharia ASEP
 
-## Objetivo e escopo concluídos
+## Objetivo imediato
 
-Módulo `asep.project_analysis` isolado do Runtime, com fachada pública,
-detectores heurísticos, modelos imutáveis, testes e documentação.
+Concluir o gate consolidado da White-label Presentation Layer e entregar as
+evidências para decisão de Qualidade.
 
-## Critérios já atendidos
+## Gate pendente
 
-- fachada `ProjectAnalyzer` e modelo `ProjectAnalysis`;
-- scanner configurável e caminhos relativos;
-- dez linguagens e nove frameworks;
-- package managers, entrypoints e dependências diretas;
-- arquitetura heurística e estatísticas;
-- cobertura específica do módulo superior a 95%.
+O fechamento formal exige uma execução consolidada dos gates frontend após a
+última correção realizada em `ThemeToggle.test.tsx`.
 
-## Pendências imediatas
-
-1. remover intencionalmente do índice os 4.062 arquivos
-   `.pytest-tmp-sprint91-*` rastreados no commit base;
-2. revisar o diff acumulado das Sprints 9.2–9.8;
-3. criar commit intencional somente após autorização;
-4. enviar o branch e confirmar CI/remoto;
-5. validar em clone limpo/CI multiplataforma e executar scanner de histórico;
-6. avaliar e publicar formalmente o RC2;
-7. decidir sobre lockfile antes do release estável.
-
-## Próximo planejamento
-
-Não iniciar a Sprint 10.2 sem autorização explícita. Integração do Analyzer com
-Runtime, LLM, embeddings, geração, revisão e refatoração automáticas permanecem
-fora do escopo.
-
-## Validação
+Em ambiente com Node/npm compatível com o projeto, executar em `frontend/`:
 
 ```text
-python scripts/verify_environment.py
-python -m pytest -v
-python -m compileall src tests
-git diff --check
-git status --short
-```
+npm test
+npm run typecheck
+npm run lint
+npm run build.
 
-## Riscos e dependências
+## Evidências já disponíveis
 
-- perda de mudanças se migrar antes do push;
-- dados ignorados não seguem pelo Git;
-- resolução futura de dependências pode variar por ausência de lockfile;
-- Python 3.12+ deve ser usado; 3.14.4 é o ambiente comprovado.
+- inspeção estática sem imports do frontend para módulos Python internos;
+- chamadas remotas centralizadas nos contratos HTTP públicos `/api/v1`;
+- 11 testes focados de Application/API para Agents aprovados;
+- documentação, estado e roadmap sincronizados com a Fase 22;
+- checklist detalhado em
+  [Fase 22](../docs/phase-22/white-label-presentation-layer.md).
 
-Referências: [Roadmap](../docs/architecture/Roadmap.md),
-[prompt oficial](../prompts/CurrentSprintPrompt.md) e
-[Sprint 9.8](../docs/phase-09/Sprint-9.8-Platform-Hardening-RC2.md),
-[Release Candidate 2](../docs/releases/ReleaseCandidate2.md) e
-[Migration Guide RC2](../docs/migration/MigrationGuide-RC2.md).
+## Critérios de retomada e fechamento
+
+1. Executar os quatro gates em ambiente compatível com Node/npm ou CI equivalente..
+2. Falhas, se houver, são classificadas e corrigidas com novas evidências.
+3. Qualidade avalia os resultados e decide o gate final.
+4. O estado da fase só muda para formalmente encerrada após essa decisão.
+
+## Próxima fase proposta
+
+Produto deve decidir se abre uma Fase 23 de operacionalização e projeções
+públicas. Branding administrável, health/métricas de agentes, detalhamento de
+Quality Gates e consultas avançadas de Knowledge são candidatos derivados das
+limitações atuais, não escopo aprovado.
+
+## Riscos e preservação
+
+- o worktree contém milhares de remoções preexistentes em
+  `.pytest-tmp-sprint91-*`; não restaurar nem incluir essas mudanças sem decisão
+  explícita;
+- `frontend/next-env.d.ts` já estava modificado antes deste fechamento;
+- publicação, commit, push, CI remoto e instalação de ferramentas exigem ação
+  ou autorização própria;
+- Python 3.11.9 no ambiente atual está abaixo do mínimo documental `>=3.12`,
+  embora os testes focados executados tenham passado.
+
+## Responsáveis e gatilhos
+
+- **Engenharia:** ambiente Node/npm e execução do gate;
+- **Qualidade:** aceite ou reprovação com achados;
+- **Produto:** priorização da próxima fase;
+- **Gatilho:** disponibilidade do ambiente de frontend ou resultado de CI
+  equivalente, rastreável ao mesmo commit.

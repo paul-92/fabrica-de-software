@@ -209,6 +209,7 @@ não alterou decisão arquitetural e não criou ADR.
 - [Fase 18 — Intelligent Engineering](phase-18/intelligent-engineering.md).
 - [Fase 20 — Intelligent Integration](phase-20/intelligent-integration.md).
 - [Fase 21 — Application/API Layer](phase-21/application-api-layer.md).
+- [Fase 22 — White-label Presentation Layer](phase-22/white-label-presentation-layer.md).
 
 - [Overview](project-analysis/Overview.md): arquitetura e API;
 - [ProjectAnalyzer](project-analysis/ProjectAnalyzer.md): fachada e modelos;

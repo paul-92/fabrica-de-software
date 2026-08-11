@@ -1,9 +1,9 @@
 # Estado atual da ASEP
 
-**Atualizado em:** 2026-08-05
+**Atualizado em:** 2026-08-11
 **Projeto:** AI Software Engineering Platform (ASEP)
 **Versão do pacote:** 0.1.0
-**Commit base avaliado:** `cefdfcf84ed41b93ede5b65b91ccb413b794c53d`
+**Commit base avaliado:** `4b2fb1a363213495b2f100a9704036e9a8940a42`
 
 ## Estado de entrega
 
@@ -21,6 +21,20 @@ Business Engineering e execução avançou por implementação e testes:
 - Fase 18 — Intelligent Engineering: blocos 18.1–18.4 concluídos.
 - Fase 20 — Intelligent Integration: blocos 20.1–20.4 concluídos.
 - Fase 21 — Application/API Layer: blocos 21.1–21.4 concluídos.
+- Fase 22 — White-label Presentation Layer: implementação funcional concluída;
+  Em 2026-08-11, 11 testes focados do contrato Application/API de Agents
+passaram. A inspeção estática do frontend não encontrou imports para módulos
+Python internos.
+
+Durante o desenvolvimento da Presentation Layer, typecheck, lint e build
+Next.js foram executados com sucesso em ambiente com Node/npm disponível.
+Após a correção final de isolamento de `ThemeToggle.test.tsx`, seus 3 testes
+focados passaram. O gate frontend consolidado completo ainda deve ser
+reexecutado após essa última alteração antes do fechamento formal da Fase 22.
+
+No PowerShell local utilizado para continuidade operacional, Node/npm não está
+disponível no `PATH`; portanto esse ambiente específico não consegue executar
+os gates frontend diretamente.
 
 Consulte a [Fase 17](../docs/phase-17/software-repair.md) para o ciclo de
 reparo, a [Fase 18](../docs/phase-18/intelligent-engineering.md) para a
@@ -28,14 +42,16 @@ composição inteligente controlada e a
 [Fase 20](../docs/phase-20/intelligent-integration.md) para o fluxo de
 conhecimento recuperado, Planning, engenharia e novo aprendizado, e a
 [Fase 21](../docs/phase-21/application-api-layer.md) para a fachada de
-Application e o adapter HTTP. Consulte também a
+Application e o adapter HTTP, e a
+[Fase 22](../docs/phase-22/white-label-presentation-layer.md) para a camada
+visual white-label, fronteiras, limitações e evidências. Consulte também a
 [auditoria documental](../docs/audits/Phase-01-16-Documentation-Audit.md) para
 a matriz histórica anterior.
 
 ## Git e ambiente desta fotografia
 
 - branch: `feature/phase-10-business-engineering`;
-- HEAD: `bd138b26c0e37b5c4551b70925f8f5573dd49f11`;
+- HEAD: `4b2fb1a363213495b2f100a9704036e9a8940a42`;
 - remoto correspondente: `origin/feature/phase-10-business-engineering`;
 - há 4.062 remoções rastreadas em `.pytest-tmp-sprint91-*`, preexistentes e
   fora do escopo da auditoria documental.
@@ -54,11 +70,13 @@ workflow e o pipeline inteligente são síncronos. Providers, exporters,
 Timeline, métricas, Dashboard, memória, recovery e Project Analyzer preservam
 as fronteiras documentadas nos ADRs existentes.
 
+A camada Presentation em Next.js consome somente contratos HTTP públicos
+versionados sob `/api/v1` e não importa módulos Python internos.
+
 A camada Intelligence combina conhecimento recuperado com
 `PlanningContext.memory` e consolida resultados de Planning e Autonomous
 Engineering. Ela não acessa storage, não executa recomendações e não cria
-retry. A próxima fase planejada é a Fase 22 — White-label Presentation Layer /
-Graphical Interface, consumindo somente Application/API.
+retry.
 
 ## Evidência
 
@@ -70,6 +88,11 @@ A auditoria documental não executou a suíte. O último gate histórico
 documentado permanece o do RC2; ele não deve ser apresentado como resultado
 novo desta revisão.
 
+Em 2026-08-11, 11 testes focados do contrato Application/API de Agents
+passaram. A inspeção estática do frontend não encontrou imports para módulos
+internos. O gate frontend (`test`, `typecheck`, `lint` e `build`) não pôde ser
+executado porque Node/npm não está instalado ou acessível no `PATH`.
+
 ## Limitações e pendências
 
 - workflow e runtime permanecem síncronos;
@@ -79,6 +102,7 @@ novo desta revisão.
 - Intelligent Integration reutiliza a Memory existente; `recommended_actions`
   e `should_retry` continuam informativos e não executáveis;
 - Application/API expõe Intelligent Engineering sem construir infraestrutura;
+- o fechamento formal da Fase 22 depende do gate frontend consolidado;
 - no Windows, o teste legado de multiprocessing pode falhar com `WinError 5`
   ao criar named pipe; essa limitação ambiental não é regressão da Fase 21;
 - timeout do runtime não interrompe chamada bloqueada;
@@ -102,4 +126,5 @@ a separação entre Software Repair e retry operacional.
 [Fase 17](../docs/phase-17/software-repair.md),
 [Fase 18](../docs/phase-18/intelligent-engineering.md),
 [Fase 20](../docs/phase-20/intelligent-integration.md) e
-[Fase 21](../docs/phase-21/application-api-layer.md).
+[Fase 21](../docs/phase-21/application-api-layer.md) e
+[Fase 22](../docs/phase-22/white-label-presentation-layer.md).

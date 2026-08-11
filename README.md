@@ -1,7 +1,7 @@
 # AI Software Engineering Platform — ASEP
 
 **Versão documental:** 0.1.0
-**Status:** fases implementadas até a Fase 16; auditoria documental atualizada
+**Status:** implementação funcional até a Fase 22; gate frontend final pendente
 **Dono:** Product Manager da ASEP
 
 A ASEP é uma plataforma local para desenvolvimento de software assistido por
@@ -130,6 +130,8 @@ Snapshots completos de execução são descritos em
 O pipeline consolidado e a geração determinística validada estão descritos em
 [Fase 15](docs/phase-15/intelligent-orchestrator.md) e
 [Fase 16](docs/phase-16/software-generation-validation.md).
+A camada visual e white-label está descrita na
+[Fase 22](docs/phase-22/white-label-presentation-layer.md).
 
 ## Contributing
 

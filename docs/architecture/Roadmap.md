@@ -1,6 +1,6 @@
 # Roadmap arquitetural
 
-**Dono:** Engenharia ASEP | **Versão:** 1.5 | **Status:** atualizado até a Fase 21
+**Dono:** Engenharia ASEP | **Versão:** 1.6 | **Status:** atualizado até a Fase 22
 
 O roadmap registra intenção, não compromisso nem comportamento implementado.
 Mudanças de contrato exigem decisão arquitetural e testes.
@@ -177,15 +177,24 @@ Planning e Autonomous Engineering permanecem separados e são compostos uma
 A fachada de Application, seu composition root e o endpoint HTTP v1 preservam
 as fronteiras com Intelligence e Core e foram comprovados por E2E.
 
-## Próxima fase — Fase 22: White-label Presentation Layer / Graphical Interface
+## Fase 22 — White-label Presentation Layer / Graphical Interface
 
-Construir uma interface visual que consuma exclusivamente as fronteiras
-públicas de Application/API, sem acoplar apresentação diretamente ao Core.
+Implementação funcional concluída. A interface consome contratos públicos
+versionados de Application/API sem acoplar apresentação diretamente ao Core.
 
-Escopo previsto: branding white-label configurável (nome, logo, identidade,
-tema e cores), sem identidade de cliente no Core; Dashboard, Projetos,
-Execuções, Agentes, Planning, Knowledge/Memory, timeline/logs,
-métricas/quality gates e configurações.
+Foram implementados App Shell, branding white-label orientado a deployment,
+Dashboard, Projetos, Sessões/Memória, Executions, Planning, Quality, Knowledge e
+Agents. O fechamento formal aguarda o gate frontend consolidado, bloqueado no
+ambiente auditado em 2026-08-11 pela ausência de Node/npm.
+
+Detalhes e checklist estão na
+[documentação da Fase 22](../phase-22/white-label-presentation-layer.md).
+
+## Próxima fase proposta — Fase 23
+
+Produto deve avaliar uma fase de operacionalização e projeções públicas.
+Branding dinâmico, health/métricas de agentes, Quality Gates detalhados e
+consultas avançadas de Knowledge são candidatos, não requisitos aprovados.
 
 ## Pré-condições arquiteturais
 
