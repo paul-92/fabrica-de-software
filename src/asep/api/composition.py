@@ -31,6 +31,7 @@ from asep.application import (
     SequentialProjectResolver,
     SequentialQualityGateQueryService,
     SessionMemorySearchService,
+    BrandingQueryService,
     create_intelligent_engineering_application_service,
 )
 from asep.ai_planning import (
@@ -158,6 +159,9 @@ def _create_configured_app(
         settings,
         repositories,
     )
+    branding_query_service = BrandingQueryService(
+        repositories.branding_repository,
+    )
     return create_app(
         query_service,
         metrics_service,
@@ -173,6 +177,7 @@ def _create_configured_app(
         agent_runtime_projection_service=agent_runtime_projection_service,
         sequential_quality_gate_service=sequential_quality_gate_service,
         session_memory_search_service=session_memory_search_service,
+        branding_query_service=branding_query_service,
     )
 
 

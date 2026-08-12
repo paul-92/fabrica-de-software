@@ -30,6 +30,7 @@ from asep.quality_results import (
     InvalidQualityGateResultStorageFormatError,
     QualityGateResultStorageReadError,
 )
+from asep.branding.errors import BrandingStorageError
 from asep.planning import PlanningValidationError
 from asep.ai_runtime import (
     AIRuntimeAuthenticationError,
@@ -41,6 +42,17 @@ from asep.ai_runtime import (
 
 
 def register_exception_handlers(app: FastAPI) -> None:
+    @app.exception_handler(BrandingStorageError)
+    async def branding_storage_failure_handler(
+        request: Request,
+        error: BrandingStorageError,
+    ) -> JSONResponse:
+        return _error_response(
+            status_code=500,
+            code="BRANDING_INTERNAL_ERROR",
+            message="Branding could not be read.",
+        )
+
     @app.exception_handler(InvalidSessionMemoryCursorError)
     async def invalid_session_memory_cursor_handler(
         request: Request,

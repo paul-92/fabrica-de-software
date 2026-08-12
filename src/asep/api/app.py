@@ -17,6 +17,7 @@ from asep.application import (
     ProjectWorkspaceService,
     SequentialQualityGateQueryService,
     SessionMemorySearchService,
+    BrandingQueryService,
 )
 from asep.api.errors import register_exception_handlers
 from asep.api.agent_routes import (
@@ -30,6 +31,7 @@ from asep.api.intelligent_engineering_routes import (
 )
 from asep.api.project_routes import create_projects_router
 from asep.api.sequential_quality_routes import create_sequential_quality_router
+from asep.api.branding_routes import create_branding_router
 from asep.api.routes import (
     create_health_router,
     create_metrics_router,
@@ -56,6 +58,7 @@ def create_app(
     agent_runtime_projection_service: AgentRuntimeProjectionService | None = None,
     sequential_quality_gate_service: SequentialQualityGateQueryService | None = None,
     session_memory_search_service: SessionMemorySearchService | None = None,
+    branding_query_service: BrandingQueryService | None = None,
 ) -> FastAPI:
     app = FastAPI(
         title="ASEP Dashboard API",
@@ -120,4 +123,6 @@ def create_app(
                 intelligent_engineering_service
             )
         )
+    if branding_query_service is not None:
+        app.include_router(create_branding_router(branding_query_service))
     return app

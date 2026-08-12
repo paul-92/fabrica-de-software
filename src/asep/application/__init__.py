@@ -76,6 +76,10 @@ from asep.application.session_memory_search import (
     SessionMemorySearchRequest,
     SessionMemorySearchService,
 )
+from asep.application.branding_query import (
+    BrandingProjection,
+    BrandingQueryService,
+)
 from asep.application.project_workspace import ProjectWorkspaceService, WorkspaceBrowsingPolicy
 
 __all__ = [
@@ -131,6 +135,8 @@ __all__ = [
     "SessionMemorySearchPage",
     "SessionMemorySearchRequest",
     "SessionMemorySearchService",
+    "BrandingProjection",
+    "BrandingQueryService",
     "InvalidSessionMemoryCursorError",
     "SessionMemoryKind",
     "SessionMemoryOrder",
