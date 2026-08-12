@@ -43,6 +43,7 @@ from asep.projects import (
     SessionMemoryRepository,
     InMemorySessionMemoryRepository,
     SQLiteSessionMemoryRepository,
+    SessionMemoryQuerySource,
 )
 from asep.quality_results import (
     FileQualityGateResultRepository,
@@ -76,6 +77,21 @@ class RepositoryBundle:
     session_memory_repository: SessionMemoryRepository = field(
         default_factory=InMemorySessionMemoryRepository
     )
+    session_memory_query_source: SessionMemoryQuerySource = field(init=False)
+
+    def __post_init__(self) -> None:
+        if not isinstance(
+            self.session_memory_repository,
+            SessionMemoryQuerySource,
+        ):
+            raise RepositoryConfigurationError(
+                "Session memory repository does not support read queries."
+            )
+        object.__setattr__(
+            self,
+            "session_memory_query_source",
+            self.session_memory_repository,
+        )
 
 
 class RepositoryFactory:

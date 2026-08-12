@@ -37,12 +37,11 @@ export class SequentialQualityClient {
 }
 
 function parseDecision(value: string): SequentialQualityGateDecision {
-  const normalized = value.toLowerCase();
   if (
-    normalized === "approved"
-    || normalized === "approved_with_pending"
-    || normalized === "blocked"
-  ) return normalized;
+    value === "APPROVED"
+    || value === "APPROVED_WITH_PENDING"
+    || value === "BLOCKED"
+  ) return value;
   throw new ApiResponseError("API returned an unsupported Quality Gate decision.");
 }
 

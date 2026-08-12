@@ -11,7 +11,7 @@ const gate: SequentialQualityGateDto = {
   gate_id: "QG-ANALYSIS",
   execution_id: "execution/one",
   stage_id: "analysis",
-  decision: "approved_with_pending",
+  decision: "APPROVED_WITH_PENDING",
   satisfied_criteria: ["Escopo definido"],
   unsatisfied_criteria: ["Revisão pendente"],
   evaluated_at: "2026-08-11T12:00:00Z",
@@ -37,13 +37,24 @@ describe("SequentialQualityClient", () => {
     await expect(client.list("project", "execution")).resolves.toEqual([]);
   });
 
-  it("normalizes the canonical backend enum representation", async () => {
+  it("consumes the canonical backend enum representation without normalization", async () => {
     const client = new SequentialQualityClient({
       request: vi.fn().mockResolvedValue({
-        items: [{ ...gate, decision: "APPROVED_WITH_PENDING" }],
+        items: [gate],
       }),
     } as unknown as ApiClient);
     await expect(client.list("project", "execution")).resolves.toEqual([gate]);
+  });
+
+  it("rejects non-canonical lowercase decision values", async () => {
+    const client = new SequentialQualityClient({
+      request: vi.fn().mockResolvedValue({
+        items: [{ ...gate, decision: "approved_with_pending" }],
+      }),
+    } as unknown as ApiClient);
+    await expect(client.list("project", "execution")).rejects.toMatchObject({
+      name: "ApiResponseError",
+    });
   });
 
   it("rejects unsupported decision values", async () => {

@@ -39,18 +39,18 @@ const sequentialLoader = (
 const gates: readonly SequentialQualityGateDto[] = [
   {
     gate_id: "QG-APPROVED", execution_id: "exec-1", stage_id: "analysis",
-    decision: "approved", satisfied_criteria: ["Escopo aprovado"],
+    decision: "APPROVED", satisfied_criteria: ["Escopo aprovado"],
     unsatisfied_criteria: [], evaluated_at: "2026-08-11T12:00:00Z",
   },
   {
     gate_id: "QG-PENDING", execution_id: "exec-1", stage_id: "review",
-    decision: "approved_with_pending", satisfied_criteria: [],
+    decision: "APPROVED_WITH_PENDING", satisfied_criteria: [],
     unsatisfied_criteria: ["Revisão final pendente"],
     evaluated_at: "2026-08-11T13:00:00Z",
   },
   {
     gate_id: "QG-BLOCKED", execution_id: "exec-1", stage_id: "release",
-    decision: "blocked", satisfied_criteria: [],
+    decision: "BLOCKED", satisfied_criteria: [],
     unsatisfied_criteria: ["Aprovação ausente"],
     evaluated_at: "2026-08-11T14:00:00Z",
   },

@@ -1,6 +1,6 @@
 # Roadmap arquitetural
 
-**Dono:** Engenharia ASEP | **Versão:** 1.6 | **Status:** atualizado até a Fase 22
+**Dono:** Engenharia ASEP | **Versão:** 1.7 | **Status:** atualizado até a Sprint 23.4
 
 O roadmap registra intenção, não compromisso nem comportamento implementado.
 Mudanças de contrato exigem decisão arquitetural e testes.
@@ -190,11 +190,18 @@ ambiente auditado em 2026-08-11 pela ausência de Node/npm.
 Detalhes e checklist estão na
 [documentação da Fase 22](../phase-22/white-label-presentation-layer.md).
 
-## Próxima fase proposta — Fase 23
+## Fase 23 — Projeções operacionais públicas
 
-Produto deve avaliar uma fase de operacionalização e projeções públicas.
-Branding dinâmico, health/métricas de agentes, Quality Gates detalhados e
-consultas avançadas de Knowledge são candidatos, não requisitos aprovados.
+Fase em andamento. As Sprints 23.1–23.3 entregaram projeção e métricas
+operacionais por agente com composição compartilhada. A Sprint 23.4 entregou a
+vertical detalhada de Quality Gates sequenciais: persistência estruturada,
+projeção de Application, resolução autorizada, endpoint opt-in e explorador
+em `/quality`.
+
+`Run`, `SequentialExecution` e `ProjectExecution` permanecem agregados
+distintos. Migração de YAML histórico, integração com Intelligent
+Orchestration e Sprints 23.5+ permanecem futuras e não priorizadas. Consulte a
+[documentação da Fase 23](../phase-23/operational-projections.md).
 
 ## Pré-condições arquiteturais
 

@@ -145,14 +145,14 @@ function Criteria({ title, items, empty }: { title: string; items: readonly stri
 }
 
 function decisionLabel(decision: SequentialQualityGateDecision): string {
-  if (decision === "approved") return "Aprovado";
-  if (decision === "approved_with_pending") return "Aprovado com pendências";
+  if (decision === "APPROVED") return "Aprovado";
+  if (decision === "APPROVED_WITH_PENDING") return "Aprovado com pendências";
   return "Bloqueado";
 }
 
 function decisionStatus(decision: SequentialQualityGateDecision): "success" | "warning" | "danger" {
-  if (decision === "approved") return "success";
-  if (decision === "approved_with_pending") return "warning";
+  if (decision === "APPROVED") return "success";
+  if (decision === "APPROVED_WITH_PENDING") return "warning";
   return "danger";
 }
 

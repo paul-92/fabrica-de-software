@@ -22,9 +22,9 @@ export type AgentRuntimeProjectionDto = Readonly<{
 }>;
 
 export type SequentialQualityGateDecision =
-  | "approved"
-  | "approved_with_pending"
-  | "blocked";
+  | "APPROVED"
+  | "APPROVED_WITH_PENDING"
+  | "BLOCKED";
 
 export type SequentialQualityGateDto = Readonly<{
   gate_id: string;

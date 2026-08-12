@@ -23,6 +23,8 @@ Business Engineering e execução avançou por implementação e testes:
 - Fase 21 — Application/API Layer: blocos 21.1–21.4 concluídos.
 - Fase 22 — White-label Presentation Layer: concluída; gate frontend
   consolidado aprovado em 2026-08-11.
+- Fase 23 — Projeções operacionais públicas: em andamento; Sprints 23.1–23.4
+  implementadas, com agentes operacionais e Quality Gates sequenciais públicos.
   Em 2026-08-11, 11 testes focados do contrato Application/API de Agents
 passaram. A inspeção estática do frontend não encontrou imports para módulos
 Python internos.
@@ -74,6 +76,12 @@ as fronteiras documentadas nos ADRs existentes.
 A camada Presentation em Next.js consome somente contratos HTTP públicos
 versionados sob `/api/v1` e não importa módulos Python internos.
 
+A vertical de qualidade sequencial preserva `ExecutionState` como fonte da
+verdade, registra resultados estruturados em repositories memory/file/SQLite e
+mantém o YAML como auditoria separada, em política audit-first sem atomicidade
+cross-store. A consulta pública é opt-in, resolve apenas projetos autorizados e
+não unifica `SequentialExecution` com `Run` ou `ProjectExecution`.
+
 A camada Intelligence combina conhecimento recuperado com
 `PlanningContext.memory` e consolida resultados de Planning e Autonomous
 Engineering. Ela não acessa storage, não executa recomendações e não cria
@@ -103,6 +111,12 @@ foram aprovados. O build de produção Next.js foi concluído com sucesso e gero
 
 Com essas evidências, a Fase 22 está formalmente concluída.
 
+Em 2026-08-11, o hardening da Sprint 23.4 aprovou 74 testes backend focados,
+`compileall`, 1.269 testes Python com 2 skips quando o único caso ambiental de
+multiprocessing foi desmarcado, e os gates frontend: 26 arquivos/139 testes,
+typecheck, lint e build. `/quality` foi confirmada entre 11 páginas estáticas.
+O run sem desmarcação teve somente o `WinError 5` já documentado.
+
 ## Limitações e pendências
 
 - workflow e runtime permanecem síncronos;
@@ -123,7 +137,9 @@ Com essas evidências, a Fase 22 está formalmente concluída.
 
 ADRs 016–029 continuam vigentes. ADR-030 registra a fronteira do Intelligent
 Orchestrator; ADR-031, a geração controlada por Tools e workspace; e ADR-032,
-a separação entre Software Repair e retry operacional.
+a separação entre Software Repair e retry operacional. ADR-033 registra a
+identidade, fonte da verdade, persistência dual e autorização da qualidade
+sequencial.
 
 ## Leitura essencial
 
@@ -135,5 +151,6 @@ a separação entre Software Repair e retry operacional.
 [Fase 17](../docs/phase-17/software-repair.md),
 [Fase 18](../docs/phase-18/intelligent-engineering.md),
 [Fase 20](../docs/phase-20/intelligent-integration.md) e
-[Fase 21](../docs/phase-21/application-api-layer.md) e
-[Fase 22](../docs/phase-22/white-label-presentation-layer.md).
+[Fase 21](../docs/phase-21/application-api-layer.md),
+[Fase 22](../docs/phase-22/white-label-presentation-layer.md) e
+[Fase 23](../docs/phase-23/operational-projections.md).

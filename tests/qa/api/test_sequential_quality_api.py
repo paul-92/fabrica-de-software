@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import inspect
 from datetime import UTC, datetime
 from pathlib import Path
@@ -199,11 +200,24 @@ def test_openapi_contract_has_only_intended_fields_and_responses() -> None:
 
 
 def test_http_adapter_imports_only_application_query_boundary() -> None:
-    source = inspect.getsource(__import__(
-        "asep.api.sequential_quality_routes", fromlist=["*"]
-    ))
-    for forbidden in (
-        "StateManager", "SequentialProjectResolver", "QualityGateResultRepository",
-        "Orchestrator", "StoredQualityGateResult", "app.state", "_results",
-    ):
-        assert forbidden not in source
+    module = __import__("asep.api.sequential_quality_routes", fromlist=["*"])
+    source = inspect.getsource(module)
+    imported_modules = {
+        node.module
+        for node in ast.walk(ast.parse(source))
+        if isinstance(node, ast.ImportFrom) and node.module is not None
+    } | {
+        alias.name
+        for node in ast.walk(ast.parse(source))
+        if isinstance(node, ast.Import)
+        for alias in node.names
+    }
+    assert imported_modules <= {
+        "__future__", "typing", "fastapi", "asep.api.routes",
+        "asep.api.schemas", "asep.api.sequential_quality_schemas",
+        "asep.application",
+    }
+    assert not any(module.startswith((
+        "asep.execution", "asep.orchestrator", "asep.project",
+        "asep.quality_results", "asep.repositories",
+    )) for module in imported_modules)

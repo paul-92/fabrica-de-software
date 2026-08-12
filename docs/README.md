@@ -22,6 +22,8 @@ A fachada de aplicação e o adapter HTTP de Intelligent Engineering estão em
 [Application/API Layer](phase-21/application-api-layer.md).
 A camada visual operacional e white-label, seu hardening e o estado do gate
 final estão em [White-label Presentation Layer](phase-22/white-label-presentation-layer.md).
+As projeções operacionais públicas de agentes e a vertical detalhada de
+Quality Gates estão em [Fase 23](phase-23/operational-projections.md).
 A revisão de consistência e a decisão supersessora proposta estão em
 [architecture/Architectural-Consistency-Review.md](architecture/Architectural-Consistency-Review.md).
 

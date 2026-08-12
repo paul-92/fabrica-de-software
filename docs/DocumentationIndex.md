@@ -210,6 +210,8 @@ não alterou decisão arquitetural e não criou ADR.
 - [Fase 20 — Intelligent Integration](phase-20/intelligent-integration.md).
 - [Fase 21 — Application/API Layer](phase-21/application-api-layer.md).
 - [Fase 22 — White-label Presentation Layer](phase-22/white-label-presentation-layer.md).
+- [Fase 23 — Projeções operacionais públicas](phase-23/operational-projections.md).
+- [ADR-033 — fronteira da qualidade sequencial](adr/ADR-033-sequential-quality-boundary.md).
 
 - [Overview](project-analysis/Overview.md): arquitetura e API;
 - [ProjectAnalyzer](project-analysis/ProjectAnalyzer.md): fachada e modelos;

@@ -1,6 +1,6 @@
 # Próximos passos
 
-**Estado:** Fase 22 formalmente concluída
+**Estado:** Fase 23 em andamento; Sprint 23.4 pronta para fechamento intencional
 
 **Atualizado em:** 2026-08-11
 
@@ -8,8 +8,8 @@
 
 ## Objetivo imediato
 
-Definir e priorizar o próximo incremento da ASEP após a conclusão da
-White-label Presentation Layer.
+Registrar o fechamento intencional da Sprint 23.4 e priorizar explicitamente o
+próximo incremento da Fase 23, sem assumir que 23.5 já foi aprovado.
 
 ## Gate final da Fase 22
 
@@ -38,20 +38,16 @@ A Fase 22 não possui gate frontend pendente.
 - checklist detalhado em
   [Fase 22](../docs/phase-22/white-label-presentation-layer.md).
 
-## Próxima fase proposta
+## Continuidade da Fase 23
 
-Produto deve definir e priorizar o próximo incremento da plataforma.
+As Sprints 23.1–23.4 entregaram agentes operacionais e a projeção detalhada de
+Quality Gates sequenciais. Produto deve decidir o escopo seguinte. Busca e
+paginação, branding dinâmico, migração de YAML histórico e integração com
+Intelligent Orchestration continuam candidatos, não requisitos aprovados.
 
-Uma possível Fase 23 de operacionalização e projeções públicas pode considerar:
-
-- branding administrável em runtime;
-- health e métricas públicas por agente;
-- detalhamento público de Quality Gates;
-- busca, paginação e consultas avançadas de Knowledge;
-- evolução das capacidades operacionais expostas pela Presentation Layer.
-
-Esses itens são candidatos derivados das limitações atuais e não constituem
-escopo aprovado até que a próxima fase seja formalmente definida.
+Antes de qualquer novo slice, preservar as identidades distintas de `Run`,
+`SequentialExecution` e `ProjectExecution`, a composição opt-in e as fronteiras
+registradas no [ADR-033](../docs/adr/ADR-033-sequential-quality-boundary.md).
 
 ## Riscos e preservação
 

@@ -10,6 +10,15 @@ from asep.projects.session_memory_models import SessionMemoryEntry, SessionMemor
 from asep.projects.session_memory_repository import SessionMemoryRepository
 from asep.projects.session_memory_in_memory import InMemorySessionMemoryRepository
 from asep.projects.session_memory_sqlite import SQLiteSessionMemoryRepository
+from asep.projects.session_memory_query import (
+    DEFAULT_SESSION_MEMORY_PAGE_SIZE,
+    InvalidSessionMemoryCursorError,
+    MAX_SESSION_MEMORY_PAGE_SIZE,
+    SessionMemoryOrder,
+    SessionMemoryPage,
+    SessionMemoryQuery,
+    SessionMemoryQuerySource,
+)
 from asep.projects.workspace_models import WorkspaceDirectory, WorkspaceEntry, WorkspaceEntryKind, WorkspaceFileContent
 
 __all__ = [
@@ -31,5 +40,12 @@ __all__ = [
     "SessionMemoryRepository",
     "InMemorySessionMemoryRepository",
     "SQLiteSessionMemoryRepository",
+    "DEFAULT_SESSION_MEMORY_PAGE_SIZE",
+    "InvalidSessionMemoryCursorError",
+    "MAX_SESSION_MEMORY_PAGE_SIZE",
+    "SessionMemoryOrder",
+    "SessionMemoryPage",
+    "SessionMemoryQuery",
+    "SessionMemoryQuerySource",
     "WorkspaceDirectory", "WorkspaceEntry", "WorkspaceEntryKind", "WorkspaceFileContent",
 ]
