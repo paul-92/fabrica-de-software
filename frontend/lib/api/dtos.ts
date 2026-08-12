@@ -1,5 +1,13 @@
 export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
+export type RuntimeBrandingDto = Readonly<{
+  product_name: string;
+  short_name: string;
+  logo_url: string | null;
+  workspace_label: string;
+  footer_text: string;
+}>;
+
 export type AgentCatalogItemDto = Readonly<{
   agent_id: string;
   name: string;

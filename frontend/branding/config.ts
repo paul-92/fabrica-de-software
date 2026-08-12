@@ -1,4 +1,5 @@
 import type { BrandConfig } from "./types";
+import type { RuntimeBrandingDto } from "../lib/api/dtos";
 
 export const defaultBrandConfig: BrandConfig = Object.freeze({
   productName: "Engineering Platform",
@@ -40,5 +41,19 @@ export function loadBrandConfig(): BrandConfig {
       defaultBrandConfig.workspaceLabel,
     footerText:
       process.env.NEXT_PUBLIC_FOOTER_TEXT ?? defaultBrandConfig.footerText,
+  });
+}
+
+export function resolveBrandConfig(
+  buildTime: BrandConfig,
+  runtime: RuntimeBrandingDto,
+): BrandConfig {
+  return Object.freeze({
+    ...buildTime,
+    productName: runtime.product_name,
+    shortName: runtime.short_name,
+    logoUrl: runtime.logo_url ?? undefined,
+    workspaceLabel: runtime.workspace_label,
+    footerText: runtime.footer_text,
   });
 }

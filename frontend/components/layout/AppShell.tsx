@@ -2,28 +2,70 @@
 
 import { usePathname } from "next/navigation";
 import type { CSSProperties, PropsWithChildren } from "react";
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
+import { resolveBrandConfig } from "../../branding/config";
 import type { BrandConfig } from "../../branding/types";
+import { createPlatformClients } from "../../lib/api";
+import type { RuntimeBrandingDto } from "../../lib/api/dtos";
+import {
+  createBrandingLoader,
+  type BrandingLoader,
+} from "../../lib/services/branding";
 import { AppHeader } from "./AppHeader";
 import { titleForPath } from "./navigation";
 import { Sidebar } from "./Sidebar";
 
-type AppShellProps = PropsWithChildren<{ brand: BrandConfig }>;
+type AppShellProps = PropsWithChildren<{
+  brand: BrandConfig;
+  brandingLoader?: BrandingLoader;
+}>;
 
-export function AppShell({ brand, children }: AppShellProps) {
+export function AppShell({ brand, brandingLoader, children }: AppShellProps) {
   const pathname = usePathname();
+  const loader = useMemo(
+    () => brandingLoader ?? createBrandingLoader(createPlatformClients),
+    [brandingLoader],
+  );
+  const requestVersion = useRef(0);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [runtimeBrand, setRuntimeBrand] = useState<RuntimeBrandingDto | null>(null);
+  const [brandingError, setBrandingError] = useState(false);
+  const [brandingAttempt, setBrandingAttempt] = useState(0);
+  const resolvedBrand = runtimeBrand
+    ? resolveBrandConfig(brand, runtimeBrand)
+    : brand;
+
+  useEffect(() => {
+    const version = ++requestVersion.current;
+    loader.getBranding().then(
+      (loaded) => {
+        if (version !== requestVersion.current) return;
+        setRuntimeBrand(loaded);
+        setBrandingError(false);
+      },
+      () => {
+        if (version !== requestVersion.current) return;
+        setBrandingError(true);
+      },
+    );
+  }, [loader, brandingAttempt]);
+
+  function retryBranding() {
+    requestVersion.current += 1;
+    setBrandingError(false);
+    setBrandingAttempt((value) => value + 1);
+  }
 
   const brandStyles = {
-    "--brand-primary": brand.primaryColor,
-    "--brand-secondary": brand.secondaryColor,
+    "--brand-primary": resolvedBrand.primaryColor,
+    "--brand-secondary": resolvedBrand.secondaryColor,
   } as CSSProperties;
 
   return (
     <div className="app-shell" style={brandStyles}>
       <Sidebar
-        brand={brand}
+        brand={resolvedBrand}
         pathname={pathname}
         mobileOpen={mobileOpen}
         onNavigate={() => setMobileOpen(false)}
@@ -41,9 +83,18 @@ export function AppShell({ brand, children }: AppShellProps) {
       <div className="app-shell__workspace">
         <AppHeader
           title={titleForPath(pathname)}
-          brand={brand}
+          brand={resolvedBrand}
           onOpenNavigation={() => setMobileOpen(true)}
         />
+
+        {brandingError ? (
+          <div className="branding-notice" role="status">
+            <span>A identidade atual foi preservada.</span>
+            <button type="button" onClick={retryBranding}>
+              Tentar novamente
+            </button>
+          </div>
+        ) : null}
 
         <main className="app-content">{children}</main>
       </div>

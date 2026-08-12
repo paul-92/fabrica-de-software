@@ -10,6 +10,7 @@ import { ProjectHistoryClient, ProjectRuntimeClient } from "../services/projectR
 import { ProjectWorkspaceClient } from "../services/projectWorkspace";
 import { AgentsClient } from "../services/agents";
 import { SequentialQualityClient } from "../services/sequentialQuality";
+import { BrandingClient } from "../services/branding";
 
 export type PlatformClients = Readonly<{
   intelligentEngineering: IntelligentEngineeringClient;
@@ -22,6 +23,7 @@ export type PlatformClients = Readonly<{
   projectWorkspace: ProjectWorkspaceClient;
   agents: AgentsClient;
   sequentialQuality: SequentialQualityClient;
+  branding: BrandingClient;
 }>;
 
 export function createPlatformClients(): PlatformClients {
@@ -37,5 +39,6 @@ export function createPlatformClients(): PlatformClients {
     projectWorkspace: new ProjectWorkspaceClient(api),
     agents: new AgentsClient(api),
     sequentialQuality: new SequentialQualityClient(api),
+    branding: new BrandingClient(api),
   });
 }

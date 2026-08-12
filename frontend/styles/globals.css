@@ -54,7 +54,7 @@ button:focus-visible {
 
 .sidebar__brand { padding: 0 8px 24px; }
 .sidebar__nav { display: grid; gap: 4px; }
-.sidebar__footer { color: var(--color-text-secondary); font-size: .72rem; margin: auto 10px 0; }
+.sidebar__footer { color: var(--color-text-secondary); font-size: .72rem; margin: auto 10px 0; overflow-wrap: anywhere; }
 
 .nav-link {
   align-items: center;
@@ -99,6 +99,8 @@ button:focus-visible {
 .app-header__eyebrow { color: var(--color-text-secondary); font-size: .68rem; font-weight: 750; letter-spacing: .1em; margin: 0 0 3px; text-transform: uppercase; }
 .app-header__title { font-size: 1rem; font-weight: 750; margin: 0; }
 .app-header__actions { align-items: center; display: flex; min-width: 120px; justify-content: flex-end; }
+.branding-notice { align-items: center; background: var(--color-surface); border-bottom: 1px solid var(--color-border); color: var(--color-text-secondary); display: flex; font-size: .75rem; gap: 10px; justify-content: flex-end; min-height: 34px; padding: 5px 24px; }
+.branding-notice button { background: transparent; border: 0; color: var(--color-brand-primary); cursor: pointer; font: inherit; font-weight: 750; padding: 4px; }
 
 .menu-button {
   background: var(--color-surface);
@@ -307,7 +309,7 @@ button:focus-visible {
 .brand-mark { align-items: center; display: flex; gap: 12px; }
 .brand-mark__glyph { align-items: center; background: linear-gradient(135deg, var(--color-brand-primary), var(--color-brand-secondary)); border-radius: 12px; color: white; display: inline-flex; font-weight: 800; height: 42px; justify-content: center; letter-spacing: -.04em; width: 42px; }
 .brand-mark__image { height: 42px; object-fit: contain; width: 42px; }
-.brand-mark__name { font-size: 1rem; font-weight: 750; letter-spacing: -.02em; }
+.brand-mark__name { font-size: 1rem; font-weight: 750; letter-spacing: -.02em; min-width: 0; overflow-wrap: anywhere; }
 .hero { display: grid; gap: 24px; grid-template-columns: 1.35fr .65fr; margin-bottom: 28px; }
 .hero__copy { padding: 28px 0; }
 .eyebrow { color: var(--color-brand-primary); font-size: .72rem; font-weight: 800; letter-spacing: .13em; margin: 0 0 10px; text-transform: uppercase; }
