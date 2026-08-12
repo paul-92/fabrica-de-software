@@ -1,5 +1,5 @@
 import { ApiClient } from "../api/client";
-import type { AIRuntimeExecutionMode, JsonValue, ProjectAIRuntimeExecutionDto, ProjectExecutionDto, ProjectSessionDto, SessionMemoryDto, SessionMemoryKind } from "../api/dtos";
+import type { AIRuntimeExecutionMode, JsonValue, ProjectAIRuntimeExecutionDto, ProjectExecutionDto, ProjectSessionDto, SessionMemoryDto, SessionMemoryKind, SessionMemorySearchPageDto, SessionMemorySearchParams } from "../api/dtos";
 
 export class ProjectRuntimeClient {
   constructor(private readonly api: ApiClient) {}
@@ -38,6 +38,18 @@ export class ProjectHistoryClient {
   }
   async listMemory(projectId: string, sessionId: string): Promise<readonly SessionMemoryDto[]> {
     return (await this.api.request<MemoryResponse>({ path: `/api/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/memory` })).items;
+  }
+  searchMemory(projectId: string, sessionId: string, params: SessionMemorySearchParams = {}): Promise<SessionMemorySearchPageDto> {
+    const query = new URLSearchParams();
+    if (params.text !== undefined) query.set("text", params.text);
+    if (params.kind !== undefined) query.set("kind", params.kind);
+    if (params.order !== undefined) query.set("order", params.order);
+    if (params.page_size !== undefined) query.set("page_size", String(params.page_size));
+    if (params.cursor !== undefined) query.set("cursor", params.cursor);
+    const suffix = query.size > 0 ? `?${query.toString()}` : "";
+    return this.api.request({
+      path: `/api/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/memory/search${suffix}`,
+    });
   }
   addMemory(projectId: string, sessionId: string, kind: SessionMemoryKind, content: string): Promise<SessionMemoryDto> {
     return this.api.request({ path: `/api/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/memory`, method: "POST", body: { kind, content } });

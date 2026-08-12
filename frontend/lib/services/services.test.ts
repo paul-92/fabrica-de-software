@@ -68,6 +68,7 @@ describe("specialized API clients", () => {
     const { transport, api } = setup();
     transport.responses.push(
       { status: 200, ok: true, body: { items: [] } },
+      { status: 200, ok: true, body: { items: [], next_cursor: "opaque" } },
       { status: 200, ok: true, body: { id: "run/one" } },
       { status: 200, ok: true, body: { items: [] } },
     );
@@ -150,6 +151,7 @@ describe("specialized API clients", () => {
       { status: 200, ok: true, body: { items: [] } },
       { status: 200, ok: true, body: { execution_id: "e/1" } },
       { status: 200, ok: true, body: { items: [] } },
+      { status: 200, ok: true, body: { items: [], next_cursor: "opaque" } },
       { status: 201, ok: true, body: { memory_id: "m/1" } },
       { status: 200, ok: true, body: { execution_id: "e/1" } },
     );
@@ -159,6 +161,9 @@ describe("specialized API clients", () => {
     await history.listSessionExecutions("p/1", "s/1");
     await history.getExecution("p/1", "e/1");
     await history.listMemory("p/1", "s/1");
+    expect(await history.searchMemory("p/1", "s/1", {
+      text: "safe % text", kind: "fact", order: "oldest", page_size: 1, cursor: "opaque/+",
+    })).toEqual({ items: [], next_cursor: "opaque" });
     await history.addMemory("p/1", "s/1", "constraint", "Use PostgreSQL for persistence.");
     await new ProjectRuntimeClient(api).execute("p/1", {
       session_id: "s/1", runtime_id: "codex", instruction: "Inspect",
@@ -169,9 +174,25 @@ describe("specialized API clients", () => {
       { url: "https://example.test/api/v1/projects/p%2F1/sessions/s%2F1/executions" },
       { url: "https://example.test/api/v1/projects/p%2F1/executions/e%2F1" },
       { url: "https://example.test/api/v1/projects/p%2F1/sessions/s%2F1/memory", method: "GET" },
+      { url: "https://example.test/api/v1/projects/p%2F1/sessions/s%2F1/memory/search?text=safe+%25+text&kind=fact&order=oldest&page_size=1&cursor=opaque%2F%2B", method: "GET" },
       { url: "https://example.test/api/v1/projects/p%2F1/sessions/s%2F1/memory", method: "POST", body: { kind: "constraint", content: "Use PostgreSQL for persistence." } },
       { url: "https://example.test/api/v1/projects/p%2F1/ai-runtime/execute", body: { session_id: "s/1", runtime_id: "codex", instruction: "Inspect" } },
     ]);
+  });
+
+  it("searches session memory without optional parameters and propagates HTTP errors", async () => {
+    const { transport, api } = setup();
+    transport.responses.push(
+      { status: 200, ok: true, body: { items: [], next_cursor: null } },
+      { status: 400, ok: false, body: { error: { code: "SESSION_MEMORY_CURSOR_INVALID", message: "Invalid cursor." } } },
+    );
+    const history = new ProjectHistoryClient(api);
+    expect(await history.searchMemory("p/1", "s/1")).toEqual({ items: [], next_cursor: null });
+    await expect(history.searchMemory("p/1", "s/1", { cursor: "bad" })).rejects.toThrow("Invalid cursor.");
+    expect(transport.requests[0]).toMatchObject({
+      url: "https://example.test/api/v1/projects/p%2F1/sessions/s%2F1/memory/search",
+      method: "GET",
+    });
   });
 
   it("browses workspace using only project id and encoded relative path", async () => {

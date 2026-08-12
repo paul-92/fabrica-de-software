@@ -96,6 +96,19 @@ export type SessionMemoryDto = Readonly<{
   created_at: string;
 }>;
 
+export type SessionMemoryOrder = "newest" | "oldest";
+export type SessionMemorySearchPageDto = Readonly<{
+  items: readonly SessionMemoryDto[];
+  next_cursor: string | null;
+}>;
+export type SessionMemorySearchParams = Readonly<{
+  text?: string;
+  kind?: SessionMemoryKind;
+  order?: SessionMemoryOrder;
+  page_size?: number;
+  cursor?: string;
+}>;
+
 export type ProjectExecutionDto = Readonly<{
   execution_id: string;
   session_id: string;

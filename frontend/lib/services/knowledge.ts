@@ -1,4 +1,4 @@
-import type { ProjectDto, ProjectSessionDto, SessionMemoryDto } from "../api/dtos";
+import type { ProjectDto, ProjectSessionDto, SessionMemorySearchPageDto, SessionMemorySearchParams } from "../api/dtos";
 import { createPlatformClients, type PlatformClients } from "../api";
 
 type KnowledgeClients = Pick<PlatformClients, "projects" | "projectHistory">;
@@ -6,7 +6,7 @@ type KnowledgeClients = Pick<PlatformClients, "projects" | "projectHistory">;
 export interface KnowledgeLoader {
   listProjects(): Promise<readonly ProjectDto[]>;
   listSessions(projectId: string): Promise<readonly ProjectSessionDto[]>;
-  listMemory(projectId: string, sessionId: string): Promise<readonly SessionMemoryDto[]>;
+  searchMemory(projectId: string, sessionId: string, params?: SessionMemorySearchParams): Promise<SessionMemorySearchPageDto>;
 }
 
 export class KnowledgeDataService implements KnowledgeLoader {
@@ -20,8 +20,8 @@ export class KnowledgeDataService implements KnowledgeLoader {
     return this.clients.projectHistory.listSessions(projectId);
   }
 
-  listMemory(projectId: string, sessionId: string): Promise<readonly SessionMemoryDto[]> {
-    return this.clients.projectHistory.listMemory(projectId, sessionId);
+  searchMemory(projectId: string, sessionId: string, params: SessionMemorySearchParams = {}): Promise<SessionMemorySearchPageDto> {
+    return this.clients.projectHistory.searchMemory(projectId, sessionId, params);
   }
 }
 
@@ -33,6 +33,6 @@ export function createKnowledgeLoader(
   return {
     listProjects: () => getService().listProjects(),
     listSessions: (projectId) => getService().listSessions(projectId),
-    listMemory: (projectId, sessionId) => getService().listMemory(projectId, sessionId),
+    searchMemory: (projectId, sessionId, params) => getService().searchMemory(projectId, sessionId, params),
   };
 }
