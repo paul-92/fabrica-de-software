@@ -67,6 +67,12 @@ from asep.application.session_memory import (
     SessionMemorySelector,
     serialize_session_memory_context,
 )
+from asep.application.session_memory_search import (
+    SessionMemorySearchItem,
+    SessionMemorySearchPage,
+    SessionMemorySearchRequest,
+    SessionMemorySearchService,
+)
 from asep.application.project_workspace import ProjectWorkspaceService, WorkspaceBrowsingPolicy
 
 __all__ = [
@@ -118,6 +124,10 @@ __all__ = [
     "SessionMemoryPolicy",
     "SessionMemorySelector",
     "serialize_session_memory_context",
+    "SessionMemorySearchItem",
+    "SessionMemorySearchPage",
+    "SessionMemorySearchRequest",
+    "SessionMemorySearchService",
     "ProjectWorkspaceService", "WorkspaceBrowsingPolicy",
     "create_intelligent_engineering_application_service",
 ]
