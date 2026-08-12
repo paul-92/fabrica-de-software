@@ -1,6 +1,6 @@
 # Estado atual da ASEP
 
-**Atualizado em:** 2026-08-11
+**Atualizado em:** 2026-08-12
 **Projeto:** AI Software Engineering Platform (ASEP)
 **Versão do pacote:** 0.1.0
 **Commit base avaliado:** `4b2fb1a363213495b2f100a9704036e9a8940a42`
@@ -23,21 +23,14 @@ Business Engineering e execução avançou por implementação e testes:
 - Fase 21 — Application/API Layer: blocos 21.1–21.4 concluídos.
 - Fase 22 — White-label Presentation Layer: concluída; gate frontend
   consolidado aprovado em 2026-08-11.
-- Fase 23 — Projeções operacionais públicas: em andamento; Sprints 23.1–23.4
-  implementadas, com agentes operacionais e Quality Gates sequenciais públicos.
+- Fase 23 — Projeções operacionais públicas: em andamento; Sprints 23.1–23.5
+  concluídas, incluindo Advanced Knowledge Queries ponta a ponta.
   Em 2026-08-11, 11 testes focados do contrato Application/API de Agents
 passaram. A inspeção estática do frontend não encontrou imports para módulos
 Python internos.
 
-Durante o desenvolvimento da Presentation Layer, typecheck, lint e build
-Next.js foram executados com sucesso em ambiente com Node/npm disponível.
-Após a correção final de isolamento de `ThemeToggle.test.tsx`, seus 3 testes
-focados passaram. O gate frontend consolidado completo ainda deve ser
-reexecutado após essa última alteração antes do fechamento formal da Fase 22.
-
-No PowerShell local utilizado para continuidade operacional, Node/npm não está
-disponível no `PATH`; portanto esse ambiente específico não consegue executar
-os gates frontend diretamente.
+O gate consolidado da Fase 22 permanece aprovado. O Node portátil disponível
+em ambiente de usuário também executa os gates frontend da Sprint 23.5.
 
 Consulte a [Fase 17](../docs/phase-17/software-repair.md) para o ciclo de
 reparo, a [Fase 18](../docs/phase-18/intelligent-engineering.md) para a
@@ -115,6 +108,13 @@ Em 2026-08-11, o hardening da Sprint 23.4 aprovou 74 testes backend focados,
 `compileall`, 1.269 testes Python com 2 skips quando o único caso ambiental de
 multiprocessing foi desmarcado, e os gates frontend: 26 arquivos/139 testes,
 typecheck, lint e build. `/quality` foi confirmada entre 11 páginas estáticas.
+
+Em 2026-08-12, a vertical 23.5 foi concluída: contratos read-only de Session
+Memory, autorização Application, endpoint público aditivo e busca paginada em
+`/knowledge`. Command/query compartilham o mesmo repository; InMemory e SQLite
+possuem paridade, enquanto `file` continua InMemory para esta família. Os gates
+finais e eventuais limitações ambientais estão registrados na documentação da
+Fase 23. A Fase 23 permanece em andamento.
 O run sem desmarcação teve somente o `WinError 5` já documentado.
 
 ## Limitações e pendências

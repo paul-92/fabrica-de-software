@@ -1,6 +1,6 @@
 # Roadmap arquitetural
 
-**Dono:** Engenharia ASEP | **Versão:** 1.7 | **Status:** atualizado até a Sprint 23.4
+**Dono:** Engenharia ASEP | **Versão:** 1.8 | **Status:** atualizado até a Sprint 23.5
 
 O roadmap registra intenção, não compromisso nem comportamento implementado.
 Mudanças de contrato exigem decisão arquitetural e testes.
@@ -198,9 +198,14 @@ vertical detalhada de Quality Gates sequenciais: persistência estruturada,
 projeção de Application, resolução autorizada, endpoint opt-in e explorador
 em `/quality`.
 
+A Sprint 23.5 entregou Advanced Knowledge Queries: porta read-only separada
+com shared repository identity, busca textual e por kind, ordenação total,
+keyset pagination, autorização Project → Session na Application, endpoint
+aditivo `/memory/search` e interface paginada em `/knowledge`.
+
 `Run`, `SequentialExecution` e `ProjectExecution` permanecem agregados
 distintos. Migração de YAML histórico, integração com Intelligent
-Orchestration e Sprints 23.5+ permanecem futuras e não priorizadas. Consulte a
+Orchestration e incrementos posteriores à 23.5 permanecem não priorizados. Consulte a
 [documentação da Fase 23](../phase-23/operational-projections.md).
 
 ## Pré-condições arquiteturais

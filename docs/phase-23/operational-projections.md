@@ -4,9 +4,9 @@
 
 **Dono:** Engenharia ASEP
 
-**Versão:** 1.0
+**Versão:** 1.1
 
-**Status:** em andamento; Sprints 23.1–23.4 concluídas
+**Status:** em andamento; Sprints 23.1–23.5 concluídas
 
 ## Objetivo e fronteira
 
@@ -32,9 +32,89 @@ instância de cada dependência compartilhada.
 - **23.4:** persistência estruturada de Quality Gates, projeção de
   `SequentialExecution`, resolução autorizada de projetos sequenciais, API
   pública opt-in e explorador detalhado em `/quality`.
+- **23.5:** consultas avançadas e autorizadas de Session Memory, com paridade
+  InMemory/SQLite, API pública paginada e busca operacional em `/knowledge`.
 
-A fase inteira não está encerrada: incrementos 23.5 ou posteriores dependem de
-priorização explícita.
+A Sprint 23.5 está formalmente encerrada. A Fase 23 continua em andamento e
+incrementos posteriores dependem de priorização explícita.
+
+## Advanced Knowledge Queries — Sprint 23.5
+
+O fluxo read-only implementado é:
+
+```text
+HTTP → SessionMemorySearchService → ProjectSessionService.get(project, session)
+→ SessionMemoryQuerySource → InMemory/SQLite → resposta paginada → /knowledge
+```
+
+`SessionMemoryQuerySource` é separado do contrato legado de comandos, mas o
+`RepositoryBundle` atribui ambos ao mesmo objeto:
+
+```python
+bundle.session_memory_repository is bundle.session_memory_query_source
+```
+
+Assim, uma escrita por `ProjectSessionMemoryService` fica imediatamente
+visível na consulta sem cache, cópia ou segundo store. No backend `file`, esta
+família continua honestamente InMemory; somente SQLite oferece durabilidade.
+
+A autorização ocorre antes da query. `ProjectSessionService.get()` é a fonte
+canônica para existência do projeto, existência da sessão e ownership. Sessão
+ausente e sessão de outro projeto compartilham semântica pública segura, e uma
+memória órfã não autoriza uma sessão inexistente.
+
+A busca é substring determinística sobre conteúdo com trim, collapse de
+whitespace e casefold. `kind` usa somente `SessionMemoryKind`. A ordenação total
+é `(created_at, memory_id)`, descendente para `newest` e ascendente para
+`oldest`, inclusive para instantes equivalentes com offsets diferentes.
+
+A paginação é keyset, não offset. O cursor URL-safe/Base64 contém versão,
+projeto, sessão, texto normalizado, kind, ordem, timestamp e `memory_id`; é
+opaco para Application, HTTP e frontend. Ele não é assinado nem criptografado.
+Cursores incompatíveis falham de forma tipada. O contrato limita páginas a
+`1..100`, usa 25 por padrão, não fornece `total_count` e não promete snapshot
+transacional diante de inserções concorrentes.
+
+O endpoint aditivo é:
+
+```text
+GET /api/v1/projects/{project_id}/sessions/{session_id}/memory/search
+```
+
+Ele aceita `text`, `kind`, `order`, `page_size` e `cursor`, e responde somente
+com `items` e `next_cursor`. Cada item expõe os sete fatos já públicos de
+`SessionMemoryEntry`. GET e POST legados em `/memory` permanecem sem paginação
+e sem mudança de envelope.
+
+No frontend, `ProjectHistoryClient` usa path IDs codificados e
+`URLSearchParams`; React não usa `fetch` diretamente. `/knowledge` mantém o
+percurso Projeto → Sessão, carrega a primeira página sem exigir texto, permite
+filtros explícitos e adiciona páginas sem duplicar `memory_id`. Um token
+monotônico impede respostas antigas de projeto, sessão, busca ou load-more de
+contaminar o estado atual. Falha de load-more preserva itens e possui retry
+isolado.
+
+### Evidências e taxonomia de testes da vertical
+
+- unitários e contract tests: modelos frozen/strict, defaults e limites;
+- repository parity e reconstruction: mesma semântica InMemory/SQLite e reopen;
+- ownership e negative/security: validação antes da query, cross-project,
+  órfãos, cursores incompatíveis e caracteres SQL tratados literalmente;
+- API, OpenAPI e architectural boundary: DTO exato, respostas 200/400/404/422/500
+  e rota sem imports de repository/storage;
+- composition/shared identity: command/query no mesmo objeto e composições
+  isoladas;
+- compatibility/regression: endpoints `/memory`, AI Runtime, Planning,
+  Intelligent Integration e Agent Memory preservados;
+- frontend service, stale-response e accessibility: URL encoding,
+  `URLSearchParams`, paginação, retry, labels, `status` e `alert`;
+- gates: suíte Python e frontend, compileall, typecheck, lint, production build
+  e `git diff --check`.
+
+Falhas ambientais são separadas de produto: o teste legado de multiprocessing
+pode receber `WinError 5` em named pipes no Windows restrito; Vite pode receber
+`spawn EPERM` ao iniciar workers no mesmo tipo de sandbox. Reruns fora dessas
+restrições comprovam independência da vertical.
 
 ## Identidades operacionais
 
