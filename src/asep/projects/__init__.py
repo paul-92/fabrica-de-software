@@ -8,6 +8,9 @@ from asep.projects.history_models import (
     ProjectOperationalPlan,
     ProjectOperationalPlanOperation,
     ProjectOperationalPlanStep,
+    ProjectRepairResult,
+    ProjectValidationResult,
+    ProjectValidationStatus,
     ProjectSession,
 )
 from asep.projects.history_repository import ProjectExecutionRepository, ProjectSessionRepository
@@ -38,6 +41,9 @@ __all__ = [
     "ProjectOperationalPlan",
     "ProjectOperationalPlanOperation",
     "ProjectOperationalPlanStep",
+    "ProjectRepairResult",
+    "ProjectValidationResult",
+    "ProjectValidationStatus",
     "ProjectSession",
     "ProjectExecutionRepository",
     "ProjectSessionRepository",

@@ -73,6 +73,7 @@ class ProjectAIRuntimeExecutionService:
                  context_builder: SessionContextBuilder | None = None, *,
                  memory_service: ProjectSessionMemoryService | None = None,
                  operational_plan_builder: ProjectOperationalPlanBuilder | None = None,
+                 defer_completion: bool = False,
                  clock: Callable[[], datetime] | None = None,
                  id_generator: Callable[[], str] | None = None) -> None:
         self._projects = projects
@@ -83,6 +84,7 @@ class ProjectAIRuntimeExecutionService:
         self._context_builder = context_builder or SessionContextBuilder(executions)
         self._memory = memory_service
         self._operational_plan_builder = operational_plan_builder
+        self._defer_completion = defer_completion
         self._clock = clock or (lambda: datetime.now(UTC))
         self._id_generator = id_generator or (lambda: str(uuid4()))
         self._locks_guard = Lock()
@@ -177,6 +179,21 @@ class ProjectAIRuntimeExecutionService:
 
     def _persist_success(self, execution: ProjectExecution, result: AIRuntimeResult,
                          changes: tuple[WorkspaceChange, ...]) -> ProjectAIRuntimeExecutionResult:
+        if self._defer_completion:
+            pending_validation = ProjectExecution.model_validate({
+                **execution.model_dump(),
+                "output": result.output,
+                "model": result.identity.model_id,
+                "usage": result.usage,
+                "changes": changes,
+            })
+            self._executions.update(pending_validation)
+            return ProjectAIRuntimeExecutionResult(
+                runtime_result=result,
+                changes=changes,
+                execution_mode=execution.execution_mode,
+                execution=pending_validation,
+            )
         completed = ProjectExecution.model_validate({**execution.model_dump(), **{
             "status": ProjectExecutionStatus.SUCCEEDED, "output": result.output,
             "model": result.identity.model_id, "usage": result.usage,

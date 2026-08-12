@@ -51,6 +51,18 @@ from asep.application.project_engineering_execution import (
     ProjectEngineeringExecutionService,
     ProjectRuntimeExecutionCapability,
 )
+from asep.application.project_engineering_quality import (
+    ProjectQualityGateCapability,
+    ProjectQualityGateService,
+)
+from asep.application.project_engineering_repair import (
+    ProjectRepairCapability,
+    ProjectRepairService,
+)
+from asep.application.project_engineering_validation import (
+    ProjectValidationCapability,
+    ProjectValidationService,
+)
 from asep.application.project_sessions import ProjectSessionService
 from asep.application.session_context import (
     ContextCompactor,
@@ -126,6 +138,12 @@ __all__ = [
     "DeterministicProjectOperationalPlanBuilder",
     "ProjectEngineeringExecutionService",
     "ProjectRuntimeExecutionCapability",
+    "ProjectQualityGateCapability",
+    "ProjectQualityGateService",
+    "ProjectRepairCapability",
+    "ProjectRepairService",
+    "ProjectValidationCapability",
+    "ProjectValidationService",
     "ProjectSessionService",
     "ContextCompactor",
     "SessionContextBuilder",

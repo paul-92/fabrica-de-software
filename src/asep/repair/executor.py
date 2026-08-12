@@ -27,9 +27,14 @@ class ControlledRepairExecutor:
         self,
         tool_executor: ToolExecutor,
         workspace: Path,
+        *,
+        workflow_execution_id: str = "repair",
+        execution_prefix: str = "repair",
     ) -> None:
         self._tool_executor = tool_executor
         self._workspace = workspace
+        self._workflow_execution_id = workflow_execution_id
+        self._execution_prefix = execution_prefix
         self._execution_number = 0
 
     def execute(
@@ -37,7 +42,7 @@ class ControlledRepairExecutor:
         plan: RepairPlan,
     ) -> RepairResult:
         self._execution_number += 1
-        execution_prefix = f"repair-{self._execution_number}"
+        execution_prefix = f"{self._execution_prefix}-{self._execution_number}"
         messages: list[str] = []
 
         for index, change in enumerate(
@@ -63,7 +68,7 @@ class ControlledRepairExecutor:
                         metadata={
                             "reason": change.reason,
                         },
-                        workflow_execution_id="repair",
+                        workflow_execution_id=self._workflow_execution_id,
                     )
                 )
             except Exception as exc:
@@ -99,7 +104,7 @@ class ControlledRepairExecutor:
                     workspace=self._workspace,
                     payload={"paths": list(plan.test_paths)},
                     metadata={"repair": True},
-                    workflow_execution_id="repair",
+                    workflow_execution_id=self._workflow_execution_id,
                 )
             )
         except Exception as exc:

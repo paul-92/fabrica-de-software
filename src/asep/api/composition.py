@@ -36,6 +36,9 @@ from asep.application import (
     BrandingAdministrationService,
     DeterministicProjectOperationalPlanBuilder,
     ProjectEngineeringExecutionService,
+    ProjectQualityGateService,
+    ProjectRepairService,
+    ProjectValidationService,
     create_intelligent_engineering_application_service,
 )
 from asep.ai_planning import (
@@ -56,12 +59,19 @@ from asep.orchestrator import (
     Orchestrator,
     create_sequential_operational_composition,
 )
-from asep.repair import ControlledRepairExecutor
+from asep.quality.engine import QualityGateEngine
+from asep.quality_results import QualityGateResultRepository
+from asep.repair import (
+    ControlledRepairExecutor,
+    DeterministicRepairPlanner,
+    PytestFailureAnalyzer,
+)
 from asep.repositories import RepositoryBundle, RepositoryFactory
 from asep.timeline import TimelineRecorder
 from asep.tools import (
     InMemoryToolRegistry,
     RunTestsTool,
+    ToolExecutionPolicy,
     ToolExecutionService,
     WriteFileTool,
 )
@@ -90,6 +100,7 @@ class TrustedBrandingAdministrationComposition:
 class ProjectEngineeringOperationalComposition:
     app: FastAPI
     project_engineering_execution: ProjectEngineeringExecutionService
+    quality_gate_results: QualityGateResultRepository
 
 
 @dataclass(frozen=True, slots=True)
@@ -174,16 +185,39 @@ def _create_project_application_services(
             if include_engineering_execution
             else None
         ),
+        defer_completion=include_engineering_execution,
     )
+    engineering_execution = None
+    if include_engineering_execution:
+        tools_registry = InMemoryToolRegistry()
+        for tool in (WriteFileTool(), RunTestsTool()):
+            tools_registry.register(tool)
+        tools = ToolExecutionService(
+            tools_registry,
+            timeline=TimelineRecorder(repositories.timeline_repository),
+            policy=ToolExecutionPolicy(fail_fast=False),
+        )
+        engineering_execution = ProjectEngineeringExecutionService(
+            runtime_execution,
+            project_service,
+            repositories.project_execution_repository,
+            memory,
+            ProjectValidationService(tools),
+            ProjectRepairService(
+                PytestFailureAnalyzer(),
+                DeterministicRepairPlanner(),
+                tools,
+            ),
+            ProjectQualityGateService(
+                QualityGateEngine(),
+                repositories.quality_gate_result_repository,
+            ),
+        )
     return _ProjectApplicationServices(
         projects=project_service,
         runtime_connection=runtime_connection,
         runtime_execution=runtime_execution,
-        engineering_execution=(
-            ProjectEngineeringExecutionService(runtime_execution)
-            if include_engineering_execution
-            else None
-        ),
+        engineering_execution=engineering_execution,
         sessions=sessions,
         memory=memory,
         memory_search=SessionMemorySearchService(
@@ -301,6 +335,7 @@ def create_project_engineering_operational_composition(
             project_services=project_services,
         ),
         project_engineering_execution=engineering,
+        quality_gate_results=repositories.quality_gate_result_repository,
     )
 
 

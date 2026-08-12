@@ -27,6 +27,13 @@ class FixtureRuntime:
         workspace = request.workspace
         assert workspace is not None
         (workspace / "health.py").write_text("STATUS = 'ok'\n", encoding="utf-8")
+        (workspace / "tests").mkdir(exist_ok=True)
+        (workspace / "tests" / "test_health.py").write_text(
+            "from health import STATUS\n\n"
+            "def test_health():\n"
+            "    assert STATUS == 'ok'\n",
+            encoding="utf-8",
+        )
         return AIRuntimeResult(output="done", identity=self.identity)
 
 
@@ -97,6 +104,10 @@ def test_composition_is_frozen_and_shares_http_project_history_and_memory(
     )
     assert runs.status_code == 200
     assert runs.json()["items"] == []
+    stored_gate = composition.quality_gate_results.list_by_run(
+        result.execution.execution_id
+    )
+    assert stored_gate == (result.execution.quality_gate,)
     assert not any(
         path.startswith("/api/v1/sequential-projects")
         for path in composition.app.openapi()["paths"]
@@ -114,7 +125,7 @@ def test_operational_compositions_are_isolated(tmp_path: Path) -> None:
     second_client = TestClient(second.app)
     project_id, session_id = create_project_and_session(first_client, tmp_path)
 
-    first.project_engineering_execution.execute(
+    completed = first.project_engineering_execution.execute(
         ProjectAIRuntimeExecutionRequest(
             project_id=project_id,
             session_id=session_id,
@@ -126,4 +137,9 @@ def test_operational_compositions_are_isolated(tmp_path: Path) -> None:
 
     assert first_client.get("/api/v1/projects").json()["items"]
     assert second_client.get("/api/v1/projects").json()["items"] == []
-
+    assert first.quality_gate_results.list_by_run(
+        completed.execution.execution_id
+    )
+    assert second.quality_gate_results.list_by_run(
+        completed.execution.execution_id
+    ) == ()

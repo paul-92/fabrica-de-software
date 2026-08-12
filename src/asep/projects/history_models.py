@@ -6,6 +6,8 @@ from enum import StrEnum
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from asep.ai_runtime import AIRuntimeExecutionMode, AIRuntimeUsage
+from asep.quality_results import StoredQualityGateResult
+from asep.repair import RepairResult
 from asep.workspace_changes import WorkspaceChange
 
 
@@ -73,6 +75,60 @@ class ProjectOperationalPlan(BaseModel):
         return self
 
 
+class ProjectValidationStatus(StrEnum):
+    PASSED = "passed"
+    FAILED = "failed"
+
+
+class ProjectValidationResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    execution_id: str
+    sequence: int = Field(ge=1)
+    command: tuple[str, ...] = Field(min_length=1)
+    exit_code: int
+    status: ProjectValidationStatus
+    output: str
+    completed_at: datetime
+
+    @field_validator("execution_id")
+    @classmethod
+    def validation_execution_id_not_blank(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("validation execution_id must not be blank")
+        return normalized
+
+    @field_validator("command")
+    @classmethod
+    def command_entries_not_blank(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        if any(not item.strip() for item in value):
+            raise ValueError("validation command entries must not be blank")
+        return value
+
+    @field_validator("completed_at")
+    @classmethod
+    def validation_timestamp_is_aware(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("validation timestamp must be timezone-aware")
+        return value
+
+
+class ProjectRepairResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    execution_id: str
+    result: RepairResult
+
+    @field_validator("execution_id")
+    @classmethod
+    def repair_execution_id_not_blank(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("repair execution_id must not be blank")
+        return normalized
+
+
 class ProjectSession(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -109,6 +165,9 @@ class ProjectExecution(BaseModel):
     execution_mode: AIRuntimeExecutionMode
     status: ProjectExecutionStatus
     operational_plan: ProjectOperationalPlan | None = None
+    validations: tuple[ProjectValidationResult, ...] = ()
+    repair: ProjectRepairResult | None = None
+    quality_gate: StoredQualityGateResult | None = None
     output: str | None = None
     model: str | None = None
     usage: AIRuntimeUsage | None = None
@@ -156,6 +215,18 @@ class ProjectExecution(BaseModel):
             and self.operational_plan.execution_id != self.execution_id
         ):
             raise ValueError("operational plan must belong to the execution")
+        if any(
+            validation.execution_id != self.execution_id
+            for validation in self.validations
+        ):
+            raise ValueError("validations must belong to the execution")
+        if self.repair is not None and self.repair.execution_id != self.execution_id:
+            raise ValueError("repair must belong to the execution")
+        if (
+            self.quality_gate is not None
+            and self.quality_gate.run_id != self.execution_id
+        ):
+            raise ValueError("quality gate must belong to the execution")
         return self
 
 
@@ -165,5 +236,8 @@ __all__ = [
     "ProjectOperationalPlan",
     "ProjectOperationalPlanOperation",
     "ProjectOperationalPlanStep",
+    "ProjectRepairResult",
+    "ProjectValidationResult",
+    "ProjectValidationStatus",
     "ProjectSession",
 ]
