@@ -4,9 +4,9 @@
 
 **Dono:** Engenharia ASEP
 
-**Versão:** 1.1
+**Versão:** 1.2
 
-**Status:** em andamento; Sprints 23.1–23.5 concluídas
+**Status:** em andamento; Sprints 23.1–23.6 concluídas
 
 ## Objetivo e fronteira
 
@@ -34,9 +34,66 @@ instância de cada dependência compartilhada.
   pública opt-in e explorador detalhado em `/quality`.
 - **23.5:** consultas avançadas e autorizadas de Session Memory, com paridade
   InMemory/SQLite, API pública paginada e busca operacional em `/knowledge`.
+- **23.6:** Runtime Branding canônico e persistente, projeção pública read-only,
+  consumo resiliente no App Shell e administração somente por composição
+  confiável, sem mutação HTTP.
 
-A Sprint 23.5 está formalmente encerrada. A Fase 23 continua em andamento e
+A Sprint 23.6 está formalmente encerrada. A Fase 23 continua em andamento e
 incrementos posteriores dependem de priorização explícita.
+
+## Runtime Branding — Sprint 23.6
+
+O branding institucional canônico contém somente `product_name`, `short_name`,
+`logo_url`, `workspace_label` e `footer_text`. `BrandingRepository` armazena um
+snapshot completo ou ausência de override, com implementações InMemory, File e
+SQLite selecionadas pela `RepositoryFactory`. O formato File é versionado e usa
+substituição atômica; SQLite usa uma linha singleton no banco compartilhado.
+
+`BrandingQueryService` resolve o override completo ou
+`DEFAULT_BRANDING_SETTINGS`, sem merge parcial e sem persistir defaults. A
+projeção pública é:
+
+```text
+GET /api/v1/branding
+```
+
+O adapter HTTP conhece somente Application e expõe os cinco campos
+institucionais. Não há POST, PUT, PATCH ou DELETE de branding.
+
+No frontend, o `BrandConfig` de deployment continua sendo renderizado no HTML
+inicial. Após hidratação, um único owner no `AppShell` consulta o endpoint pelo
+service/API client e substitui somente identidade institucional. Loading, erro
+e retry preservam o fallback build-time; token monotônico impede resposta
+antiga. Favicon, metadata, `defaultTheme`, cores e a preferência `asep-theme`
+continuam fora do contrato runtime.
+
+`BrandingAdministrationService` executa substituição completa validada pelo
+modelo canônico. `create_trusted_branding_administration_composition()` entrega
+ao host o `app` e o command service, sem colocá-lo em `app.state` ou expô-lo por
+HTTP. Query e administração recebem exatamente
+`repositories.branding_repository` do mesmo `RepositoryBundle`; composições
+independentes permanecem isoladas.
+
+### Decisão de segurança
+
+A mutação HTTP e a UI administrativa ficam **adiadas** até existir uma
+fronteira real de autenticação e autorização. A Sprint 23.6 não inventa usuário,
+role, RBAC ou permissão. CORS não é tratado como autenticação. Esse adiamento
+não é pendência para o fechamento da vertical read-only/trusted-host.
+
+Estado das slices:
+
+- 23.6A Architecture/Audit — concluída;
+- 23.6B Persistence — concluída;
+- 23.6C Public Read API — concluída;
+- 23.6D Runtime Frontend Consumption — concluída;
+- 23.6E Trusted Administration — concluída.
+
+Esta vertical poderá ser usada posteriormente na apostila para explicar
+Dependency Injection, Repository Pattern, Application Services, Composition
+Root, shared lifetime/identity, DTO versus Domain Model, fallback/resiliência,
+fronteiras read/write, segurança por não exposição e taxonomia de testes. A
+apostila não faz parte da Sprint 23.6.
 
 ## Advanced Knowledge Queries — Sprint 23.5
 

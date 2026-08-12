@@ -211,8 +211,8 @@ não alterou decisão arquitetural e não criou ADR.
 - [Fase 21 — Application/API Layer](phase-21/application-api-layer.md).
 - [Fase 22 — White-label Presentation Layer](phase-22/white-label-presentation-layer.md).
 - [Fase 23 — Projeções operacionais públicas](phase-23/operational-projections.md).
-  Inclui a vertical 23.5 de Advanced Knowledge Queries, contratos, segurança,
-  paginação e evidências de testes.
+  Inclui Advanced Knowledge Queries e Runtime Branding, seus contratos,
+  persistência, composição compartilhada, fronteiras de segurança e evidências.
 - [ADR-033 — fronteira da qualidade sequencial](adr/ADR-033-sequential-quality-boundary.md).
 
 - [Overview](project-analysis/Overview.md): arquitetura e API;

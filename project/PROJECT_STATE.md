@@ -23,8 +23,9 @@ Business Engineering e execução avançou por implementação e testes:
 - Fase 21 — Application/API Layer: blocos 21.1–21.4 concluídos.
 - Fase 22 — White-label Presentation Layer: concluída; gate frontend
   consolidado aprovado em 2026-08-11.
-- Fase 23 — Projeções operacionais públicas: em andamento; Sprints 23.1–23.5
-  concluídas, incluindo Advanced Knowledge Queries ponta a ponta.
+- Fase 23 — Projeções operacionais públicas: em andamento; Sprints 23.1–23.6
+  concluídas, incluindo Advanced Knowledge Queries e Runtime Branding ponta a
+  ponta.
   Em 2026-08-11, 11 testes focados do contrato Application/API de Agents
 passaram. A inspeção estática do frontend não encontrou imports para módulos
 Python internos.
@@ -68,6 +69,14 @@ as fronteiras documentadas nos ADRs existentes.
 
 A camada Presentation em Next.js consome somente contratos HTTP públicos
 versionados sob `/api/v1` e não importa módulos Python internos.
+
+Runtime Branding possui modelo canônico, defaults e repository compartilhado
+com backends Memory/File/SQLite. `BrandingQueryService` alimenta
+`GET /api/v1/branding`; o App Shell preserva o branding build-time durante
+loading/erro e aplica somente a identidade institucional após hidratação. A
+administração confiável é um Application service entregue diretamente ao host
+por composição tipada e compartilha a mesma instância do repository com a
+query. Não existe mutação HTTP nem UI administrativa.
 
 A vertical de qualidade sequencial preserva `ExecutionState` como fonte da
 verdade, registra resultados estruturados em repositories memory/file/SQLite e
@@ -117,6 +126,12 @@ finais e eventuais limitações ambientais estão registrados na documentação 
 Fase 23. A Fase 23 permanece em andamento.
 O run sem desmarcação teve somente o `WinError 5` já documentado.
 
+Em 2026-08-12, a vertical 23.6 foi concluída: 23.6A–23.6E estão encerradas. O
+gate focado final validou modelos/repositories, Application query/admin, GET,
+composição compartilhada e frontend runtime; typecheck, lint, build estático,
+compileall e diff check foram aprovados. Auth/Authz, mutação HTTP e UI
+administrativa foram explicitamente adiados e não bloqueiam esse fechamento.
+
 ## Limitações e pendências
 
 - workflow e runtime permanecem síncronos;
@@ -132,6 +147,8 @@ O run sem desmarcação teve somente o `WinError 5` já documentado.
 - publicação, CI remoto, scanner histórico e árvore limpa são gates
   operacionais separados;
 - revisão humana desta atualização documental está pendente.
+- mutação HTTP e UI administrativa de branding dependem de uma futura fronteira
+  real de autenticação/autorização; nenhum usuário ou RBAC foi presumido.
 
 ## Decisões essenciais
 

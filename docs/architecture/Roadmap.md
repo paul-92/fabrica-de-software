@@ -1,6 +1,6 @@
 # Roadmap arquitetural
 
-**Dono:** Engenharia ASEP | **Versão:** 1.8 | **Status:** atualizado até a Sprint 23.5
+**Dono:** Engenharia ASEP | **Versão:** 1.9 | **Status:** atualizado até a Sprint 23.6
 
 O roadmap registra intenção, não compromisso nem comportamento implementado.
 Mudanças de contrato exigem decisão arquitetural e testes.
@@ -203,9 +203,16 @@ com shared repository identity, busca textual e por kind, ordenação total,
 keyset pagination, autorização Project → Session na Application, endpoint
 aditivo `/memory/search` e interface paginada em `/knowledge`.
 
+A Sprint 23.6 entregou Runtime Branding: modelo institucional canônico,
+persistência Memory/File/SQLite, `BrandingQueryService`, leitura pública em
+`GET /api/v1/branding`, fallback build-time com consumo runtime no App Shell e
+`BrandingAdministrationService` disponível somente por composição confiável.
+Mutação HTTP e UI administrativa permanecem adiadas até existir autenticação e
+autorização reais; não são requisitos para o fechamento da 23.6.
+
 `Run`, `SequentialExecution` e `ProjectExecution` permanecem agregados
 distintos. Migração de YAML histórico, integração com Intelligent
-Orchestration e incrementos posteriores à 23.5 permanecem não priorizados. Consulte a
+Orchestration e incrementos posteriores à 23.6 permanecem não priorizados. Consulte a
 [documentação da Fase 23](../phase-23/operational-projections.md).
 
 ## Pré-condições arquiteturais
