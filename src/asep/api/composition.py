@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from pathlib import Path
 
 from asep.ai_runtime import (
+    AIRuntimeRegistry,
     CodexAIRuntime,
     CodexAIRuntimeConfig,
     CodexAIRuntimeDiagnostics,
@@ -33,6 +34,8 @@ from asep.application import (
     SessionMemorySearchService,
     BrandingQueryService,
     BrandingAdministrationService,
+    DeterministicProjectOperationalPlanBuilder,
+    ProjectEngineeringExecutionService,
     create_intelligent_engineering_application_service,
 )
 from asep.ai_planning import (
@@ -83,6 +86,24 @@ class TrustedBrandingAdministrationComposition:
     branding_administration: BrandingAdministrationService
 
 
+@dataclass(frozen=True, slots=True)
+class ProjectEngineeringOperationalComposition:
+    app: FastAPI
+    project_engineering_execution: ProjectEngineeringExecutionService
+
+
+@dataclass(frozen=True, slots=True)
+class _ProjectApplicationServices:
+    projects: ProjectService
+    runtime_connection: AIRuntimeConnectionService
+    runtime_execution: ProjectAIRuntimeExecutionService
+    engineering_execution: ProjectEngineeringExecutionService | None
+    sessions: ProjectSessionService
+    memory: ProjectSessionMemoryService
+    memory_search: SessionMemorySearchService
+    workspace: ProjectWorkspaceService
+
+
 def _create_intelligent_engineering_service(
     settings: ApplicationSettings,
     repositories: RepositoryBundle,
@@ -113,12 +134,73 @@ def _create_intelligent_engineering_service(
     )
 
 
+def _create_project_application_services(
+    repositories: RepositoryBundle,
+    *,
+    runtime_registry: AIRuntimeRegistry | None = None,
+    include_engineering_execution: bool = False,
+) -> _ProjectApplicationServices:
+    project_service = ProjectService(repositories.project_repository)
+    runtime_connection = AIRuntimeConnectionService(
+        (
+            CodexAIRuntimeDiagnostics(
+                CodexDiagnosticsConfig(working_directory=Path.cwd())
+            ),
+        )
+    )
+    registry = runtime_registry or InMemoryAIRuntimeRegistry()
+    if runtime_registry is None:
+        registry.register(
+            CodexAIRuntime(CodexAIRuntimeConfig(workspace=Path.cwd()))
+        )
+    sessions = ProjectSessionService(
+        project_service,
+        repositories.project_session_repository,
+        repositories.project_execution_repository,
+    )
+    memory = ProjectSessionMemoryService(
+        project_service,
+        sessions,
+        repositories.session_memory_repository,
+    )
+    runtime_execution = ProjectAIRuntimeExecutionService(
+        project_service,
+        registry,
+        sessions,
+        repositories.project_execution_repository,
+        memory_service=memory,
+        operational_plan_builder=(
+            DeterministicProjectOperationalPlanBuilder()
+            if include_engineering_execution
+            else None
+        ),
+    )
+    return _ProjectApplicationServices(
+        projects=project_service,
+        runtime_connection=runtime_connection,
+        runtime_execution=runtime_execution,
+        engineering_execution=(
+            ProjectEngineeringExecutionService(runtime_execution)
+            if include_engineering_execution
+            else None
+        ),
+        sessions=sessions,
+        memory=memory,
+        memory_search=SessionMemorySearchService(
+            sessions,
+            repositories.session_memory_query_source,
+        ),
+        workspace=ProjectWorkspaceService(project_service),
+    )
+
+
 def _create_configured_app(
     settings: ApplicationSettings,
     *,
     agent_runtime_projection_service: AgentRuntimeProjectionService | None = None,
     sequential_quality_gate_service: SequentialQualityGateQueryService | None = None,
     repositories: RepositoryBundle | None = None,
+    project_services: _ProjectApplicationServices | None = None,
 ) -> FastAPI:
     repositories = repositories or RepositoryFactory(settings).create()
     query_service = RunQueryService(
@@ -129,39 +211,8 @@ def _create_configured_app(
     agent_catalog_service = AgentCatalogService(
         DeclarativeAgentCatalogSource(settings.agent_catalog_directory)
     )
-    project_service = ProjectService(repositories.project_repository)
-    ai_runtime_connection_service = AIRuntimeConnectionService(
-        (
-            CodexAIRuntimeDiagnostics(
-                CodexDiagnosticsConfig(working_directory=Path.cwd())
-            ),
-        )
-    )
-    runtime_registry = InMemoryAIRuntimeRegistry()
-    runtime_registry.register(
-        CodexAIRuntime(CodexAIRuntimeConfig(workspace=Path.cwd()))
-    )
-    project_session_service = ProjectSessionService(
-        project_service,
-        repositories.project_session_repository,
-        repositories.project_execution_repository,
-    )
-    project_memory_service = ProjectSessionMemoryService(
-        project_service,
-        project_session_service,
-        repositories.session_memory_repository,
-    )
-    session_memory_search_service = SessionMemorySearchService(
-        project_session_service,
-        repositories.session_memory_query_source,
-    )
-    project_workspace_service = ProjectWorkspaceService(project_service)
-    project_runtime_execution = ProjectAIRuntimeExecutionService(
-        project_service,
-        runtime_registry,
-        project_session_service,
-        repositories.project_execution_repository,
-        memory_service=project_memory_service,
+    project_services = project_services or _create_project_application_services(
+        repositories
     )
     intelligent_engineering_service = _create_intelligent_engineering_service(
         settings,
@@ -175,16 +226,16 @@ def _create_configured_app(
         metrics_service,
         intelligent_engineering_service=intelligent_engineering_service,
         cors_origins=settings.cors_origins,
-        project_service=project_service,
-        ai_runtime_connection_service=ai_runtime_connection_service,
-        project_ai_runtime_execution_service=project_runtime_execution,
-        project_session_service=project_session_service,
-        project_session_memory_service=project_memory_service,
-        project_workspace_service=project_workspace_service,
+        project_service=project_services.projects,
+        ai_runtime_connection_service=project_services.runtime_connection,
+        project_ai_runtime_execution_service=project_services.runtime_execution,
+        project_session_service=project_services.sessions,
+        project_session_memory_service=project_services.memory,
+        project_workspace_service=project_services.workspace,
         agent_catalog_service=agent_catalog_service,
         agent_runtime_projection_service=agent_runtime_projection_service,
         sequential_quality_gate_service=sequential_quality_gate_service,
-        session_memory_search_service=session_memory_search_service,
+        session_memory_search_service=project_services.memory_search,
         branding_query_service=branding_query_service,
     )
 
@@ -228,6 +279,31 @@ def create_default_operational_composition(
     )
 
 
+def create_project_engineering_operational_composition(
+    repository_settings: ApplicationSettings | None = None,
+    *,
+    runtime_registry: AIRuntimeRegistry | None = None,
+) -> ProjectEngineeringOperationalComposition:
+    settings = repository_settings or Configuration.load()
+    repositories = RepositoryFactory(settings).create()
+    project_services = _create_project_application_services(
+        repositories,
+        runtime_registry=runtime_registry,
+        include_engineering_execution=True,
+    )
+    engineering = project_services.engineering_execution
+    if engineering is None:  # pragma: no cover - composition invariant
+        raise RuntimeError("project engineering service was not composed")
+    return ProjectEngineeringOperationalComposition(
+        app=_create_configured_app(
+            settings,
+            repositories=repositories,
+            project_services=project_services,
+        ),
+        project_engineering_execution=engineering,
+    )
+
+
 def create_sequential_operational_api_composition(
     repository_settings: ApplicationSettings | None = None,
     *,
@@ -253,10 +329,12 @@ def create_sequential_operational_api_composition(
 
 __all__ = [
     "OperationalComposition",
+    "ProjectEngineeringOperationalComposition",
     "SequentialOperationalApiComposition",
     "TrustedBrandingAdministrationComposition",
     "create_default_app",
     "create_default_operational_composition",
+    "create_project_engineering_operational_composition",
     "create_trusted_branding_administration_composition",
     "create_sequential_operational_api_composition",
 ]

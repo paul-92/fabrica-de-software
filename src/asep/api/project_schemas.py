@@ -241,7 +241,12 @@ class ProjectExecutionResponse(ProjectHttpSchema):
 
     @classmethod
     def from_domain(cls, execution: ProjectExecution) -> "ProjectExecutionResponse":
-        return cls.model_validate(execution.model_dump(mode="json"))
+        return cls.model_validate(
+            execution.model_dump(
+                mode="json",
+                exclude={"operational_plan"},
+            )
+        )
 
 
 class ProjectExecutionListResponse(ProjectHttpSchema):

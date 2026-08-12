@@ -4,7 +4,7 @@ from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 import re
 from threading import Lock
-from typing import Any
+from typing import Any, Protocol
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -23,7 +23,16 @@ from asep.application.session_memory import (
     serialize_session_memory_context,
 )
 from asep.application.workspace_changes import WorkspaceChange, WorkspaceSnapshotter
-from asep.projects import ProjectExecution, ProjectExecutionRepository, ProjectExecutionStatus
+from asep.projects import (
+    ProjectExecution,
+    ProjectExecutionRepository,
+    ProjectExecutionStatus,
+    ProjectOperationalPlan,
+)
+
+
+class ProjectOperationalPlanBuilder(Protocol):
+    def build(self, execution: ProjectExecution) -> ProjectOperationalPlan: ...
 
 
 class ProjectAIRuntimeExecutionRequest(BaseModel):
@@ -63,6 +72,7 @@ class ProjectAIRuntimeExecutionService:
                  snapshotter: WorkspaceSnapshotter | None = None,
                  context_builder: SessionContextBuilder | None = None, *,
                  memory_service: ProjectSessionMemoryService | None = None,
+                 operational_plan_builder: ProjectOperationalPlanBuilder | None = None,
                  clock: Callable[[], datetime] | None = None,
                  id_generator: Callable[[], str] | None = None) -> None:
         self._projects = projects
@@ -72,6 +82,7 @@ class ProjectAIRuntimeExecutionService:
         self._snapshotter = snapshotter or WorkspaceSnapshotter()
         self._context_builder = context_builder or SessionContextBuilder(executions)
         self._memory = memory_service
+        self._operational_plan_builder = operational_plan_builder
         self._clock = clock or (lambda: datetime.now(UTC))
         self._id_generator = id_generator or (lambda: str(uuid4()))
         self._locks_guard = Lock()
@@ -102,6 +113,15 @@ class ProjectAIRuntimeExecutionService:
             memory_truncated=memory_context.truncated,
             created_at=self._clock(),
         )
+        if self._operational_plan_builder is not None:
+            execution = ProjectExecution.model_validate(
+                {
+                    **execution.model_dump(mode="python"),
+                    "operational_plan": self._operational_plan_builder.build(
+                        execution
+                    ),
+                }
+            )
         self._executions.create(execution)
         try:
             runtime = self._runtimes.get(request.runtime_id)
@@ -191,4 +211,9 @@ class ProjectAIRuntimeExecutionService:
             return self._write_locks.setdefault(project_id, Lock())
 
 
-__all__ = ["ProjectAIRuntimeExecutionRequest", "ProjectAIRuntimeExecutionResult", "ProjectAIRuntimeExecutionService"]
+__all__ = [
+    "ProjectAIRuntimeExecutionRequest",
+    "ProjectAIRuntimeExecutionResult",
+    "ProjectAIRuntimeExecutionService",
+    "ProjectOperationalPlanBuilder",
+]

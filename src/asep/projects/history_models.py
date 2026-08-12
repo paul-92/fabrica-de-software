@@ -16,6 +16,63 @@ class ProjectExecutionStatus(StrEnum):
     FAILED = "failed"
 
 
+class ProjectOperationalPlanOperation(StrEnum):
+    ANALYZE_CONTEXT = "analyze_context"
+    EXECUTE_WORKSPACE_TASK = "execute_workspace_task"
+    CAPTURE_WORKSPACE_CHANGES = "capture_workspace_changes"
+
+
+class ProjectOperationalPlanStep(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    step_id: str
+    operation: ProjectOperationalPlanOperation
+    description: str
+
+    @field_validator("step_id", "description")
+    @classmethod
+    def text_not_blank(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("operational plan fields must not be blank")
+        return normalized
+
+
+class ProjectOperationalPlan(BaseModel):
+    """Bounded facts describing the work intended by one execution."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    execution_id: str
+    steps: tuple[ProjectOperationalPlanStep, ...] = Field(
+        min_length=1,
+        max_length=5,
+    )
+    created_at: datetime
+
+    @field_validator("execution_id")
+    @classmethod
+    def execution_id_not_blank(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("operational plan execution_id must not be blank")
+        return normalized
+
+    @field_validator("created_at")
+    @classmethod
+    def plan_timestamp_is_aware(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("operational plan timestamp must be timezone-aware")
+        return value
+
+    @model_validator(mode="after")
+    def steps_are_unique(self) -> "ProjectOperationalPlan":
+        identifiers = tuple(step.step_id for step in self.steps)
+        if len(identifiers) != len(set(identifiers)):
+            raise ValueError("operational plan steps must be unique")
+        return self
+
+
 class ProjectSession(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -51,6 +108,7 @@ class ProjectExecution(BaseModel):
     instruction: str
     execution_mode: AIRuntimeExecutionMode
     status: ProjectExecutionStatus
+    operational_plan: ProjectOperationalPlan | None = None
     output: str | None = None
     model: str | None = None
     usage: AIRuntimeUsage | None = None
@@ -93,7 +151,19 @@ class ProjectExecution(BaseModel):
             raise ValueError("succeeded execution cannot have error_code")
         if self.status is ProjectExecutionStatus.FAILED and not self.error_code:
             raise ValueError("failed execution must have error_code")
+        if (
+            self.operational_plan is not None
+            and self.operational_plan.execution_id != self.execution_id
+        ):
+            raise ValueError("operational plan must belong to the execution")
         return self
 
 
-__all__ = ["ProjectExecution", "ProjectExecutionStatus", "ProjectSession"]
+__all__ = [
+    "ProjectExecution",
+    "ProjectExecutionStatus",
+    "ProjectOperationalPlan",
+    "ProjectOperationalPlanOperation",
+    "ProjectOperationalPlanStep",
+    "ProjectSession",
+]

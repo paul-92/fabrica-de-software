@@ -46,6 +46,11 @@ from asep.application.project_ai_runtime import (
     ProjectAIRuntimeExecutionResult,
     ProjectAIRuntimeExecutionService,
 )
+from asep.application.project_engineering_execution import (
+    DeterministicProjectOperationalPlanBuilder,
+    ProjectEngineeringExecutionService,
+    ProjectRuntimeExecutionCapability,
+)
 from asep.application.project_sessions import ProjectSessionService
 from asep.application.session_context import (
     ContextCompactor,
@@ -118,6 +123,9 @@ __all__ = [
     "ProjectAIRuntimeExecutionRequest",
     "ProjectAIRuntimeExecutionResult",
     "ProjectAIRuntimeExecutionService",
+    "DeterministicProjectOperationalPlanBuilder",
+    "ProjectEngineeringExecutionService",
+    "ProjectRuntimeExecutionCapability",
     "ProjectSessionService",
     "ContextCompactor",
     "SessionContextBuilder",
