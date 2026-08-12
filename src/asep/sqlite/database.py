@@ -107,6 +107,11 @@ class SQLiteDatabase:
         );
         CREATE INDEX IF NOT EXISTS idx_project_session_memory_session
             ON project_session_memory (session_id, created_at);
+        CREATE TABLE IF NOT EXISTS branding_settings (
+            id TEXT PRIMARY KEY,
+            version TEXT NOT NULL,
+            payload TEXT NOT NULL
+        );
     """
     _EXPECTED_COLUMNS = {
         "runs": {"id", "started_at", "payload"},
@@ -143,6 +148,7 @@ class SQLiteDatabase:
             "id", "project_id", "session_id", "kind", "normalized_content",
             "created_at", "payload"
         },
+        "branding_settings": {"id", "version", "payload"},
     }
 
     def __init__(self, path: Path) -> None:

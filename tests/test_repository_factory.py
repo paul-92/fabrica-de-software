@@ -39,6 +39,11 @@ from asep.quality_results import (
     QualityGateResultRepository,
     SQLiteQualityGateResultRepository,
 )
+from asep.branding import (
+    FileBrandingRepository,
+    InMemoryBrandingRepository,
+    SQLiteBrandingRepository,
+)
 
 NOW = datetime(2026, 7, 30, 12, 0, tzinfo=UTC)
 
@@ -71,6 +76,10 @@ def test_factory_creates_memory_repositories() -> None:
         InMemoryQualityGateResultRepository,
     )
     assert isinstance(
+        repositories.branding_repository,
+        InMemoryBrandingRepository,
+    )
+    assert isinstance(
         repositories.quality_gate_result_repository,
         QualityGateResultRepository,
     )
@@ -96,6 +105,7 @@ def test_factory_creates_file_repositories_at_stable_paths(
         repositories.quality_gate_result_repository,
         FileQualityGateResultRepository,
     )
+    assert isinstance(repositories.branding_repository, FileBrandingRepository)
     assert (tmp_path / "storage/quality-gate-results.json").exists()
     repositories.timeline_repository.append(
         TimelineEvent(
@@ -153,6 +163,7 @@ def test_factory_calls_return_isolated_repository_sets() -> None:
         first.quality_gate_result_repository
         is not second.quality_gate_result_repository
     )
+    assert first.branding_repository is not second.branding_repository
 
 
 def test_factory_creates_sqlite_repositories(tmp_path: Path) -> None:
@@ -173,6 +184,7 @@ def test_factory_creates_sqlite_repositories(tmp_path: Path) -> None:
         repositories.quality_gate_result_repository,
         SQLiteQualityGateResultRepository,
     )
+    assert isinstance(repositories.branding_repository, SQLiteBrandingRepository)
     assert database.exists()
 
 

@@ -51,6 +51,12 @@ from asep.quality_results import (
     QualityGateResultRepository,
     SQLiteQualityGateResultRepository,
 )
+from asep.branding import (
+    BrandingRepository,
+    FileBrandingRepository,
+    InMemoryBrandingRepository,
+    SQLiteBrandingRepository,
+)
 
 
 RepositorySettings = ApplicationSettings
@@ -78,6 +84,9 @@ class RepositoryBundle:
         default_factory=InMemorySessionMemoryRepository
     )
     session_memory_query_source: SessionMemoryQuerySource = field(init=False)
+    branding_repository: BrandingRepository = field(
+        default_factory=InMemoryBrandingRepository
+    )
 
     def __post_init__(self) -> None:
         if not isinstance(
@@ -124,6 +133,7 @@ class RepositoryFactory:
             timeline_repository=InMemoryTimelineRepository(),
             workflow_repository=InMemoryWorkflowRepository(),
             quality_gate_result_repository=InMemoryQualityGateResultRepository(),
+            branding_repository=InMemoryBrandingRepository(),
             memory_store=InMemoryMemoryStore(),
         )
 
@@ -143,6 +153,9 @@ class RepositoryFactory:
                 storage_directory
                 / self._configuration.quality_gate_results_filename
             ),
+            branding_repository=FileBrandingRepository(
+                storage_directory / self._configuration.branding_filename
+            ),
             memory_store=InMemoryMemoryStore(),
         )
 
@@ -155,6 +168,7 @@ class RepositoryFactory:
             quality_gate_result_repository=SQLiteQualityGateResultRepository(
                 database
             ),
+            branding_repository=SQLiteBrandingRepository(database),
             memory_store=SQLiteMemoryStore(database),
             project_repository=SQLiteProjectRepository(database),
             project_session_repository=SQLiteProjectSessionRepository(database),
