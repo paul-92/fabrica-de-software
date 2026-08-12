@@ -32,6 +32,7 @@ from asep.application import (
     SequentialQualityGateQueryService,
     SessionMemorySearchService,
     BrandingQueryService,
+    BrandingAdministrationService,
     create_intelligent_engineering_application_service,
 )
 from asep.ai_planning import (
@@ -76,6 +77,12 @@ class SequentialOperationalApiComposition:
     orchestrator: Orchestrator
 
 
+@dataclass(frozen=True, slots=True)
+class TrustedBrandingAdministrationComposition:
+    app: FastAPI
+    branding_administration: BrandingAdministrationService
+
+
 def _create_intelligent_engineering_service(
     settings: ApplicationSettings,
     repositories: RepositoryBundle,
@@ -111,8 +118,9 @@ def _create_configured_app(
     *,
     agent_runtime_projection_service: AgentRuntimeProjectionService | None = None,
     sequential_quality_gate_service: SequentialQualityGateQueryService | None = None,
+    repositories: RepositoryBundle | None = None,
 ) -> FastAPI:
-    repositories = RepositoryFactory(settings).create()
+    repositories = repositories or RepositoryFactory(settings).create()
     query_service = RunQueryService(
         repositories.run_repository,
         repositories.timeline_repository,
@@ -188,6 +196,20 @@ def create_default_app(
     return _create_configured_app(settings)
 
 
+def create_trusted_branding_administration_composition(
+    repository_settings: ApplicationSettings | None = None,
+) -> TrustedBrandingAdministrationComposition:
+    settings = repository_settings or Configuration.load()
+    repositories = RepositoryFactory(settings).create()
+    administration = BrandingAdministrationService(
+        repositories.branding_repository
+    )
+    return TrustedBrandingAdministrationComposition(
+        app=_create_configured_app(settings, repositories=repositories),
+        branding_administration=administration,
+    )
+
+
 def create_default_operational_composition(
     repository_settings: ApplicationSettings | None = None,
 ) -> OperationalComposition:
@@ -232,7 +254,9 @@ def create_sequential_operational_api_composition(
 __all__ = [
     "OperationalComposition",
     "SequentialOperationalApiComposition",
+    "TrustedBrandingAdministrationComposition",
     "create_default_app",
     "create_default_operational_composition",
+    "create_trusted_branding_administration_composition",
     "create_sequential_operational_api_composition",
 ]
