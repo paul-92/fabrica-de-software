@@ -16,6 +16,7 @@ from asep.application import (
     ProjectSessionMemoryService,
     ProjectWorkspaceService,
     SequentialQualityGateQueryService,
+    SessionMemorySearchService,
 )
 from asep.api.errors import register_exception_handlers
 from asep.api.agent_routes import (
@@ -54,6 +55,7 @@ def create_app(
     agent_catalog_service: AgentCatalogService | None = None,
     agent_runtime_projection_service: AgentRuntimeProjectionService | None = None,
     sequential_quality_gate_service: SequentialQualityGateQueryService | None = None,
+    session_memory_search_service: SessionMemorySearchService | None = None,
 ) -> FastAPI:
     app = FastAPI(
         title="ASEP Dashboard API",
@@ -105,6 +107,7 @@ def create_app(
                 project_session_service,
                 project_session_memory_service,
                 project_workspace_service,
+                session_memory_search_service,
             )
         )
     if ai_runtime_connection_service is not None:

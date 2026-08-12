@@ -68,6 +68,9 @@ from asep.application.session_memory import (
     serialize_session_memory_context,
 )
 from asep.application.session_memory_search import (
+    InvalidSessionMemoryCursorError,
+    SessionMemoryKind,
+    SessionMemoryOrder,
     SessionMemorySearchItem,
     SessionMemorySearchPage,
     SessionMemorySearchRequest,
@@ -128,6 +131,9 @@ __all__ = [
     "SessionMemorySearchPage",
     "SessionMemorySearchRequest",
     "SessionMemorySearchService",
+    "InvalidSessionMemoryCursorError",
+    "SessionMemoryKind",
+    "SessionMemoryOrder",
     "ProjectWorkspaceService", "WorkspaceBrowsingPolicy",
     "create_intelligent_engineering_application_service",
 ]

@@ -1,6 +1,7 @@
 from pathlib import Path
+from typing import Annotated
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Path as PathParameter, Query
 
 from asep.api.project_schemas import (
     CreateProjectRequest,
@@ -16,6 +17,7 @@ from asep.api.project_schemas import (
     CreateSessionMemoryRequest,
     SessionMemoryListResponse,
     SessionMemoryResponse,
+    SessionMemorySearchResponse,
     WorkspaceDirectoryResponse,
     WorkspaceFileContentResponse,
 )
@@ -26,7 +28,16 @@ from asep.application import (
     ProjectSessionService,
     ProjectSessionMemoryService,
     ProjectWorkspaceService,
+    SessionMemoryKind,
+    SessionMemoryOrder,
+    SessionMemorySearchRequest,
+    SessionMemorySearchService,
 )
+from asep.api.schemas import ErrorResponse
+
+
+Identifier = Annotated[str, PathParameter(min_length=1, pattern=r".*\S.*")]
+SignificantText = Annotated[str, Query(min_length=1, pattern=r".*\S.*")]
 
 
 def create_projects_router(
@@ -35,6 +46,7 @@ def create_projects_router(
     session_service: ProjectSessionService | None = None,
     memory_service: ProjectSessionMemoryService | None = None,
     workspace_service: ProjectWorkspaceService | None = None,
+    memory_search_service: SessionMemorySearchService | None = None,
 ) -> APIRouter:
     router = APIRouter(prefix="/api/v1/projects", tags=["projects"])
 
@@ -166,5 +178,38 @@ def create_projects_router(
             return SessionMemoryResponse.from_domain(memory_service.add(
                 project_id, session_id, body.kind, body.content
             ))
+
+    if memory_search_service is not None:
+        @router.get(
+            "/{project_id}/sessions/{session_id}/memory/search",
+            response_model=SessionMemorySearchResponse,
+            responses={
+                400: {"model": ErrorResponse},
+                404: {"model": ErrorResponse},
+                422: {"model": ErrorResponse},
+                500: {"model": ErrorResponse},
+            },
+            summary="Search session memory",
+        )
+        def search_memory(
+            project_id: Identifier,
+            session_id: Identifier,
+            text: SignificantText | None = None,
+            kind: SessionMemoryKind | None = None,
+            order: SessionMemoryOrder = SessionMemoryOrder.NEWEST,
+            page_size: int = Query(default=25, ge=1, le=100),
+            cursor: SignificantText | None = None,
+        ) -> SessionMemorySearchResponse:
+            return SessionMemorySearchResponse.from_application(
+                memory_search_service.search(SessionMemorySearchRequest(
+                    project_id=project_id,
+                    session_id=session_id,
+                    text=text,
+                    kind=kind,
+                    order=order,
+                    page_size=page_size,
+                    cursor=cursor,
+                ))
+            )
 
     return router

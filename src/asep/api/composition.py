@@ -30,6 +30,7 @@ from asep.application import (
     AuthorizedSequentialProject,
     SequentialProjectResolver,
     SequentialQualityGateQueryService,
+    SessionMemorySearchService,
     create_intelligent_engineering_application_service,
 )
 from asep.ai_planning import (
@@ -141,6 +142,10 @@ def _create_configured_app(
         project_session_service,
         repositories.session_memory_repository,
     )
+    session_memory_search_service = SessionMemorySearchService(
+        project_session_service,
+        repositories.session_memory_query_source,
+    )
     project_workspace_service = ProjectWorkspaceService(project_service)
     project_runtime_execution = ProjectAIRuntimeExecutionService(
         project_service,
@@ -167,6 +172,7 @@ def _create_configured_app(
         agent_catalog_service=agent_catalog_service,
         agent_runtime_projection_service=agent_runtime_projection_service,
         sequential_quality_gate_service=sequential_quality_gate_service,
+        session_memory_search_service=session_memory_search_service,
     )
 
 

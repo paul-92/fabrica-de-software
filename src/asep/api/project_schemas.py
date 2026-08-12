@@ -13,6 +13,7 @@ from asep.projects import (
     WorkspaceDirectory,
     WorkspaceFileContent,
 )
+from asep.application import SessionMemorySearchItem, SessionMemorySearchPage
 from asep.ai_runtime import AIRuntimeExecutionMode
 from asep.workspace_changes import WorkspaceChangeType
 
@@ -185,9 +186,34 @@ class SessionMemoryResponse(ProjectHttpSchema):
     def from_domain(cls, entry: SessionMemoryEntry) -> "SessionMemoryResponse":
         return cls.model_validate(entry.model_dump(mode="json"))
 
+    @classmethod
+    def from_application(
+        cls,
+        item: SessionMemorySearchItem,
+    ) -> "SessionMemoryResponse":
+        return cls.model_validate(item.model_dump(mode="json"))
+
 
 class SessionMemoryListResponse(ProjectHttpSchema):
     items: tuple[SessionMemoryResponse, ...]
+
+
+class SessionMemorySearchResponse(ProjectHttpSchema):
+    items: tuple[SessionMemoryResponse, ...]
+    next_cursor: str | None
+
+    @classmethod
+    def from_application(
+        cls,
+        page: SessionMemorySearchPage,
+    ) -> "SessionMemorySearchResponse":
+        return cls(
+            items=tuple(
+                SessionMemoryResponse.from_application(item)
+                for item in page.items
+            ),
+            next_cursor=page.next_cursor,
+        )
 
 
 class ProjectExecutionResponse(ProjectHttpSchema):

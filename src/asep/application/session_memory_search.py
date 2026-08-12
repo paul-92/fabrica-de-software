@@ -8,6 +8,7 @@ from asep.application.project_sessions import ProjectSessionService
 from asep.projects import (
     DEFAULT_SESSION_MEMORY_PAGE_SIZE,
     MAX_SESSION_MEMORY_PAGE_SIZE,
+    InvalidSessionMemoryCursorError,
     SessionMemoryEntry,
     SessionMemoryKind,
     SessionMemoryOrder,
@@ -96,6 +97,9 @@ class SessionMemorySearchService:
 
 
 __all__ = [
+    "InvalidSessionMemoryCursorError",
+    "SessionMemoryKind",
+    "SessionMemoryOrder",
     "SessionMemorySearchItem",
     "SessionMemorySearchPage",
     "SessionMemorySearchRequest",

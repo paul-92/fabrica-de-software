@@ -19,6 +19,7 @@ from asep.errors import (
     WorkspaceNotFoundError,
 )
 from asep.application import (
+    InvalidSessionMemoryCursorError,
     SequentialExecutionNotFoundError,
     SequentialExecutionOwnershipError,
     SequentialProjectIdentityMismatchError,
@@ -40,6 +41,17 @@ from asep.ai_runtime import (
 
 
 def register_exception_handlers(app: FastAPI) -> None:
+    @app.exception_handler(InvalidSessionMemoryCursorError)
+    async def invalid_session_memory_cursor_handler(
+        request: Request,
+        error: InvalidSessionMemoryCursorError,
+    ) -> JSONResponse:
+        return _error_response(
+            status_code=400,
+            code=error.code,
+            message="Session memory cursor is invalid.",
+        )
+
     @app.exception_handler(SequentialProjectNotFoundError)
     @app.exception_handler(SequentialProjectPathError)
     @app.exception_handler(SequentialProjectIdentityMismatchError)
