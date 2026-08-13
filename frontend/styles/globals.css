@@ -291,6 +291,17 @@ button:focus-visible {
 .runtime-guidance a { color: var(--color-brand-primary); }
 .runtime-result { border-top: 1px solid var(--color-border); margin-top: 24px; padding-top: 20px; }
 .runtime-result pre { background: var(--color-surface-elevated); border-radius: 12px; color: var(--color-text-primary); overflow-wrap: anywhere; padding: 16px; white-space: pre-wrap; }
+.engineering-quality { border-top: 1px solid var(--color-border); margin-top: var(--space-5); padding-top: var(--space-4); }
+.quality-summary { display: grid; gap: var(--space-3); grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.quality-summary div, .validation-result, .repair-flow, .quality-gate { background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: var(--space-3); }
+.quality-summary dt { color: var(--color-text-secondary); font-size: var(--font-size-small); }
+.quality-summary dd { font-size: 1.15rem; font-weight: var(--font-weight-semibold); margin: var(--space-1) 0 0; }
+.validation-group { margin-top: var(--space-4); }
+.validation-group > ol { display: grid; gap: var(--space-3); list-style: none; padding: 0; }
+.validation-result header { align-items: center; display: flex; gap: var(--space-3); justify-content: space-between; }
+.validation-result details { margin-top: var(--space-2); }
+.validation-result summary { color: var(--color-brand-primary); cursor: pointer; font-weight: var(--font-weight-semibold); }
+.quality-gate__criteria { display: grid; gap: var(--space-3); grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: var(--space-3); }
 
 @keyframes dashboard-pulse {
   to { opacity: .52; }
@@ -334,6 +345,7 @@ h1 { font-size: clamp(2.8rem, 7vw, 5.6rem); letter-spacing: -.07em; line-height:
 .signal__line { background: linear-gradient(90deg, var(--color-brand-primary), var(--color-brand-secondary)); border-radius: 999px; height: 8px; margin-top: 48px; width: 76%; }
 
 @media (max-width: 760px) {
+  .quality-summary, .quality-gate__criteria { grid-template-columns: 1fr; }
   .app-shell { display: block; }
   .sidebar {
     box-shadow: var(--shadow-elevated);
