@@ -2,11 +2,12 @@
 
 from asep.configuration.errors import ConfigurationValidationError
 from asep.configuration.loader import Configuration
-from asep.configuration.models import ApplicationSettings, StorageBackend
+from asep.configuration.models import ApplicationSettings, EnvironmentMode, StorageBackend
 
 __all__ = [
     "ApplicationSettings",
     "Configuration",
     "ConfigurationValidationError",
+    "EnvironmentMode",
     "StorageBackend",
 ]

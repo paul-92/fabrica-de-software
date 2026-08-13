@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+import os
 from pathlib import Path, PurePath
+import tempfile
 from urllib.parse import urlsplit
 
 from asep.configuration.errors import ConfigurationValidationError
@@ -26,10 +28,16 @@ class StorageBackend(StrEnum):
     SQLITE = "sqlite"
 
 
+class EnvironmentMode(StrEnum):
+    DEVELOPMENT = "development"
+    PRODUCTION = "production"
+
+
 @dataclass(frozen=True, slots=True)
 class ApplicationSettings:
     """Snapshot validado de toda configuração atualmente suportada."""
 
+    environment: EnvironmentMode | str = EnvironmentMode.DEVELOPMENT
     storage_backend: StorageBackend | str = StorageBackend.MEMORY
     storage_directory: Path | str | None = _DEFAULT_STORAGE_DIRECTORY
     runs_filename: str = "runs.json"
@@ -47,6 +55,12 @@ class ApplicationSettings:
     hosted_root: Path | str = _DEFAULT_STORAGE_DIRECTORY / "hosted-workspaces"
 
     def __post_init__(self) -> None:
+        try:
+            object.__setattr__(self, "environment", EnvironmentMode(self.environment))
+        except (TypeError, ValueError) as exc:
+            raise ConfigurationValidationError(
+                "environment deve ser development ou production."
+            ) from exc
         object.__setattr__(
             self,
             "storage_backend",
@@ -102,6 +116,72 @@ class ApplicationSettings:
             raise ConfigurationValidationError("legacy_admin_password deve conter ao menos 12 caracteres.")
         if self.access_cookie_secure and self.legacy_admin_password == "change-me-local-admin":
             raise ConfigurationValidationError("produção exige uma senha administrativa explícita.")
+        if self.environment is EnvironmentMode.PRODUCTION:
+            self._validate_production()
+
+    def _validate_production(self) -> None:
+        if self.storage_backend is not StorageBackend.SQLITE:
+            raise ConfigurationValidationError("production exige storage_backend sqlite.")
+        database = self.sqlite_database.expanduser()
+        hosted = self.hosted_root.expanduser()
+        if not database.is_absolute():
+            raise ConfigurationValidationError("production exige sqlite_database absoluto.")
+        if not hosted.is_absolute():
+            raise ConfigurationValidationError("production exige hosted_root absoluto.")
+        database = database.resolve()
+        hosted = hosted.resolve()
+        try:
+            database.relative_to(hosted)
+        except ValueError:
+            pass
+        else:
+            raise ConfigurationValidationError("sqlite_database deve ficar fora do hosted_root.")
+        temporary = Path(tempfile.gettempdir()).resolve()
+        try:
+            hosted.relative_to(temporary)
+        except ValueError:
+            pass
+        else:
+            raise ConfigurationValidationError(
+                "hosted_root de production não pode ficar em diretório temporário."
+            )
+        if not self.access_cookie_secure:
+            raise ConfigurationValidationError("production exige cookie Secure.")
+        email = self.legacy_admin_email.strip().casefold()
+        if not email or "@" not in email or email.startswith("@") or email.endswith("@"):
+            raise ConfigurationValidationError("production exige email administrativo válido.")
+        if self.legacy_admin_password == "change-me-local-admin":
+            raise ConfigurationValidationError(
+                "production exige senha administrativa forte e explícita."
+            )
+        if not self.cors_origins:
+            raise ConfigurationValidationError("production exige ao menos uma origem HTTPS.")
+        for origin in self.cors_origins:
+            parsed = urlsplit(origin)
+            if origin == "*" or parsed.scheme != "https":
+                raise ConfigurationValidationError(
+                    "production aceita somente origins HTTPS explícitas."
+                )
+            if (parsed.hostname or "").casefold() in {"localhost", "127.0.0.1", "::1"}:
+                raise ConfigurationValidationError("production não aceita origins locais.")
+        self._probe_directory(database.parent, "sqlite_database parent")
+        self._probe_directory(hosted, "hosted_root")
+        object.__setattr__(self, "sqlite_database", database)
+        object.__setattr__(self, "hosted_root", hosted)
+
+    @staticmethod
+    def _probe_directory(path: Path, field: str) -> None:
+        try:
+            path.mkdir(parents=True, exist_ok=True)
+            if not path.is_dir() or not os.access(path, os.R_OK | os.W_OK):
+                raise OSError("directory is not readable and writable")
+            descriptor, probe = tempfile.mkstemp(prefix=".asep-readiness-", dir=path)
+            os.close(descriptor)
+            Path(probe).unlink()
+        except OSError as exc:
+            raise ConfigurationValidationError(
+                f"{field} deve ser acessível para leitura e escrita."
+            ) from exc
 
     @staticmethod
     def _validate_backend(

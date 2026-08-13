@@ -12,6 +12,7 @@ class Configuration:
     """Carrega um snapshot imutável a partir de defaults e ambiente."""
 
     _ENVIRONMENT_FIELDS = {
+        "ASEP_ENVIRONMENT": "environment",
         "ASEP_STORAGE_BACKEND": "storage_backend",
         "ASEP_STORAGE_DIRECTORY": "storage_directory",
         "ASEP_RUNS_FILENAME": "runs_filename",

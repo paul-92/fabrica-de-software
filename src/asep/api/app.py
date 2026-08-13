@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from collections.abc import Callable
 
 from asep.application import (
     AgentCatalogService,
@@ -72,6 +73,7 @@ def create_app(
     access_cookie_secure: bool = False,
     ai_usage_service: AIUsageService | None = None,
     ai_quota_service: AIQuotaService | None = None,
+    readiness: Callable[[], bool] | None = None,
 ) -> FastAPI:
     app = FastAPI(
         title="ASEP Dashboard API",
@@ -95,7 +97,7 @@ def create_app(
     if access_service is not None:
         @app.middleware("http")
         async def require_private_access(request, call_next):
-            public = {"/api/v1/health", "/api/v1/access/login", "/api/v1/access/logout"}
+            public = {"/api/v1/health", "/api/v1/ready", "/api/v1/access/login", "/api/v1/access/logout"}
             if request.method != "OPTIONS" and request.url.path.startswith("/api/v1/") and request.url.path not in public:
                 try:
                     access_service.authenticate(request.cookies.get("asep_session"))
@@ -110,7 +112,7 @@ def create_app(
         allow_headers=["Accept", "Content-Type"],
     )
     register_exception_handlers(app)
-    app.include_router(create_health_router())
+    app.include_router(create_health_router(readiness))
     app.include_router(create_runs_router(run_query_service))
     app.include_router(create_metrics_router(metrics_service))
     if agent_catalog_service is not None:

@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Query
+from collections.abc import Callable
+from fastapi import APIRouter, Query, Response
 
 from asep.application import RunQueryService
 from asep.api.schemas import (
@@ -24,7 +25,7 @@ from asep.runs import RunStatus
 API_PREFIX = "/api/v1"
 
 
-def create_health_router() -> APIRouter:
+def create_health_router(readiness: Callable[[], bool] | None = None) -> APIRouter:
     router = APIRouter(prefix=API_PREFIX, tags=["health"])
 
     @router.get(
@@ -34,6 +35,13 @@ def create_health_router() -> APIRouter:
     )
     def health() -> HealthResponse:
         return HealthResponse(status="ok", api_version="v1")
+
+    @router.get("/ready", summary="Check API readiness")
+    def ready(response: Response) -> dict[str, str]:
+        healthy = readiness is None or readiness()
+        if not healthy:
+            response.status_code = 503
+        return {"status": "ready" if healthy else "unavailable"}
 
     return router
 

@@ -6,6 +6,8 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from fastapi import FastAPI
 from pathlib import Path
+import os
+import sqlite3
 
 from asep.ai_runtime import (
     AIRuntimeRegistry,
@@ -330,6 +332,23 @@ def _create_configured_app(
         repositories.branding_repository,
     )
     access_service = _bootstrap_access(settings, repositories)
+    def readiness() -> bool:
+        try:
+            if settings.storage_backend.value == "sqlite":
+                database_uri = settings.sqlite_database.as_uri() + "?mode=rw"
+                with sqlite3.connect(database_uri, uri=True) as connection:
+                    row = connection.execute(
+                        "SELECT value FROM schema_metadata WHERE key='schema_version'"
+                    ).fetchone()
+                    if row is None:
+                        return False
+            return (
+                settings.hosted_root.is_dir()
+                and os.access(settings.hosted_root, os.R_OK | os.W_OK)
+            )
+        except (OSError, sqlite3.Error):
+            return False
+
     return create_app(
         query_service,
         metrics_service,
@@ -353,6 +372,7 @@ def _create_configured_app(
         access_cookie_secure=settings.access_cookie_secure,
         ai_usage_service=project_services.usage,
         ai_quota_service=project_services.quotas,
+        readiness=readiness,
     )
 
 

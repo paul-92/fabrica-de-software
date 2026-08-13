@@ -196,5 +196,6 @@ def test_configuration_public_exports_are_intentional() -> None:
         "ApplicationSettings",
         "Configuration",
         "ConfigurationValidationError",
+        "EnvironmentMode",
         "StorageBackend",
     }
