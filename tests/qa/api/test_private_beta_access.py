@@ -127,7 +127,7 @@ def test_sqlite_legacy_project_migrates_with_explicit_ownership(tmp_path: Path):
     assert project.organization_id == "legacy-local"
     assert project.created_by_user_id == "legacy-local-admin"
     with sqlite3.connect(database) as connection:
-        assert connection.execute("SELECT value FROM schema_metadata WHERE key='schema_version'").fetchone()[0] == "3"
+        assert connection.execute("SELECT value FROM schema_metadata WHERE key='schema_version'").fetchone()[0] == "4"
 
 
 def test_secure_cookie_configuration_rejects_default_admin_password():

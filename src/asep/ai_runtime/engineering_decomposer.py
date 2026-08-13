@@ -30,6 +30,7 @@ class _ProviderDecomposition(BaseModel):
 
 
 class CodexEngineeringTaskDecomposer:
+    ai_backed = True
     """Consumes an AIRuntime without coupling Application to Codex internals."""
 
     def __init__(

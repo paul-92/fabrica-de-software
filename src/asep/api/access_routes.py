@@ -67,7 +67,7 @@ def create_access_router(service: AccessService, *, secure_cookie: bool) -> tupl
     @router.get("/users")
     def users(current: RequestPrincipal = Depends(principal)):
         try:
-            return {"items": [item.model_dump(mode="json") for item in service.list_users(current)]}
+            return {"items": [{**item.model_dump(mode="json"), "role": service.membership(current, item.user_id).role.value} for item in service.list_users(current)]}
         except AccessDeniedError as exc:
             raise HTTPException(status_code=403, detail="Administrator access required.") from exc
 

@@ -44,6 +44,15 @@ class SQLiteDatabase:
         CREATE INDEX IF NOT EXISTS idx_ai_usage_user ON ai_usage_ledger (organization_id, user_id, started_at);
         CREATE INDEX IF NOT EXISTS idx_ai_usage_project ON ai_usage_ledger (organization_id, project_id, started_at);
         CREATE INDEX IF NOT EXISTS idx_ai_usage_execution ON ai_usage_ledger (organization_id, execution_id, started_at);
+        CREATE TABLE IF NOT EXISTS ai_quotas (
+            organization_id TEXT NOT NULL, user_id TEXT NOT NULL, payload TEXT NOT NULL,
+            PRIMARY KEY (organization_id, user_id)
+        );
+        CREATE TABLE IF NOT EXISTS ai_quota_reservations (
+            id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, user_id TEXT NOT NULL,
+            period_started_at TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_ai_quota_reservations ON ai_quota_reservations (organization_id,user_id,period_started_at,status);
         CREATE TABLE IF NOT EXISTS runs (
             id TEXT PRIMARY KEY,
             started_at TEXT NOT NULL,
@@ -151,6 +160,8 @@ class SQLiteDatabase:
         "memberships": {"organization_id", "user_id", "role", "created_at", "payload"},
         "access_sessions": {"id", "user_id", "token_hash", "expires_at", "payload"},
         "ai_usage_ledger": {"id", "organization_id", "user_id", "project_id", "execution_id", "started_at", "payload"},
+        "ai_quotas": {"organization_id", "user_id", "payload"},
+        "ai_quota_reservations": {"id", "organization_id", "user_id", "period_started_at", "status", "created_at"},
         "runs": {"id", "started_at", "payload"},
         "timeline_events": {"id", "run_id", "timestamp", "payload"},
         "workflow_snapshots": {
@@ -221,7 +232,7 @@ class SQLiteDatabase:
             with self.connect() as connection:
                 self._migrate(connection)
                 connection.executescript(self._SCHEMA)
-                connection.execute("INSERT OR REPLACE INTO schema_metadata (key,value) VALUES ('schema_version','3')")
+                connection.execute("INSERT OR REPLACE INTO schema_metadata (key,value) VALUES ('schema_version','4')")
                 self._validate_schema(connection)
         except SQLiteConnectionError:
             raise

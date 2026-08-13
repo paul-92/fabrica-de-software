@@ -45,6 +45,8 @@ from asep.access import AccessDeniedError, AccessService
 from asep.api.access_routes import create_access_router
 from asep.ai_usage import AIUsageService
 from asep.api.ai_usage_routes import create_ai_usage_router
+from asep.ai_quotas import AIQuotaService
+from asep.api.ai_quota_routes import create_ai_quota_router
 
 
 def create_app(
@@ -69,6 +71,7 @@ def create_app(
     access_service: AccessService | None = None,
     access_cookie_secure: bool = False,
     ai_usage_service: AIUsageService | None = None,
+    ai_quota_service: AIQuotaService | None = None,
 ) -> FastAPI:
     app = FastAPI(
         title="ASEP Dashboard API",
@@ -103,7 +106,7 @@ def create_app(
         CORSMiddleware,
         allow_origins=list(cors_origins),
         allow_credentials=True,
-        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Accept", "Content-Type"],
     )
     register_exception_handlers(app)
@@ -141,6 +144,8 @@ def create_app(
         )
         if ai_usage_service is not None and principal_dependency is not None:
             app.include_router(create_ai_usage_router(ai_usage_service, project_service, principal_dependency))
+        if ai_quota_service is not None and principal_dependency is not None:
+            app.include_router(create_ai_quota_router(ai_quota_service, principal_dependency))
     if ai_runtime_connection_service is not None:
         app.include_router(
             create_ai_runtime_router(ai_runtime_connection_service)

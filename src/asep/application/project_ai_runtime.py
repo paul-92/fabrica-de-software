@@ -16,6 +16,7 @@ from asep._json_values import freeze_json
 from asep.access.models import RequestPrincipal
 from asep.access.models import LEGACY_ADMIN_USER_ID, LEGACY_ORGANIZATION_ID
 from asep.ai_usage import AIUsageOperation, AIUsageService, AIUsageStatus
+from asep.ai_quotas import AIQuotaService
 from asep.ai_runtime import (
     AIRuntimeExecutionMode,
     AIRuntimeIdentity,
@@ -52,6 +53,8 @@ class ProjectOperationalPlanBuilder(Protocol):
 
 
 class ProjectEngineeringPlanningCapability(Protocol):
+    @property
+    def ai_backed(self) -> bool: ...
     def analyze(self, workspace: Path) -> BoundedProjectAnalysis: ...
 
     def plan_from_analysis(
@@ -132,11 +135,16 @@ class ProjectAIRuntimeExecutionService:
         self._clock = clock or (lambda: datetime.now(UTC))
         self._id_generator = id_generator or (lambda: str(uuid4()))
         self._usage: AIUsageService | None = None
+        self._quotas: AIQuotaService | None = None
         self._locks_guard = Lock()
         self._write_locks: dict[str, Lock] = {}
 
     def with_usage_metering(self, service: AIUsageService) -> "ProjectAIRuntimeExecutionService":
         self._usage = service
+        return self
+
+    def with_quota_guard(self, service: AIQuotaService) -> "ProjectAIRuntimeExecutionService":
+        self._quotas = service
         return self
 
     def _invoke_runtime(self, runtime, runtime_request: AIRuntimeRequest,
@@ -146,6 +154,7 @@ class ProjectAIRuntimeExecutionService:
         started = self._clock()
         trusted_user = principal.user_id if principal else LEGACY_ADMIN_USER_ID
         trusted_org = principal.organization_id if principal else LEGACY_ORGANIZATION_ID
+        admission = self._quotas.admit(trusted_org, trusted_user) if self._quotas else None
         try:
             result = runtime.execute(runtime_request)
         except Exception:
@@ -155,6 +164,7 @@ class ProjectAIRuntimeExecutionService:
                     execution_id=execution.execution_id, runtime_id=runtime.identity.runtime_id,
                     provider=runtime.identity.runtime_id, model=runtime.identity.model_id,
                     operation=operation, started_at=started, status=AIUsageStatus.FAILED)
+            if admission is not None and self._usage is not None: self._quotas.reconcile(admission)
             raise
         if self._usage is not None:
             self._usage.record(organization_id=trusted_org, user_id=trusted_user,
@@ -163,6 +173,7 @@ class ProjectAIRuntimeExecutionService:
                 provider=str(result.metadata.get("provider", result.identity.runtime_id)),
                 model=result.identity.model_id, operation=operation, started_at=started,
                 status=AIUsageStatus.SUCCEEDED, result=result)
+        if admission is not None: self._quotas.reconcile(admission)
         return result
 
     def _record_ai_planning(self, execution: ProjectExecution, principal: RequestPrincipal | None, plan: ProjectOperationalPlan) -> None:
@@ -176,6 +187,24 @@ class ProjectAIRuntimeExecutionService:
             provider="planning-runtime", model=None, operation=AIUsageOperation.PLANNING,
             started_at=self._clock(), status=AIUsageStatus.SUCCEEDED,
         )
+
+    def _plan(self, execution, analysis, session_context, memory_context, principal):
+        admission = None
+        if self._quotas is not None and getattr(self._engineering_planning, "ai_backed", False):
+            admission = self._quotas.admit(execution.organization_id, execution.requested_by_user_id)
+        try:
+            plan = self._engineering_planning.plan_from_analysis(execution, analysis, session_context, memory_context)
+        except Exception:
+            if admission is not None:
+                self._usage.record(organization_id=execution.organization_id,user_id=execution.requested_by_user_id,
+                    project_id=execution.project_id,session_id=execution.session_id,execution_id=execution.execution_id,
+                    runtime_id="planning-runtime",provider="planning-runtime",model=None,operation=AIUsageOperation.PLANNING,
+                    started_at=self._clock(),status=AIUsageStatus.FAILED)
+                self._quotas.reconcile(admission)
+            raise
+        self._record_ai_planning(execution, principal, plan)
+        if admission is not None: self._quotas.reconcile(admission)
+        return plan
 
     def prepare(
         self, request: ProjectAIRuntimeExecutionRequest,
@@ -210,10 +239,7 @@ class ProjectAIRuntimeExecutionService:
             created_at=self._clock(),
         )
         analysis = self._engineering_planning.analyze(project.workspace_path)
-        plan = self._engineering_planning.plan_from_analysis(
-            execution, analysis, session_context, memory_context,
-        )
-        self._record_ai_planning(execution, request.principal, plan)
+        plan = self._plan(execution, analysis, session_context, memory_context, request.principal)
         after = self._snapshotter.capture(project.workspace_path)
         if self._snapshotter.changes(before, after):
             raise RuntimeError("planning mutated the workspace")
@@ -417,13 +443,7 @@ class ProjectAIRuntimeExecutionService:
                 bounded_analysis = self._engineering_planning.analyze(
                     project.workspace_path
                 )
-                plan = self._engineering_planning.plan_from_analysis(
-                    execution,
-                    bounded_analysis,
-                    session_context,
-                    memory_context,
-                )
-                self._record_ai_planning(execution, request.principal, plan)
+                plan = self._plan(execution, bounded_analysis, session_context, memory_context, request.principal)
                 execution = ProjectExecution.model_validate(
                     {**execution.model_dump(mode="python"), "operational_plan": plan}
                 )

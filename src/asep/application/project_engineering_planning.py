@@ -87,6 +87,7 @@ class EngineeringTaskDecomposer(Protocol):
 
 class DeterministicEngineeringTaskDecomposer:
     """Reference decomposition; it makes no semantic file-discovery claims."""
+    ai_backed = False
 
     def decompose(
         self, context: EngineeringPlanningContext
@@ -225,6 +226,10 @@ class ProjectEngineeringPlanningService:
         self._analyzer = analyzer
         self._decomposer = decomposer
         self._validator = validator or ProjectEngineeringPlanValidator()
+
+    @property
+    def ai_backed(self) -> bool:
+        return bool(getattr(self._decomposer, "ai_backed", False))
 
     def plan(
         self,

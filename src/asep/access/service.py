@@ -110,6 +110,13 @@ class AccessService:
         self._require_admin(principal)
         return self._repository.list_users(principal.organization_id)
 
+    def membership(self, principal: RequestPrincipal, user_id: str) -> Membership:
+        self._require_admin(principal)
+        item = self._repository.get_membership(principal.organization_id, user_id)
+        if item is None:
+            raise KeyError(user_id)
+        return item
+
     def set_status(self, principal: RequestPrincipal, user_id: str, status: UserStatus) -> User:
         self._require_admin(principal)
         user = self._repository.get_user(principal.organization_id, user_id)

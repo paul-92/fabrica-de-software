@@ -26,6 +26,7 @@ from asep.projects import (
 )
 from asep.ai_runtime import AIRuntimeIdentity, AIRuntimeUsage
 from asep.ai_usage import AIUsageOperation, AIUsageService, AIUsageStatus
+from asep.ai_quotas import AIQuotaService
 from asep.access.models import LEGACY_ADMIN_USER_ID, LEGACY_ORGANIZATION_ID
 
 
@@ -94,11 +95,12 @@ class AIBackedEngineeringImplementationProvider(Protocol):
 
 class MeteredEngineeringImplementationProvider:
     """Single metering boundary for AI-backed implementation providers."""
-    def __init__(self, provider: AIBackedEngineeringImplementationProvider, usage: AIUsageService) -> None:
-        self._provider, self._usage = provider, usage
+    def __init__(self, provider: AIBackedEngineeringImplementationProvider, usage: AIUsageService, quotas: AIQuotaService | None = None) -> None:
+        self._provider, self._usage, self._quotas = provider, usage, quotas
     def supports(self, step: ProjectOperationalPlanStep) -> bool: return self._provider.supports(step)
     def changes_for(self, context: "EngineeringImplementationContext") -> tuple[EngineeringFileChange, ...]:
         started = datetime.now(UTC)
+        admission=self._quotas.admit(context.organization_id,context.user_id) if self._quotas and not getattr(self._provider,"metered_by_runtime",False) else None
         try:
             result = self._provider.invoke_ai(context)
         except Exception as error:
@@ -109,6 +111,7 @@ class MeteredEngineeringImplementationProvider:
                 project_id=context.project_id,session_id=context.session_id,execution_id=context.execution_id,
                 runtime_id=identity.runtime_id,provider=identity.runtime_id,model=identity.model_id,
                 operation=AIUsageOperation.IMPLEMENTATION,started_at=started,status=AIUsageStatus.FAILED)
+            if admission is not None: self._quotas.reconcile(admission)
             raise
         if not result.already_metered:
             from asep.ai_runtime import AIRuntimeResult
@@ -118,6 +121,8 @@ class MeteredEngineeringImplementationProvider:
                 runtime_id=result.identity.runtime_id,provider=result.provider,model=result.identity.model_id,
                 operation=AIUsageOperation.IMPLEMENTATION,started_at=started,status=AIUsageStatus.SUCCEEDED,
                 result=normalized,provider_request_id=result.provider_request_id)
+        if admission is not None:
+            (self._quotas.release if result.already_metered else self._quotas.reconcile)(admission)
         return result.changes
 
 

@@ -99,6 +99,7 @@ from asep.access.models import (
 )
 from asep.projects import HostedWorkspaceManager
 from asep.ai_usage import AIUsageService
+from asep.ai_quotas import AIQuotaService
 from datetime import UTC, datetime
 
 
@@ -138,6 +139,7 @@ class _ProjectApplicationServices:
     memory_search: SessionMemorySearchService
     workspace: ProjectWorkspaceService
     usage: AIUsageService
+    quotas: AIQuotaService
 
 
 def _create_intelligent_engineering_service(
@@ -208,13 +210,15 @@ def _create_project_application_services(
         repositories.session_memory_repository,
     )
     usage = AIUsageService(repositories.ai_usage_repository)
+    assert repositories.ai_quota_repository is not None
+    quotas = AIQuotaService(repositories.ai_quota_repository, repositories.access_repository)
     runtime_execution = ProjectAIRuntimeExecutionService(
         project_service,
         registry,
         sessions,
         repositories.project_execution_repository,
         memory_service=memory,
-    ).with_usage_metering(usage)
+    ).with_usage_metering(usage).with_quota_guard(quotas)
     internal_execution = None
     engineering_tools = None
     if include_engineering_execution:
@@ -238,7 +242,7 @@ def _create_project_application_services(
                 policy=AgentExecutionPolicy(fail_fast=False),
             )
             effective_provider = (
-                MeteredEngineeringImplementationProvider(implementation_provider, usage)
+                MeteredEngineeringImplementationProvider(implementation_provider, usage, quotas)
                 if isinstance(implementation_provider, AIBackedEngineeringImplementationProvider)
                 else implementation_provider
             )
@@ -263,7 +267,7 @@ def _create_project_application_services(
         ),
         internal_execution=internal_execution,
         defer_completion=include_engineering_execution,
-    ).with_usage_metering(usage)
+    ).with_usage_metering(usage).with_quota_guard(quotas)
     engineering_execution = None
     if include_engineering_execution:
         assert engineering_tools is not None
@@ -294,7 +298,7 @@ def _create_project_application_services(
             sessions,
             repositories.session_memory_query_source,
         ),
-        workspace=ProjectWorkspaceService(project_service), usage=usage,
+        workspace=ProjectWorkspaceService(project_service), usage=usage, quotas=quotas,
     )
 
 
@@ -348,6 +352,7 @@ def _create_configured_app(
         access_service=access_service,
         access_cookie_secure=settings.access_cookie_secure,
         ai_usage_service=project_services.usage,
+        ai_quota_service=project_services.quotas,
     )
 
 

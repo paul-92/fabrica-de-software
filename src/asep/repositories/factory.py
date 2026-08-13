@@ -59,6 +59,7 @@ from asep.branding import (
 )
 from asep.access import AccessRepository, InMemoryAccessRepository, SQLiteAccessRepository
 from asep.ai_usage import AIUsageRepository, InMemoryAIUsageRepository, SQLiteAIUsageRepository
+from asep.ai_quotas import AIQuotaRepository, InMemoryAIQuotaRepository, SQLiteAIQuotaRepository
 
 
 RepositorySettings = ApplicationSettings
@@ -91,6 +92,7 @@ class RepositoryBundle:
     )
     access_repository: AccessRepository = field(default_factory=InMemoryAccessRepository)
     ai_usage_repository: AIUsageRepository = field(default_factory=InMemoryAIUsageRepository)
+    ai_quota_repository: AIQuotaRepository | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(
@@ -105,6 +107,8 @@ class RepositoryBundle:
             "session_memory_query_source",
             self.session_memory_repository,
         )
+        if self.ai_quota_repository is None:
+            object.__setattr__(self, "ai_quota_repository", InMemoryAIQuotaRepository(self.ai_usage_repository))
 
 
 class RepositoryFactory:
@@ -180,4 +184,5 @@ class RepositoryFactory:
             project_execution_repository=SQLiteProjectExecutionRepository(database),
             session_memory_repository=SQLiteSessionMemoryRepository(database),
             ai_usage_repository=SQLiteAIUsageRepository(database),
+            ai_quota_repository=SQLiteAIQuotaRepository(database),
         )
