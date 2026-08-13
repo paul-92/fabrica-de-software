@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { SessionMemoryKind } from "../../lib/api/dtos";
+import type { ProjectAIRuntimeExecutionDto, ProjectExecutionDto, SessionMemoryKind } from "../../lib/api/dtos";
 import type { ProjectRuntimeWorkspaceService } from "../../lib/services/projectRuntimeWorkspace";
 import { ProjectRuntimePanel } from "./ProjectRuntimePanel";
 
@@ -124,6 +124,67 @@ describe("ProjectRuntimePanel", () => {
     expect((screen.getByLabelText("Permitir alterações no projeto") as HTMLInputElement).checked).toBe(true);
     expect(execute).toHaveBeenCalledOnce();
     expect(execute).toHaveBeenCalledWith("p-1", "s-1", "Write safely", "workspace_write");
+  });
+
+  it("renders bounded engineering plan, validation, repair and quality evidence", async () => {
+    const engineeringResult = {
+      ...result,
+      execution_mode: "workspace_write" as const,
+      status: "succeeded" as const,
+      instruction: "Add health endpoint",
+      operational_plan: { execution_id: "e-1", created_at: "2026-08-12T00:00:00Z", source: "ai", steps: [
+        { step_id: "execute", operation: "execute_workspace_task", description: "Executar a tarefa no workspace.", dependencies: [], target_hints: ["src/api.py"], validation_hints: ["pytest"] },
+      ] },
+      step_results: [
+        { execution_id: "e-1", step_id: "execute", executor: "developer_agent", tool_id: "workspace_changes", succeeded: true, output: "Updated src/api.py", started_at: "2026-08-12T00:00:00Z", completed_at: "2026-08-12T00:00:01Z" },
+      ],
+      validations: [
+        { execution_id: "e-1", sequence: 2, validator: "vitest", command: ["npm", "run", "test"], exit_code: 0, status: "passed" as const, output: "vitest passed", completed_at: "2026-08-12T00:00:02Z" },
+        { execution_id: "e-1", sequence: 1, validator: "pytest", command: ["python", "-m", "pytest", "tests"], exit_code: 1, status: "failed" as const, output: "1 failed", completed_at: "2026-08-12T00:00:01Z" },
+      ],
+      repair: { execution_id: "e-1", outcome: "succeeded" as const, attempt_count: 1 },
+      quality_gate: { gate_id: "PROJECT-ENGINEERING-VALIDATION", execution_id: "e-1", stage_id: "validation", decision: "APPROVED" as const, satisfied_criteria: ["pytest passed", "vitest passed"], unsatisfied_criteria: [], evaluated_at: "2026-08-12T00:00:03Z" },
+    } satisfies ProjectAIRuntimeExecutionDto;
+    render(<ProjectRuntimePanel {...props} service={service({ execute: vi.fn().mockResolvedValue(engineeringResult) })} />);
+    await screen.findByText("● Pronto");
+    fireEvent.click(screen.getByLabelText("Permitir alterações no projeto"));
+    fireEvent.change(screen.getByLabelText("Tarefa"), { target: { value: "Add health endpoint" } });
+    fireEvent.click(screen.getByRole("button", { name: "Executar com Codex" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Confirmar e executar" }));
+
+    expect(await screen.findByRole("region", { name: "Evidências da execução de engenharia" })).toBeTruthy();
+    expect(screen.getByText("e-1")).toBeTruthy();
+    expect(screen.getByText("Executar a tarefa no workspace.")).toBeTruthy();
+    expect(screen.getByText("Concluída: execute")).toBeTruthy();
+    expect(screen.getByText("Updated src/api.py")).toBeTruthy();
+    const validationHeadings = screen.getAllByRole("heading", { level: 5 }).filter((heading) => heading.textContent?.startsWith("#"));
+    expect(validationHeadings.map((heading) => heading.textContent)).toEqual(["#1 · pytest", "#2 · vitest"]);
+    expect(screen.getByText("1 tentativa(s) · Concluído")).toBeTruthy();
+    expect(screen.getByText("Aprovado")).toBeTruthy();
+    expect(screen.getByText("pytest passed")).toBeTruthy();
+    expect(screen.getAllByText("vitest passed")).toHaveLength(2);
+    expect(screen.getByText("Nenhum critério não atendido.")).toBeTruthy();
+  });
+
+  it("reopens a persisted BLOCKED execution with failure evidence", async () => {
+    const blocked = {
+      ...failedExecution,
+      execution_id: "e-blocked",
+      error_code: "QUALITY_GATE_BLOCKED",
+      operational_plan: { execution_id: "e-blocked", created_at: "2026-08-12T00:00:00Z", source: "deterministic", steps: [] },
+      step_results: [],
+      validations: [{ execution_id: "e-blocked", sequence: 1, validator: "eslint", command: ["npm", "run", "lint"], exit_code: 1, status: "failed" as const, output: "lint failed", completed_at: "2026-08-12T00:00:01Z" }],
+      repair: { execution_id: "e-blocked", outcome: "exhausted" as const, attempt_count: 2 },
+      quality_gate: { gate_id: "gate-1", execution_id: "e-blocked", stage_id: "validation", decision: "BLOCKED" as const, satisfied_criteria: [], unsatisfied_criteria: ["eslint must pass"], evaluated_at: "2026-08-12T00:00:02Z" },
+    } satisfies ProjectExecutionDto;
+    render(<ProjectRuntimePanel {...props} service={service({ listExecutions: vi.fn().mockResolvedValue([blocked]) })} />);
+    fireEvent.click(await screen.findByRole("button", { name: /falhou.*change file/i }));
+    expect(await screen.findByText("e-blocked")).toBeTruthy();
+    expect(screen.getByText("#1 · eslint")).toBeTruthy();
+    expect(screen.getByText("2 tentativa(s) · Tentativas esgotadas")).toBeTruthy();
+    expect(screen.getByText("Bloqueado")).toBeTruthy();
+    expect(screen.getByText("eslint must pass")).toBeTruthy();
+    expect(screen.getByText(/QUALITY_GATE_BLOCKED/)).toBeTruthy();
   });
 
   it("creates and selects a session while preserving input on error", async () => {

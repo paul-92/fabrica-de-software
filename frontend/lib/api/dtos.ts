@@ -52,6 +52,65 @@ export type WorkspaceChangeDto = Readonly<{
   size_before: number | null;
   size_after: number | null;
 }>;
+export type ProjectOperationalPlanDto = Readonly<{
+  execution_id: string;
+  steps: readonly Readonly<{
+    step_id: string;
+    operation: string;
+    description: string;
+    dependencies: readonly string[];
+    target_hints: readonly string[];
+    validation_hints: readonly string[];
+  }>[];
+  created_at: string;
+  source: string;
+}>;
+export type ProjectValidationDto = Readonly<{
+  execution_id: string;
+  sequence: number;
+  validator: string;
+  command: readonly string[];
+  exit_code: number;
+  status: "passed" | "failed";
+  output: string;
+  completed_at: string;
+}>;
+export type ProjectRepairDto = Readonly<{
+  execution_id: string;
+  outcome: "succeeded" | "failed" | "exhausted";
+  attempt_count: number;
+}>;
+export type ProjectQualityGateDto = Readonly<{
+  gate_id: string;
+  execution_id: string;
+  stage_id: string;
+  decision: SequentialQualityGateDecision;
+  satisfied_criteria: readonly string[];
+  unsatisfied_criteria: readonly string[];
+  evaluated_at: string;
+}>;
+export type ProjectEngineeringStepResultDto = Readonly<{
+  execution_id: string;
+  step_id: string;
+  executor: string;
+  tool_id: string;
+  succeeded: boolean;
+  output: string;
+  started_at: string;
+  completed_at: string;
+}>;
+export type ProjectEngineeringEvidenceDto = Readonly<{
+  status?: "pending" | "running" | "succeeded" | "failed";
+  instruction?: string;
+  operational_plan?: ProjectOperationalPlanDto | null;
+  validations?: readonly ProjectValidationDto[];
+  repair?: ProjectRepairDto | null;
+  quality_gate?: ProjectQualityGateDto | null;
+  step_results?: readonly ProjectEngineeringStepResultDto[];
+  error_code?: string | null;
+  created_at?: string;
+  completed_at?: string | null;
+}>;
 export type AIRuntimeStatusDto = Readonly<{
   runtime_id: string;
   installed: boolean;
@@ -83,7 +142,7 @@ export type ProjectAIRuntimeExecutionDto = Readonly<{
   memory_entry_count: number;
   memory_char_count: number;
   memory_truncated: boolean;
-}>;
+}> & ProjectEngineeringEvidenceDto;
 
 export type ProjectSessionDto = Readonly<{
   session_id: string;
@@ -139,7 +198,7 @@ export type ProjectExecutionDto = Readonly<{
   memory_truncated: boolean;
   created_at: string;
   completed_at: string | null;
-}>;
+}> & ProjectEngineeringEvidenceDto;
 
 export type ProjectDto = Readonly<{
   project_id: string;
