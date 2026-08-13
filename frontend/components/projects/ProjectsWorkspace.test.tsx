@@ -6,7 +6,7 @@ import type { ProjectRuntimeWorkspaceService } from "../../lib/services/projectR
 import type { ProjectWorkspaceService } from "../../lib/services/projectWorkspaceService";
 import { ProjectsWorkspace } from "./ProjectsWorkspace";
 
-afterEach(cleanup);
+afterEach(() => { cleanup(); window.history.replaceState(null, "", "/projects"); });
 const project = { project_id: "p-1", name: "Project", workspace_path: "C:/work", created_at: "2026-08-07T00:00:00Z", updated_at: "2026-08-07T00:00:00Z" };
 function service(overrides: Partial<ProjectsWorkspaceService> = {}): ProjectsWorkspaceService {
   return { list: vi.fn().mockResolvedValue([]), create: vi.fn().mockResolvedValue(project), get: vi.fn().mockResolvedValue(project), ...overrides };
@@ -29,6 +29,47 @@ function runtimeService(): ProjectRuntimeWorkspaceService {
 function workspaceService(): ProjectWorkspaceService { return { listDirectory: vi.fn().mockResolvedValue({ path: "", entries: [] }), readFile: vi.fn() }; }
 
 describe("ProjectsWorkspace", () => {
+  it("reads stable context IDs directly from the URL", async () => {
+    window.history.replaceState(null, "", "/projects?project_id=p-1&session_id=s-1&execution_id=e-1");
+    const execution = { execution_id: "e-1", session_id: "s-1", project_id: "p-1", runtime_id: "codex", instruction: "Open", execution_mode: "read_only" as const, status: "running" as const, output: null, model: null, usage: null, changes: [], error_code: null, context_entry_count: 0, context_truncated: false, context_char_count: 0, context_omitted_execution_count: 0, memory_entry_count: 0, memory_char_count: 0, memory_truncated: false, created_at: "2026-08-07T00:00:00Z", completed_at: null };
+    const session = { session_id: "s-1", project_id: "p-1", title: "URL session", created_at: "2026-08-07T00:00:00Z", updated_at: "2026-08-07T00:00:00Z" };
+    const runtime = runtimeService();
+    vi.mocked(runtime.listSessions).mockResolvedValue([session]);
+    vi.mocked(runtime.getExecution).mockResolvedValue(execution);
+    render(<ProjectsWorkspace service={service()} runtimeService={runtime} workspaceService={workspaceService()} />);
+    expect(await screen.findByText("Fase persistida: Em execução")).toBeTruthy();
+    expect(runtime.getExecution).toHaveBeenCalledWith("p-1", "e-1");
+  });
+
+  it("reconstructs project, session and execution from stable IDs after refresh", async () => {
+    const execution = { execution_id: "e-1", session_id: "s-1", project_id: "p-1", runtime_id: "codex", instruction: "Ship", execution_mode: "workspace_write" as const, status: "succeeded" as const, output: "Done", model: "model", usage: null, changes: [], error_code: null, context_entry_count: 0, context_truncated: false, context_char_count: 0, context_omitted_execution_count: 0, memory_entry_count: 0, memory_char_count: 0, memory_truncated: false, created_at: "2026-08-07T00:00:00Z", completed_at: "2026-08-07T00:00:01Z" };
+    const session = { session_id: "s-1", project_id: "p-1", title: "Stable session", created_at: "2026-08-07T00:00:00Z", updated_at: "2026-08-07T00:00:00Z" };
+    const runtime = runtimeService();
+    vi.mocked(runtime.listSessions).mockResolvedValue([session]);
+    vi.mocked(runtime.listExecutions).mockResolvedValue([execution]);
+    vi.mocked(runtime.getExecution).mockResolvedValue(execution);
+    const projects = service({ list: vi.fn().mockResolvedValue([project]) });
+    const context = { projectId: "p-1", sessionId: "s-1", executionId: "e-1" };
+    const first = render(<ProjectsWorkspace service={projects} runtimeService={runtime} workspaceService={workspaceService()} initialContext={context} />);
+    expect(await screen.findByText("Done")).toBeTruthy();
+    expect(screen.getByText("Fase persistida: Finalizada com sucesso")).toBeTruthy();
+    expect(projects.get).toHaveBeenCalledWith("p-1");
+    expect(runtime.getExecution).toHaveBeenCalledWith("p-1", "e-1");
+    first.unmount();
+    render(<ProjectsWorkspace service={projects} runtimeService={runtime} workspaceService={workspaceService()} initialContext={context} />);
+    expect(await screen.findByText("Done")).toBeTruthy();
+    expect(vi.mocked(runtime.getExecution).mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("reports and retries an unknown project from the URL", async () => {
+    const get = vi.fn().mockRejectedValueOnce(new Error()).mockResolvedValueOnce(project);
+    render(<ProjectsWorkspace service={service({ get })} runtimeService={runtimeService()} workspaceService={workspaceService()} initialContext={{ projectId: "missing" }} />);
+    expect(await screen.findByText("Contexto do projeto não encontrado")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
+    expect(await screen.findByText("Detalhes do projeto")).toBeTruthy();
+    expect(get).toHaveBeenCalledTimes(2);
+  });
+
   it("shows loading and empty states", async () => {
     const view = render(<ProjectsWorkspace service={service({ list: () => new Promise(() => undefined) })} runtimeService={runtimeService()} />);
     expect(screen.getByRole("status").textContent).toContain("Carregando projetos");
@@ -50,6 +91,7 @@ describe("ProjectsWorkspace", () => {
     const projectButton = await screen.findByRole("button", { name: /Project.*C:\/work.*p-1/i });
     expect(screen.queryByText("Detalhes do projeto")).toBeNull();
     fireEvent.click(projectButton);
+    expect(window.location.search).toBe("?project_id=p-1");
     expect(await screen.findByText("Detalhes do projeto")).toBeTruthy();
     expect(projectButton.getAttribute("aria-pressed")).toBe("true");
     expect(await screen.findByText("Nenhuma sessão ainda.")).toBeTruthy();

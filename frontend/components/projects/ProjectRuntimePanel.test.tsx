@@ -17,6 +17,28 @@ function service(overrides: Partial<ProjectRuntimeWorkspaceService> = {}): Proje
 }
 
 describe("ProjectRuntimePanel", () => {
+  it.each([
+    ["pending", "Aguardando aprovação"],
+    ["running", "Em execução"],
+    ["succeeded", "Finalizada com sucesso"],
+    ["failed", "Finalizada com falha"],
+  ] as const)("reconstructs a %s execution from its persisted ID", async (status, phase) => {
+    const persisted = { ...failedExecution, execution_id: `e-${status}`, status, error_code: status === "failed" ? "FAILED" : null, completed_at: status === "succeeded" || status === "failed" ? "2026-08-07T00:00:01Z" : null };
+    const getExecution = vi.fn().mockResolvedValue(persisted);
+    render(<ProjectRuntimePanel {...props} service={service({ getExecution, listExecutions: vi.fn().mockResolvedValue([persisted]) })} initialSessionId="s-1" initialExecutionId={`e-${status}`} />);
+    expect(await screen.findByText(`Fase persistida: ${phase}`)).toBeTruthy();
+    expect(getExecution).toHaveBeenCalledWith("p-1", `e-${status}`);
+  });
+
+  it("shows an unknown execution and retries reconstruction", async () => {
+    const getExecution = vi.fn().mockRejectedValueOnce(new Error()).mockResolvedValueOnce(failedExecution);
+    render(<ProjectRuntimePanel {...props} service={service({ getExecution })} initialSessionId="s-1" initialExecutionId="e-failed" />);
+    expect(await screen.findByText("A execução informada pela URL não foi encontrada.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
+    expect(await screen.findByText("Fase persistida: Finalizada com falha")).toBeTruthy();
+    expect(getExecution).toHaveBeenCalledTimes(2);
+  });
+
   it("loads sessions and retries a loading failure", async () => {
     const listSessions = vi.fn().mockRejectedValueOnce(new Error()).mockResolvedValueOnce([]);
     render(<ProjectRuntimePanel {...props} service={service({ listSessions })} />);

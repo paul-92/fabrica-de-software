@@ -25,6 +25,7 @@ export function ProjectExecutionEvidence({ evidence, changes, output }: Props) {
       <div><dt>Execution ID</dt><dd><code>{evidence.execution_id}</code></dd></div>
       <div><dt>Status</dt><dd>{evidence.status ? formatExecutionStatus(evidence.status) : "Concluído"}</dd></div>
     </dl>
+    {evidence.status ? <p role="status">Fase persistida: {persistedPhase(evidence.status)}</p> : null}
 
     {evidence.operational_plan ? <>
       <h4>Plano operacional</h4>
@@ -92,4 +93,8 @@ function formatRepairOutcome(outcome: "succeeded" | "failed" | "exhausted"): str
 
 function formatGateDecision(decision: "APPROVED" | "APPROVED_WITH_PENDING" | "BLOCKED"): string {
   return { APPROVED: "Aprovado", APPROVED_WITH_PENDING: "Aprovado com pendências", BLOCKED: "Bloqueado" }[decision];
+}
+
+function persistedPhase(status: "pending" | "running" | "succeeded" | "failed"): string {
+  return { pending: "Aguardando aprovação", running: "Em execução", succeeded: "Finalizada com sucesso", failed: "Finalizada com falha" }[status];
 }
