@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path as PathParameter, Query
@@ -104,7 +103,7 @@ def create_projects_router(
     @router.post("", response_model=ProjectResponse, status_code=201)
     def create_project(body: CreateProjectRequest, current: RequestPrincipal = Depends(principal_dependency)) -> ProjectResponse:
         return ProjectResponse.from_domain(
-            service.create(body.name, Path(body.workspace_path), current)
+            service.create_hosted(body.name, current)
         )
 
     @router.get("", response_model=ProjectListResponse)

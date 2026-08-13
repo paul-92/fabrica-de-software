@@ -8,7 +8,7 @@ import { KnowledgeWorkspace } from "./KnowledgeWorkspace";
 
 afterEach(cleanup);
 
-const project = (id: string, name = id): ProjectDto => ({ project_id: id, name, workspace_path: `C:/${id}`, created_at: "2026-08-01T12:00:00Z", updated_at: "2026-08-01T12:00:00Z" });
+const project = (id: string, name = id): ProjectDto => ({ project_id: id, name, workspace_id: `workspace-${id}`, workspace_kind: "hosted", created_at: "2026-08-01T12:00:00Z", updated_at: "2026-08-01T12:00:00Z" });
 const session = (id: string, projectId: string, title = id): ProjectSessionDto => ({ session_id: id, project_id: projectId, title, created_at: "2026-08-02T12:00:00Z", updated_at: "2026-08-10T12:00:00Z" });
 const memory = (id: string, kind: SessionMemoryKind, content: string, source: string | null = null): SessionMemoryDto => ({ memory_id: id, session_id: "s-1", project_id: "p-1", kind, content, source_execution_id: source, created_at: "2026-08-10T12:00:00Z" });
 

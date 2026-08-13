@@ -1,5 +1,6 @@
 from asep.projects.in_memory import InMemoryProjectRepository
 from asep.projects.models import WorkspaceProject
+from asep.projects.hosted_workspace import HostedWorkspaceManager
 from asep.projects.repository import ProjectRepository
 from asep.projects.sqlite_repository import SQLiteProjectRepository
 from asep.projects.history_models import (
@@ -42,6 +43,7 @@ __all__ = [
     "ProjectRepository",
     "SQLiteProjectRepository",
     "WorkspaceProject",
+    "HostedWorkspaceManager",
     "ProjectExecution",
     "ProjectEngineeringStepResult",
     "ProjectExecutionStatus",

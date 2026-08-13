@@ -44,6 +44,7 @@ class ApplicationSettings:
     access_cookie_secure: bool | str = False
     legacy_admin_email: str = "admin@legacy.local"
     legacy_admin_password: str = "change-me-local-admin"
+    hosted_root: Path | str = _DEFAULT_STORAGE_DIRECTORY / "hosted-workspaces"
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -96,6 +97,7 @@ class ApplicationSettings:
             ),
         )
         object.__setattr__(self, "access_cookie_secure", str(self.access_cookie_secure).casefold() in {"1", "true", "yes"})
+        object.__setattr__(self, "hosted_root", self._validate_path("hosted_root", self.hosted_root))
         if len(self.legacy_admin_password) < 12:
             raise ConfigurationValidationError("legacy_admin_password deve conter ao menos 12 caracteres.")
         if self.access_cookie_secure and self.legacy_admin_password == "change-me-local-admin":

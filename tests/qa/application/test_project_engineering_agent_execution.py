@@ -163,8 +163,9 @@ def test_developer_agent_acceptance_writes_validates_and_approves(
     execution = result.execution
     assert runtime.calls == 0
     assert provider.calls == ["implement-change", "update-tests"]
-    assert (tmp_path / "health.py").is_file()
-    assert (tmp_path / "tests" / "test_health.py").is_file()
+    hosted = Path.cwd() / "storage/hosted-workspaces/legacy-local" / project_id / "workspace"
+    assert (hosted / "health.py").is_file()
+    assert (hosted / "tests" / "test_health.py").is_file()
     assert execution.status is ProjectExecutionStatus.SUCCEEDED
     assert execution.validations[0].status.value == "passed"
     assert execution.quality_gate.decision.value == "APPROVED"

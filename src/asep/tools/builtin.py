@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import sys
+import hashlib
+import tempfile
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -52,6 +54,15 @@ def _success(
         completed_at=context.started_at,
         attempts=context.attempt,
     )
+
+
+def _python_validation_environment(workspace: Path, execution_id: str) -> dict[str, str]:
+    """Keep bytecode isolated per validation, avoiding stale same-size repairs."""
+    workspace_key = hashlib.sha256(str(workspace.resolve()).encode("utf-8")).hexdigest()[:16]
+    execution_key = hashlib.sha256(execution_id.encode("utf-8")).hexdigest()[:16]
+    pycache = Path(tempfile.gettempdir()) / "asep-process" / workspace_key / execution_key
+    pycache.mkdir(parents=True, exist_ok=True)
+    return {"PYTHONPYCACHEPREFIX": str(pycache)}
 
 class ReadFileTool:
     metadata = ToolMetadata(
@@ -359,7 +370,7 @@ class RunTestsTool:
                 input_text="",
                 timeout=timeout,
                 working_directory=context.workspace,
-                environment={},
+                environment=_python_validation_environment(context.workspace, request.execution_id),
                 encoding="utf-8",
             )
         except ProcessTimeoutError as exc:

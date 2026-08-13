@@ -130,7 +130,7 @@ describe("specialized API clients", () => {
       { status: 200, ok: true, body: { project_id: "project/one" } },
     );
     const projects = new ProjectsClient(api);
-    const request = { name: "Project", workspace_path: "C:/work" };
+    const request = { name: "Project" };
 
     await projects.create(request);
     await projects.list();

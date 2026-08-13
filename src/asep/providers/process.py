@@ -58,6 +58,10 @@ class ProcessRunnerProtocol(Protocol):
 
 
 class ProcessRunner:
+    _HOST_ENVIRONMENT_ALLOWLIST = frozenset({
+        "PATH", "PATHEXT", "SYSTEMROOT", "WINDIR", "COMSPEC",
+        "TEMP", "TMP", "TMPDIR", "LANG", "LC_ALL", "LC_CTYPE",
+    })
     """Adaptador mínimo sobre subprocess, sem regras de provider."""
 
     def is_available(self, executable: str) -> bool:
@@ -73,7 +77,11 @@ class ProcessRunner:
         environment: Mapping[str, str],
         encoding: str,
     ) -> ProcessResult:
-        process_environment = os.environ.copy()
+        process_environment = {
+            key: value
+            for key, value in os.environ.items()
+            if key.upper() in self._HOST_ENVIRONMENT_ALLOWLIST
+        }
         process_environment.update(environment)
         try:
             completed = subprocess.run(

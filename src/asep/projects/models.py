@@ -11,6 +11,8 @@ class WorkspaceProject(BaseModel):
     project_id: str
     organization_id: str = LEGACY_ORGANIZATION_ID
     created_by_user_id: str = LEGACY_ADMIN_USER_ID
+    workspace_id: str | None = None
+    workspace_kind: str = "legacy_local"
     name: str
     workspace_path: Path
     created_at: datetime

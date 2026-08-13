@@ -26,7 +26,6 @@ export function ProjectsWorkspace({ service, runtimeService, workspaceService, i
   const [listError, setListError] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [name, setName] = useState("");
-  const [workspace, setWorkspace] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [selected, setSelected] = useState<ProjectDto | null>(null);
@@ -67,16 +66,16 @@ export function ProjectsWorkspace({ service, runtimeService, workspaceService, i
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting) return;
-    if (!name.trim() || !workspace.trim()) {
-      setFormError("Informe o nome e a pasta do projeto."); return;
+    if (!name.trim()) {
+      setFormError("Informe o nome do projeto."); return;
     }
     setSubmitting(true); setFormError(null);
     try {
-      const created = await projects.create({ name: name.trim(), workspace_path: workspace.trim() });
+      const created = await projects.create({ name: name.trim() });
       setItems((current) => [...(current ?? []), created]);
-      setSelected(created); selectContext({ projectId: created.project_id }); setName(""); setWorkspace("");
+      setSelected(created); selectContext({ projectId: created.project_id }); setName("");
     } catch {
-      setFormError("Não foi possível criar o projeto. Revise a pasta informada e tente novamente.");
+      setFormError("Não foi possível criar o projeto. Tente novamente.");
     } finally { setSubmitting(false); }
   }
 
@@ -86,19 +85,18 @@ export function ProjectsWorkspace({ service, runtimeService, workspaceService, i
   }
 
   return <div className="page-stack">
-    <PageHeader eyebrow="Área de trabalho" title="Projetos" description="Conecte pastas locais para trabalhar com segurança e controle." />
+    <PageHeader eyebrow="Área de trabalho" title="Projetos" description="Crie workspaces isolados para trabalhar com segurança e controle." />
     <Card title="Novo projeto" eyebrow="Criar"><form className="project-form" onSubmit={submit}>
       <label>Nome do projeto<input placeholder="Ex.: API de clientes" value={name} onChange={(event) => setName(event.target.value)} disabled={submitting} /></label>
-      <label>Pasta do projeto<input placeholder="Ex.: C:\\projetos\\clientes" value={workspace} onChange={(event) => setWorkspace(event.target.value)} disabled={submitting} /></label>
       {formError ? <p role="alert" className="engineering-form__error">{formError}</p> : null}
       <Button type="submit" disabled={submitting}>{submitting ? "Criando…" : "Criar projeto"}</Button>
     </form></Card>
     {items === null && !listError ? <div role="status" className="executions-skeleton"><span className="sr-only">Carregando projetos</span></div> : null}
     {listError ? <div role="alert" className="dashboard-state dashboard-state--error"><h2>Projetos indisponíveis</h2><Button onClick={() => { setListError(false); setAttempt((value) => value + 1); }}>Tentar novamente</Button></div> : null}
     {contextError ? <div role="alert" className="dashboard-state dashboard-state--error"><h2>Contexto do projeto não encontrado</h2><p>Não foi possível reconstruir o projeto informado pela URL.</p><Button onClick={() => { setContextError(false); setContextAttempt((value) => value + 1); }}>Tentar novamente</Button></div> : null}
-    {items?.length === 0 ? <div className="dashboard-state"><h2>Nenhum projeto ainda</h2><p>Crie seu primeiro projeto para conectar uma pasta local à ASEP.</p></div> : null}
-    {items && items.length > 0 ? <Card title="Projetos" eyebrow="Pastas locais"><ul className="project-list">{items.map((project) => <li key={project.project_id}><button type="button" onClick={() => { setSelected(project); selectContext({ projectId: project.project_id }); }} aria-pressed={selected?.project_id === project.project_id}><strong>{project.name}</strong><span>{project.workspace_path}</span><small>{project.project_id}</small></button></li>)}</ul></Card> : null}
-    {selected ? <div ref={detailsRef} className="project-details"><Card title={selected.name} eyebrow="Detalhes do projeto"><dl className="execution-facts"><div><dt>ID do projeto</dt><dd>{selected.project_id}</dd></div><div><dt>Pasta</dt><dd>{selected.workspace_path}</dd></div></dl></Card><ProjectFilesPanel key={selected.project_id} projectId={selected.project_id} service={workspaceService} /><ProjectRuntimePanel projectId={selected.project_id} projectName={selected.name} workspacePath={selected.workspace_path} service={runtimeService} initialSessionId={context.projectId === selected.project_id ? context.sessionId : undefined} initialExecutionId={context.projectId === selected.project_id ? context.executionId : undefined} onNavigate={(sessionId, executionId) => selectContext({ projectId: selected.project_id, sessionId, executionId })} /></div> : null}
+    {items?.length === 0 ? <div className="dashboard-state"><h2>Nenhum projeto ainda</h2><p>Crie seu primeiro workspace na ASEP.</p></div> : null}
+    {items && items.length > 0 ? <Card title="Projetos" eyebrow="Workspaces"><ul className="project-list">{items.map((project) => <li key={project.project_id}><button type="button" onClick={() => { setSelected(project); selectContext({ projectId: project.project_id }); }} aria-pressed={selected?.project_id === project.project_id}><strong>{project.name}</strong><span>{project.workspace_kind === "hosted" ? "Workspace hospedado" : "Workspace local legado"}</span><small>{project.project_id}</small></button></li>)}</ul></Card> : null}
+    {selected ? <div ref={detailsRef} className="project-details"><Card title={selected.name} eyebrow="Detalhes do projeto"><dl className="execution-facts"><div><dt>ID do projeto</dt><dd>{selected.project_id}</dd></div><div><dt>Workspace</dt><dd>{selected.workspace_id ?? "Local legado"}</dd></div></dl></Card><ProjectFilesPanel key={selected.project_id} projectId={selected.project_id} service={workspaceService} /><ProjectRuntimePanel projectId={selected.project_id} projectName={selected.name} workspaceLabel={selected.workspace_id ?? "Local legado"} service={runtimeService} initialSessionId={context.projectId === selected.project_id ? context.sessionId : undefined} initialExecutionId={context.projectId === selected.project_id ? context.executionId : undefined} onNavigate={(sessionId, executionId) => selectContext({ projectId: selected.project_id, sessionId, executionId })} /></div> : null}
   </div>;
 }
 

@@ -28,9 +28,8 @@ class ProjectHttpSchema(BaseModel):
 
 class CreateProjectRequest(ProjectHttpSchema):
     name: str
-    workspace_path: str
 
-    @field_validator("name", "workspace_path")
+    @field_validator("name")
     @classmethod
     def required_text(cls, value: str) -> str:
         if not value.strip():
@@ -41,7 +40,8 @@ class CreateProjectRequest(ProjectHttpSchema):
 class ProjectResponse(ProjectHttpSchema):
     project_id: str
     name: str
-    workspace_path: str
+    workspace_id: str | None
+    workspace_kind: str
     created_at: datetime
     updated_at: datetime
 
@@ -50,7 +50,8 @@ class ProjectResponse(ProjectHttpSchema):
         return cls(
             project_id=project.project_id,
             name=project.name,
-            workspace_path=str(project.workspace_path),
+            workspace_id=project.workspace_id,
+            workspace_kind=project.workspace_kind,
             created_at=project.created_at,
             updated_at=project.updated_at,
         )

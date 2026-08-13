@@ -10,7 +10,7 @@ const ready = { runtime_id: "codex", installed: true, authenticated: true, ready
 const result = { execution_id: "e-1", output: "Project structure", runtime_id: "codex", model_id: "model", usage: { input_units: 4, output_units: 2, total_units: 6, cost: null }, metadata: {}, execution_mode: "read_only" as const, changes: [], context_entry_count: 0, context_truncated: false, context_char_count: 79, context_omitted_execution_count: 0, memory_entry_count: 0, memory_char_count: 49, memory_truncated: false };
 const session = { session_id: "s-1", project_id: "p-1", title: "Pilot session", created_at: "2026-08-07T00:00:00Z", updated_at: "2026-08-07T00:00:00Z" };
 const failedExecution = { execution_id: "e-failed", session_id: "s-1", project_id: "p-1", runtime_id: "codex", instruction: "Change file", execution_mode: "workspace_write" as const, status: "failed" as const, output: null, model: null, usage: { input_units: 10, output_units: 2, total_units: 12, cost: null }, changes: [{ path: "partial.txt", change_type: "created" as const, size_before: null, size_after: 2 }], error_code: "AI_RUNTIME_TIMEOUT", context_entry_count: 2, context_truncated: true, context_char_count: 17432, context_omitted_execution_count: 9, memory_entry_count: 1, memory_char_count: 120, memory_truncated: false, created_at: "2026-08-07T00:00:00Z", completed_at: "2026-08-07T00:00:01Z" };
-const props = { projectId: "p-1", projectName: "Pilot", workspacePath: "C:/pilot" };
+const props = { projectId: "p-1", projectName: "Pilot", workspaceLabel: "workspace-1" };
 function service(overrides: Partial<ProjectRuntimeWorkspaceService> = {}): ProjectRuntimeWorkspaceService {
   const preparation = { execution_id: "e-1", project_id: "p-1", session_id: "s-1", runtime_id: "codex", instruction: "Write safely", status: "pending" as const, analysis: { languages: ["TypeScript"], frameworks: ["Next.js"], package_managers: ["npm"], package_manifests: ["package.json"], modules: ["src"], entrypoints: [], dependencies: [], architecture: [], has_tests: true, file_count: 3, test_file_count: 1 }, operational_plan: { execution_id: "e-1", source: "ai", created_at: "2026-08-12T00:00:00Z", steps: [{ step_id: "execute", operation: "execute_workspace_task", description: "Implementar a tarefa.", dependencies: [], target_hints: ["src"], validation_hints: ["typecheck", "vitest"] }] }, created_at: "2026-08-12T00:00:00Z" };
   return { status: vi.fn().mockResolvedValue(ready), execute: vi.fn().mockResolvedValue(result), prepare: vi.fn().mockImplementation(async (_projectId, _sessionId, instruction) => ({ ...preparation, instruction })), approve: vi.fn().mockResolvedValue(result), cancel: vi.fn().mockResolvedValue(failedExecution), listSessions: vi.fn().mockResolvedValue([session]), createSession: vi.fn().mockResolvedValue(session), listExecutions: vi.fn().mockResolvedValue([]), getExecution: vi.fn(), listMemory: vi.fn().mockResolvedValue([]), addMemory: vi.fn(), ...overrides };
@@ -137,7 +137,7 @@ describe("ProjectRuntimePanel", () => {
     expect(approve).not.toHaveBeenCalled();
     const confirmation = await screen.findByRole("alertdialog");
     expect(confirmation.textContent).toContain("Pilot");
-    expect(confirmation.textContent).toContain("C:/pilot");
+    expect(confirmation.textContent).toContain("workspace-1");
     expect(confirmation.textContent).toContain("workspace ainda não foi alterado");
     expect(confirmation.textContent).toContain("typecheck");
     fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));

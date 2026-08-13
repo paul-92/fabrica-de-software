@@ -25,6 +25,7 @@ class Configuration:
         "ASEP_ACCESS_COOKIE_SECURE": "access_cookie_secure",
         "ASEP_LEGACY_ADMIN_EMAIL": "legacy_admin_email",
         "ASEP_LEGACY_ADMIN_PASSWORD": "legacy_admin_password",
+        "ASEP_HOSTED_ROOT": "hosted_root",
     }
 
     @classmethod

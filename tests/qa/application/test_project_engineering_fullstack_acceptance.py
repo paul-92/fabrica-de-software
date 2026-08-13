@@ -286,24 +286,24 @@ def test_fullstack_pagination_acceptance_uses_one_execution(tmp_path: Path) -> N
     installed_modules = Path(__file__).parents[3] / "frontend" / "node_modules"
     if not installed_modules.is_dir():
         pytest.skip("preinstalled frontend dependencies are required for acceptance")
-    write_fullstack_fixture(tmp_path)
-    link_preinstalled_node_modules(
-        tmp_path / "web" / "node_modules", installed_modules,
-    )
-    run_baseline(tmp_path, npm)
-    shutil.rmtree(tmp_path / "web" / ".next")
     runtime = NeverRuntime()
     registry = InMemoryAIRuntimeRegistry()
     registry.register(runtime)
     composition = create_project_engineering_operational_composition(
-        ApplicationSettings(), runtime_registry=registry,
+        ApplicationSettings(hosted_root=tmp_path / "hosted"), runtime_registry=registry,
         engineering_decomposer=PaginationDecomposer(),
         implementation_provider=PaginationProvider(),
     )
     client = TestClient(composition.app)
-    project = client.post("/api/v1/projects", json={
-        "name": "Full Stack Pagination", "workspace_path": str(tmp_path),
-    }).json()
+    project = client.post("/api/v1/projects", json={"name": "Full Stack Pagination"}).json()
+    workspace = tmp_path / "hosted" / "legacy-local" / project["project_id"] / "workspace"
+    write_fullstack_fixture(workspace)
+    link_preinstalled_node_modules(workspace / "web" / "node_modules", installed_modules)
+    run_baseline(workspace, npm)
+    artifact = workspace / "web" / ".next"
+    quarantined_artifact = workspace.parent / ".baseline-next"
+    artifact.rename(quarantined_artifact)
+    shutil.rmtree(quarantined_artifact, ignore_errors=True)
     session = client.post(
         f"/api/v1/projects/{project['project_id']}/sessions",
         json={"title": "Product pagination"},

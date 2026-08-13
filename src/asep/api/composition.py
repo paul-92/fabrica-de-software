@@ -95,6 +95,7 @@ from asep.access.models import (
     LEGACY_ADMIN_USER_ID, LEGACY_ORGANIZATION_ID, Membership, Organization,
     OrganizationRole, User, UserStatus,
 )
+from asep.projects import HostedWorkspaceManager
 from datetime import UTC, datetime
 
 
@@ -168,13 +169,18 @@ def _create_intelligent_engineering_service(
 def _create_project_application_services(
     repositories: RepositoryBundle,
     *,
+    settings: ApplicationSettings | None = None,
     runtime_registry: AIRuntimeRegistry | None = None,
     include_engineering_execution: bool = False,
     engineering_decomposer: EngineeringTaskDecomposer | None = None,
     implementation_provider: EngineeringImplementationProvider | None = None,
     repair_planner: RepairPlanner | None = None,
 ) -> _ProjectApplicationServices:
-    project_service = ProjectService(repositories.project_repository)
+    effective_settings = settings or ApplicationSettings()
+    project_service = ProjectService(
+        repositories.project_repository,
+        hosted_workspaces=HostedWorkspaceManager(effective_settings.hosted_root),
+    )
     runtime_connection = AIRuntimeConnectionService(
         (
             CodexAIRuntimeDiagnostics(
@@ -300,7 +306,7 @@ def _create_configured_app(
         DeclarativeAgentCatalogSource(settings.agent_catalog_directory)
     )
     project_services = project_services or _create_project_application_services(
-        repositories
+        repositories, settings=settings
     )
     intelligent_engineering_service = _create_intelligent_engineering_service(
         settings,
@@ -403,6 +409,7 @@ def create_project_engineering_operational_composition(
     repositories = RepositoryFactory(settings).create()
     project_services = _create_project_application_services(
         repositories,
+        settings=settings,
         runtime_registry=runtime_registry,
         include_engineering_execution=True,
         engineering_decomposer=engineering_decomposer,

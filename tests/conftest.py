@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import shutil
 from textwrap import dedent
 
 import pytest
@@ -24,7 +25,33 @@ def _legacy_project_api_session(request, monkeypatch):
             original(client, "POST", "/api/v1/access/login", json={
                 "email": "admin@legacy.local", "password": "change-me-local-admin",
             })
-        return original(client, method, url, *args, **kwargs)
+        # Pre-26.3 acceptance fixtures used the public API to attach tmp_path.
+        # Keep that compatibility strictly in tests: production never accepts
+        # the host path. The fixture is copied into the newly hosted workspace.
+        legacy_source = None
+        if (
+            request.node.path.name != "test_projects_api.py"
+            and method.upper() == "POST" and path.rstrip("/").endswith("/api/v1/projects")
+            and isinstance(kwargs.get("json"), dict)
+            and "workspace_path" in kwargs["json"]
+        ):
+            payload = dict(kwargs["json"])
+            legacy_source = Path(payload.pop("workspace_path"))
+            kwargs["json"] = payload
+        response = original(client, method, url, *args, **kwargs)
+        if legacy_source is not None and response.status_code == 201:
+            project_id = response.json()["project_id"]
+            target = Path.cwd() / "storage" / "hosted-workspaces" / "legacy-local" / project_id / "workspace"
+            if legacy_source.exists():
+                shutil.copytree(legacy_source, target, dirs_exist_ok=True, symlinks=True)
+            mirrors = getattr(client, "_asep_legacy_workspace_mirrors", {})
+            mirrors[project_id] = (target, legacy_source)
+            client._asep_legacy_workspace_mirrors = mirrors
+        if method.upper() == "POST" and ("/engineering/" in path or "/ai-runtime/execute" in path):
+            for target, source in getattr(client, "_asep_legacy_workspace_mirrors", {}).values():
+                if target.exists() and source.exists():
+                    shutil.copytree(target, source, dirs_exist_ok=True, symlinks=True)
+        return response
 
     monkeypatch.setattr(TestClient, "request", authenticated)
 

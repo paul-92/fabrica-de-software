@@ -226,7 +226,8 @@ export type ProjectExecutionDto = Readonly<{
 export type ProjectDto = Readonly<{
   project_id: string;
   name: string;
-  workspace_path: string;
+  workspace_id: string | null;
+  workspace_kind: "hosted" | "legacy_local";
   created_at: string;
   updated_at: string;
 }>;
@@ -237,7 +238,6 @@ export type WorkspaceFileContentDto = Readonly<{ path: string; name: string; con
 
 export type CreateProjectDto = Readonly<{
   name: string;
-  workspace_path: string;
 }>;
 
 export type MemoryEntryDto = Readonly<{

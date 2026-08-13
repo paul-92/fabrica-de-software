@@ -175,3 +175,25 @@ def test_process_runner_never_uses_a_shell(monkeypatch, tmp_path: Path) -> None:
     )
 
     assert observed["shell"] is False
+
+
+def test_process_runner_does_not_copy_backend_secrets(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("ASEP_SESSION_SECRET", "session-secret")
+    monkeypatch.setenv("DATABASE_URL", "database-secret")
+    monkeypatch.setenv("OPENAI_API_KEY", "provider-secret")
+    observed = {}
+
+    class Completed:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    def run(command, **kwargs):
+        observed.update(kwargs)
+        return Completed()
+
+    monkeypatch.setattr("asep.providers.process.subprocess.run", run)
+    ProcessRunner().run(("python", "-V"), input_text="", timeout=1,
+                        working_directory=tmp_path, environment={}, encoding="utf-8")
+    assert "PATH" in observed["env"]
+    assert not {"ASEP_SESSION_SECRET", "DATABASE_URL", "OPENAI_API_KEY"} & set(observed["env"])
