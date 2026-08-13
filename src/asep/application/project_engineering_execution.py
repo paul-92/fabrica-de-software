@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import UTC, datetime
+import re
 from typing import Protocol
 
 from asep.ai_runtime import AIRuntimeExecutionMode
@@ -120,6 +121,17 @@ class ProjectEngineeringExecutionService:
             raise RuntimeError(
                 "project engineering runtime completed before validation"
             )
+        try:
+            return self._complete_execution(runtime_result, execution)
+        except Exception as error:
+            self._persist_unexpected_failure(execution.execution_id, error)
+            raise
+
+    def _complete_execution(
+        self,
+        runtime_result: ProjectAIRuntimeExecutionResult,
+        execution: ProjectExecution,
+    ) -> ProjectAIRuntimeExecutionResult:
         workspace = self._projects.get(execution.project_id).workspace_path
         strategy_builder = getattr(self._validation, "strategy", None)
         strategy_runner = getattr(self._validation, "validate_strategy", None)
@@ -147,6 +159,9 @@ class ProjectEngineeringExecutionService:
                 execution.operational_plan,
                 start_sequence=1,
             ))
+        execution = self._persist_progress(
+            execution, validations=tuple(validations),
+        )
         repair_result = None
         failure_analyses: list[ProjectValidationFailureAnalysis] = []
         failed = next(
@@ -158,6 +173,11 @@ class ProjectEngineeringExecutionService:
             if bounded_analyzer is not None:
                 bounded = bounded_analyzer(failed)
                 failure_analyses.append(bounded)
+                execution = self._persist_progress(
+                    execution,
+                    validations=tuple(validations),
+                    failure_analyses=tuple(failure_analyses),
+                )
                 repair_evidence = (
                     f"task={execution.instruction}\n"
                     f"validator={bounded.validator_id}\n"
@@ -180,6 +200,12 @@ class ProjectEngineeringExecutionService:
             repair_result = ProjectRepairResult(
                 execution_id=execution.execution_id,
                 result=repaired,
+            )
+            execution = self._persist_progress(
+                execution,
+                validations=tuple(validations),
+                failure_analyses=tuple(failure_analyses),
+                repair=repair_result,
             )
             if strategy is not None and strategy_runner is not None:
                 validations.extend(strategy_runner(
@@ -206,6 +232,12 @@ class ProjectEngineeringExecutionService:
                     execution.operational_plan,
                     start_sequence=len(validations) + 1,
                 ))
+            execution = self._persist_progress(
+                execution,
+                validations=tuple(validations),
+                failure_analyses=tuple(failure_analyses),
+                repair=repair_result,
+            )
 
         final_by_validator = {item.validator: item for item in validations}
         required = strategy.validators if strategy is not None else tuple(final_by_validator)
@@ -215,6 +247,13 @@ class ProjectEngineeringExecutionService:
             execution,
             final_validations,
             workspace,
+        )
+        execution = self._persist_progress(
+            execution,
+            validations=tuple(validations),
+            failure_analyses=tuple(failure_analyses),
+            repair=repair_result,
+            quality_gate=gate,
         )
         validation_passed = (
             len(final_validations) == len(required)
@@ -256,6 +295,38 @@ class ProjectEngineeringExecutionService:
             execution_mode=runtime_result.execution_mode,
             execution=completed,
         )
+
+    def _persist_progress(self, execution: ProjectExecution, **updates) -> ProjectExecution:
+        current = self._executions.get(execution.execution_id)
+        if current.status is not ProjectExecutionStatus.RUNNING:
+            return current
+        updated = ProjectExecution.model_validate({
+            **current.model_dump(mode="python"),
+            **updates,
+        })
+        self._executions.update(updated)
+        return updated
+
+    def _persist_unexpected_failure(
+        self, execution_id: str, error: Exception,
+    ) -> None:
+        current = self._executions.get(execution_id)
+        if current.status is not ProjectExecutionStatus.RUNNING:
+            return
+        failed = ProjectExecution.model_validate({
+            **current.model_dump(mode="python"),
+            "status": ProjectExecutionStatus.FAILED,
+            "error_code": self._public_error_code(error),
+            "completed_at": self._clock(),
+        })
+        self._executions.update(failed)
+
+    @staticmethod
+    def _public_error_code(error: Exception) -> str:
+        raw = getattr(error, "code", None) or type(error).__name__
+        separated = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", str(raw))
+        normalized = re.sub(r"[^A-Za-z0-9]+", "_", separated).strip("_").upper()
+        return (normalized or "UNEXPECTED_ERROR")[:100]
 
     def _validate_strategy(
         self,

@@ -29,6 +29,8 @@ from asep.projects import (
     InMemorySessionMemoryRepository,
     SessionMemoryKind,
     ProjectOperationalPlan,
+    ProjectValidationFailureAnalysis,
+    ProjectValidationFailureCategory,
     ProjectValidationResult,
     ProjectValidationStatus,
     WorkspaceProject,
@@ -154,6 +156,32 @@ class RepairOnce:
             ),),
             final_analysis=analysis,
         )
+
+
+class ExceptionalValidationStrategy(ValidationSequence):
+    def strategy(self, *args, **kwargs):
+        raise RuntimeError("strategy unavailable")
+
+
+class AnalyzingValidation(ValidationSequence):
+    def analyze_failure(self, result):
+        return ProjectValidationFailureAnalysis(
+            execution_id=result.execution_id,
+            validator_id=result.validator,
+            category=ProjectValidationFailureCategory.TEST_FAILURE,
+            summary="bounded validation failure",
+            evidence=result.output,
+        )
+
+
+class ExceptionalRepair(RepairOnce):
+    def repair(self, execution_id, workspace, analysis):
+        raise LookupError("repair boundary failed")
+
+
+class ExceptionalQualityGate:
+    def evaluate_and_record(self, execution, validation, workspace):
+        raise OSError("quality storage failed")
 
 
 def graph(
@@ -400,3 +428,85 @@ def test_operational_plan_is_strict_frozen_and_owned_by_execution(
             **plan.model_dump(mode="python"),
             "unsupported": True,
         })
+
+
+def assert_unexpected_failure_is_terminal(
+    executions: InMemoryProjectExecutionRepository,
+    memory: ProjectSessionMemoryService,
+    *,
+    error_code: str,
+):
+    persisted = executions.get("execution-1")
+    assert persisted.execution_id == "execution-1"
+    assert persisted.status.value == "failed"
+    assert persisted.completed_at is not None
+    assert persisted.error_code == error_code
+    assert len(persisted.error_code) <= 100
+    assert persisted.operational_plan is not None
+    assert persisted.operational_plan.execution_id == persisted.execution_id
+    assert {item.path for item in persisted.changes} == {"app.py", "test_app.py"}
+    assert all(
+        item.source_execution_id is None
+        for item in memory.list("project-1", "session-1")
+    )
+    return persisted
+
+
+def test_validation_strategy_exception_persists_terminal_failure(
+    tmp_path: Path,
+) -> None:
+    service, _, executions, memory, _, _, quality = graph(tmp_path)
+    service._validation = ExceptionalValidationStrategy(())
+    failure = RuntimeError("strategy unavailable")
+
+    with pytest.raises(RuntimeError) as caught:
+        service.execute(request())
+
+    assert str(caught.value) == str(failure)
+    persisted = assert_unexpected_failure_is_terminal(
+        executions, memory, error_code="RUNTIME_ERROR",
+    )
+    assert persisted.validation_strategy is None
+    assert persisted.validations == ()
+    assert quality.list_by_run("execution-1") == ()
+
+
+def test_repair_exception_preserves_failed_validation_and_identity(
+    tmp_path: Path,
+) -> None:
+    service, _, executions, memory, _, _, quality = graph(
+        tmp_path, validation_statuses=(ProjectValidationStatus.FAILED,),
+    )
+    service._validation = AnalyzingValidation((ProjectValidationStatus.FAILED,))
+    service._repair = ExceptionalRepair(RepairStatus.EXHAUSTED)
+
+    with pytest.raises(LookupError, match="repair boundary failed"):
+        service.execute(request())
+
+    persisted = assert_unexpected_failure_is_terminal(
+        executions, memory, error_code="LOOKUP_ERROR",
+    )
+    assert len(persisted.validations) == 1
+    assert persisted.validations[0].execution_id == persisted.execution_id
+    assert persisted.validations[0].status is ProjectValidationStatus.FAILED
+    assert len(persisted.failure_analyses) == 1
+    assert persisted.failure_analyses[0].execution_id == persisted.execution_id
+    assert persisted.repair is None
+    assert quality.list_by_run("execution-1") == ()
+
+
+def test_quality_gate_exception_preserves_validation_and_does_not_add_memory(
+    tmp_path: Path,
+) -> None:
+    service, _, executions, memory, _, _, _ = graph(tmp_path)
+    service._quality = ExceptionalQualityGate()
+
+    with pytest.raises(OSError, match="quality storage failed"):
+        service.execute(request())
+
+    persisted = assert_unexpected_failure_is_terminal(
+        executions, memory, error_code="OSERROR",
+    )
+    assert len(persisted.validations) == 1
+    assert persisted.validations[0].status is ProjectValidationStatus.PASSED
+    assert persisted.quality_gate is None
