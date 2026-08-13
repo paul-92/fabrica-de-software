@@ -57,6 +57,7 @@ from asep.branding import (
     InMemoryBrandingRepository,
     SQLiteBrandingRepository,
 )
+from asep.access import AccessRepository, InMemoryAccessRepository, SQLiteAccessRepository
 
 
 RepositorySettings = ApplicationSettings
@@ -87,6 +88,7 @@ class RepositoryBundle:
     branding_repository: BrandingRepository = field(
         default_factory=InMemoryBrandingRepository
     )
+    access_repository: AccessRepository = field(default_factory=InMemoryAccessRepository)
 
     def __post_init__(self) -> None:
         if not isinstance(
@@ -170,6 +172,7 @@ class RepositoryFactory:
             ),
             branding_repository=SQLiteBrandingRepository(database),
             memory_store=SQLiteMemoryStore(database),
+            access_repository=SQLiteAccessRepository(database),
             project_repository=SQLiteProjectRepository(database),
             project_session_repository=SQLiteProjectSessionRepository(database),
             project_execution_repository=SQLiteProjectExecutionRepository(database),

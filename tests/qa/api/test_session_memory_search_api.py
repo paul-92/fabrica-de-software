@@ -232,10 +232,12 @@ class FailingSearchService:
 
 def custom_client(service) -> TestClient:
     query = RunQueryService(InMemoryRunRepository(), InMemoryTimelineRepository())
+    project_service = ProjectService(InMemoryProjectRepository(), id_generator=lambda: "p")
+    project_service.create("Project", Path.cwd())
     return TestClient(create_app(
         query,
         MetricsService(query),
-        project_service=ProjectService(InMemoryProjectRepository()),
+        project_service=project_service,
         session_memory_search_service=service,
     ), raise_server_exceptions=False)
 
@@ -284,8 +286,8 @@ def test_route_imports_only_api_application_and_standard_modules() -> None:
         if isinstance(node, ast.ImportFrom) and node.module is not None
     }
     assert imported <= {
-        "pathlib", "typing", "fastapi", "asep.api.project_schemas",
-        "asep.api.schemas", "asep.application",
+        "pathlib", "typing", "collections.abc", "fastapi", "asep.access.models",
+        "asep.api.project_schemas", "asep.api.schemas", "asep.application",
     }
     assert not any(name.startswith((
         "asep.projects", "asep.repositories", "asep.sqlite", "asep.memory",

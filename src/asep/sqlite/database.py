@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+import json
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
@@ -14,6 +15,26 @@ class SQLiteDatabase:
     """Inicializa o banco e fornece conexões transacionais curtas."""
 
     _SCHEMA = """
+        CREATE TABLE IF NOT EXISTS schema_metadata (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS organizations (
+            id TEXT PRIMARY KEY, created_at TEXT NOT NULL, payload TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS users (
+            id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, status TEXT NOT NULL,
+            password_hash TEXT NOT NULL, created_at TEXT NOT NULL, payload TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS memberships (
+            organization_id TEXT NOT NULL, user_id TEXT NOT NULL, role TEXT NOT NULL,
+            created_at TEXT NOT NULL, payload TEXT NOT NULL,
+            PRIMARY KEY (organization_id, user_id)
+        );
+        CREATE TABLE IF NOT EXISTS access_sessions (
+            id TEXT PRIMARY KEY, user_id TEXT NOT NULL, token_hash TEXT NOT NULL UNIQUE,
+            expires_at TEXT NOT NULL, payload TEXT NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS runs (
             id TEXT PRIMARY KEY,
             started_at TEXT NOT NULL,
@@ -67,6 +88,7 @@ class SQLiteDatabase:
             ON memory_entries (workflow_execution_id);
         CREATE TABLE IF NOT EXISTS projects (
             id TEXT PRIMARY KEY,
+            organization_id TEXT NOT NULL DEFAULT 'legacy-local',
             created_at TEXT NOT NULL,
             payload TEXT NOT NULL
         );
@@ -114,6 +136,11 @@ class SQLiteDatabase:
         );
     """
     _EXPECTED_COLUMNS = {
+        "schema_metadata": {"key", "value"},
+        "organizations": {"id", "created_at", "payload"},
+        "users": {"id", "email", "status", "password_hash", "created_at", "payload"},
+        "memberships": {"organization_id", "user_id", "role", "created_at", "payload"},
+        "access_sessions": {"id", "user_id", "token_hash", "expires_at", "payload"},
         "runs": {"id", "started_at", "payload"},
         "timeline_events": {"id", "run_id", "timestamp", "payload"},
         "workflow_snapshots": {
@@ -139,7 +166,7 @@ class SQLiteDatabase:
             "created_at",
             "payload",
         },
-        "projects": {"id", "created_at", "payload"},
+        "projects": {"id", "organization_id", "created_at", "payload"},
         "project_sessions": {"id", "project_id", "created_at", "payload"},
         "project_executions": {
             "id", "session_id", "project_id", "status", "created_at", "payload"
@@ -182,7 +209,9 @@ class SQLiteDatabase:
             ) from exc
         try:
             with self.connect() as connection:
+                self._migrate(connection)
                 connection.executescript(self._SCHEMA)
+                connection.execute("INSERT OR REPLACE INTO schema_metadata (key,value) VALUES ('schema_version','2')")
                 self._validate_schema(connection)
         except SQLiteConnectionError:
             raise
@@ -191,6 +220,24 @@ class SQLiteDatabase:
                 "Falha ao inicializar o schema SQLite.",
                 path=self.path,
             ) from exc
+
+    @staticmethod
+    def _migrate(connection: sqlite3.Connection) -> None:
+        tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        if "projects" in tables:
+            columns = {row[1] for row in connection.execute("PRAGMA table_info(projects)")}
+            if "organization_id" not in columns:
+                connection.execute("ALTER TABLE projects ADD COLUMN organization_id TEXT NOT NULL DEFAULT 'legacy-local'")
+            rows = connection.execute("SELECT id,payload FROM projects").fetchall()
+            for row in rows:
+                payload = json.loads(row["payload"])
+                changed = False
+                if "organization_id" not in payload:
+                    payload["organization_id"] = "legacy-local"; changed = True
+                if "created_by_user_id" not in payload:
+                    payload["created_by_user_id"] = "legacy-local-admin"; changed = True
+                if changed:
+                    connection.execute("UPDATE projects SET organization_id='legacy-local', payload=? WHERE id=?", (json.dumps(payload, sort_keys=True), row["id"]))
 
     def _validate_schema(self, connection: sqlite3.Connection) -> None:
         for table, expected in self._EXPECTED_COLUMNS.items():

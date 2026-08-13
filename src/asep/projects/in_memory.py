@@ -23,3 +23,12 @@ class InMemoryProjectRepository:
                 key=lambda project: (project.created_at, project.project_id),
             )
         )
+
+    def get_for_organization(self, organization_id: str, project_id: str) -> WorkspaceProject:
+        project = self.get(project_id)
+        if project.organization_id != organization_id:
+            raise ProjectNotFoundError("Projeto não encontrado.")
+        return project
+
+    def list_for_organization(self, organization_id: str) -> tuple[WorkspaceProject, ...]:
+        return tuple(item for item in self.list() if item.organization_id == organization_id)

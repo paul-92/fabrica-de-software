@@ -4,6 +4,29 @@ from pathlib import Path
 from textwrap import dedent
 
 import pytest
+from fastapi.testclient import TestClient
+
+
+@pytest.fixture(autouse=True)
+def _legacy_project_api_session(request, monkeypatch):
+    """Authenticate pre-26.2 project API tests through the legacy-local account.
+
+    Security tests opt out so anonymous behavior remains directly observable.
+    """
+    if request.node.get_closest_marker("no_legacy_access"):
+        return
+    original = TestClient.request
+
+    def authenticated(client, method, url, *args, **kwargs):
+        path = str(url)
+        if "/api/v1/" in path and "/api/v1/access/" not in path and "/api/v1/health" not in path and not getattr(client, "_asep_access_attempted", False):
+            client._asep_access_attempted = True
+            original(client, "POST", "/api/v1/access/login", json={
+                "email": "admin@legacy.local", "password": "change-me-local-admin",
+            })
+        return original(client, method, url, *args, **kwargs)
+
+    monkeypatch.setattr(TestClient, "request", authenticated)
 
 
 def write_file(root: Path, relative_path: str, content: str) -> Path:

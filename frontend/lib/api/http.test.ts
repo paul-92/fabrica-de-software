@@ -28,6 +28,7 @@ describe("FetchHttpTransport", () => {
       "https://platform.example/api/v1/action",
       expect.objectContaining({
         method: "POST",
+        credentials: "include",
         body: JSON.stringify({ goal: "test" }),
         headers: expect.objectContaining({ "Content-Type": "application/json" }),
       }),

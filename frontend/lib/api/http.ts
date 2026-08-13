@@ -49,6 +49,7 @@ export class FetchHttpTransport implements HttpTransport {
     try {
       const response = await fetch(request.url, {
         method: request.method,
+        credentials: "include",
         headers: {
           Accept: "application/json",
           ...(request.body === undefined ? {} : { "Content-Type": "application/json" }),

@@ -13,6 +13,7 @@ from uuid import uuid4
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from asep._json_values import freeze_json
+from asep.access.models import RequestPrincipal
 from asep.ai_runtime import (
     AIRuntimeExecutionMode,
     AIRuntimeIdentity,
@@ -77,6 +78,7 @@ class ProjectAIRuntimeExecutionRequest(BaseModel):
     instruction: str
     metadata: Mapping[str, Any] = Field(default_factory=dict)
     execution_mode: AIRuntimeExecutionMode = AIRuntimeExecutionMode.READ_ONLY
+    principal: RequestPrincipal | None = None
 
     @field_validator("project_id", "session_id", "runtime_id", "instruction")
     @classmethod
@@ -137,7 +139,7 @@ class ProjectAIRuntimeExecutionService:
             raise ValueError("project engineering preparation requires workspace_write mode")
         if self._engineering_planning is None:
             raise RuntimeError("project engineering planning is unavailable")
-        project = self._projects.get(request.project_id)
+        project = self._projects.get(request.project_id, request.principal)
         self._sessions.get(request.project_id, request.session_id)
         session_context = self._context_builder.build(request.project_id, request.session_id)
         memory_context = (
@@ -196,7 +198,7 @@ class ProjectAIRuntimeExecutionService:
             raise ValueError("preparation identity does not match approval")
         if prepared.operational_plan is None or not prepared.preparation_analysis:
             raise ValueError("prepared plan is invalid")
-        project = self._projects.get(request.project_id)
+        project = self._projects.get(request.project_id, request.principal)
         self._sessions.get(request.project_id, request.session_id)
         session_context = self._context_builder.build(request.project_id, request.session_id)
         memory_context = (
@@ -333,7 +335,7 @@ class ProjectAIRuntimeExecutionService:
         return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
 
     def execute(self, request: ProjectAIRuntimeExecutionRequest) -> ProjectAIRuntimeExecutionResult:
-        project = self._projects.get(request.project_id)
+        project = self._projects.get(request.project_id, request.principal)
         self._sessions.get(request.project_id, request.session_id)
         session_context = self._context_builder.build(
             request.project_id, request.session_id

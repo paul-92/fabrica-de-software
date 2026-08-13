@@ -11,6 +11,7 @@ import { ProjectWorkspaceClient } from "../services/projectWorkspace";
 import { AgentsClient } from "../services/agents";
 import { SequentialQualityClient } from "../services/sequentialQuality";
 import { BrandingClient } from "../services/branding";
+import { AccessClient } from "../services/access";
 
 export type PlatformClients = Readonly<{
   intelligentEngineering: IntelligentEngineeringClient;
@@ -24,6 +25,7 @@ export type PlatformClients = Readonly<{
   agents: AgentsClient;
   sequentialQuality: SequentialQualityClient;
   branding: BrandingClient;
+  access: AccessClient;
 }>;
 
 export function createPlatformClients(): PlatformClients {
@@ -40,5 +42,6 @@ export function createPlatformClients(): PlatformClients {
     agents: new AgentsClient(api),
     sequentialQuality: new SequentialQualityClient(api),
     branding: new BrandingClient(api),
+    access: new AccessClient(api),
   });
 }

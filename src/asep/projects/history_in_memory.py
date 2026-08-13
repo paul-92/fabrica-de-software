@@ -21,6 +21,12 @@ class InMemoryProjectSessionRepository:
         except KeyError as exc:
             raise ProjectSessionNotFoundError("Project session not found.") from exc
 
+    def get_by_project(self, project_id: str, session_id: str) -> ProjectSession:
+        session = self._items.get(session_id)
+        if session is None or session.project_id != project_id:
+            raise ProjectSessionNotFoundError("Project session not found.")
+        return session.model_copy(deep=True)
+
     def list_by_project(self, project_id: str) -> tuple[ProjectSession, ...]:
         items = (item for item in self._items.values() if item.project_id == project_id)
         return tuple(item.model_copy(deep=True) for item in sorted(
@@ -50,6 +56,12 @@ class InMemoryProjectExecutionRepository:
             return self._items[execution_id].model_copy(deep=True)
         except KeyError as exc:
             raise ProjectExecutionNotFoundError("Project execution not found.") from exc
+
+    def get_by_project(self, project_id: str, execution_id: str) -> ProjectExecution:
+        execution = self._items.get(execution_id)
+        if execution is None or execution.project_id != project_id:
+            raise ProjectExecutionNotFoundError("Project execution not found.")
+        return execution.model_copy(deep=True)
 
     def list_by_session(self, session_id: str) -> tuple[ProjectExecution, ...]:
         return self._list(lambda item: item.session_id == session_id)

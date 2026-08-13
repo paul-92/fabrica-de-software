@@ -28,10 +28,7 @@ class ProjectSessionService:
 
     def get(self, project_id: str, session_id: str) -> ProjectSession:
         self._projects.get(project_id)
-        session = self._sessions.get(session_id)
-        if session.project_id != project_id:
-            raise ProjectSessionNotFoundError("Project session not found.")
-        return session
+        return self._sessions.get_by_project(project_id, session_id)
 
     def list(self, project_id: str) -> tuple[ProjectSession, ...]:
         self._projects.get(project_id)
@@ -39,10 +36,7 @@ class ProjectSessionService:
 
     def get_execution(self, project_id: str, execution_id: str) -> ProjectExecution:
         self._projects.get(project_id)
-        execution = self._executions.get(execution_id)
-        if execution.project_id != project_id:
-            raise ProjectExecutionNotFoundError("Project execution not found.")
-        return execution
+        return self._executions.get_by_project(project_id, execution_id)
 
     def list_executions(self, project_id: str) -> tuple[ProjectExecution, ...]:
         self._projects.get(project_id)

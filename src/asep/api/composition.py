@@ -90,6 +90,12 @@ from asep.tools import (
     node_validation_tools,
 )
 from asep.registry.agent_catalog_source import DeclarativeAgentCatalogSource
+from asep.access import AccessService
+from asep.access.models import (
+    LEGACY_ADMIN_USER_ID, LEGACY_ORGANIZATION_ID, Membership, Organization,
+    OrganizationRole, User, UserStatus,
+)
+from datetime import UTC, datetime
 
 
 @dataclass(frozen=True, slots=True)
@@ -303,6 +309,7 @@ def _create_configured_app(
     branding_query_service = BrandingQueryService(
         repositories.branding_repository,
     )
+    access_service = _bootstrap_access(settings, repositories)
     return create_app(
         query_service,
         metrics_service,
@@ -322,7 +329,27 @@ def _create_configured_app(
         sequential_quality_gate_service=sequential_quality_gate_service,
         session_memory_search_service=project_services.memory_search,
         branding_query_service=branding_query_service,
+        access_service=access_service,
+        access_cookie_secure=settings.access_cookie_secure,
     )
+
+
+def _bootstrap_access(settings: ApplicationSettings, repositories: RepositoryBundle) -> AccessService:
+    repository = repositories.access_repository
+    now = datetime.now(UTC)
+    repository.save_organization(Organization(
+        organization_id=LEGACY_ORGANIZATION_ID, name="Legacy local", created_at=now,
+    ))
+    found = repository.get_user_by_email(settings.legacy_admin_email.strip().casefold())
+    if found is None:
+        user = User(user_id=LEGACY_ADMIN_USER_ID, email=settings.legacy_admin_email,
+                    status=UserStatus.ACTIVE, created_at=now, updated_at=now)
+        repository.save_user(user, AccessService.password_hash(settings.legacy_admin_password))
+        repository.save_membership(Membership(
+            organization_id=LEGACY_ORGANIZATION_ID, user_id=user.user_id,
+            role=OrganizationRole.ADMIN, created_at=now,
+        ))
+    return AccessService(repository)
 
 
 def create_default_app(

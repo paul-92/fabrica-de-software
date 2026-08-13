@@ -35,3 +35,4 @@ where = ["src"]
 addopts = "-q"
 testpaths = ["tests"]
 pythonpath = ["src"]
+markers = ["no_legacy_access: disable the legacy-local compatibility login in security tests"]

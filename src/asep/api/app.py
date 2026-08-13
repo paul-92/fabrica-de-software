@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from asep.application import (
@@ -40,6 +41,8 @@ from asep.api.routes import (
 )
 from asep.metrics import MetricsService
 from asep.configuration.models import DEFAULT_CORS_ORIGINS
+from asep.access import AccessDeniedError, AccessService
+from asep.api.access_routes import create_access_router
 
 
 def create_app(
@@ -61,6 +64,8 @@ def create_app(
     session_memory_search_service: SessionMemorySearchService | None = None,
     branding_query_service: BrandingQueryService | None = None,
     project_engineering_execution_service: ProjectEngineeringExecutionService | None = None,
+    access_service: AccessService | None = None,
+    access_cookie_secure: bool = False,
 ) -> FastAPI:
     app = FastAPI(
         title="ASEP Dashboard API",
@@ -81,10 +86,20 @@ def create_app(
     app.state.project_session_service = project_session_service
     app.state.agent_catalog_service = agent_catalog_service
     app.state.agent_runtime_projection_service = agent_runtime_projection_service
+    if access_service is not None:
+        @app.middleware("http")
+        async def require_private_access(request, call_next):
+            public = {"/api/v1/health", "/api/v1/access/login", "/api/v1/access/logout"}
+            if request.method != "OPTIONS" and request.url.path.startswith("/api/v1/") and request.url.path not in public:
+                try:
+                    access_service.authenticate(request.cookies.get("asep_session"))
+                except AccessDeniedError:
+                    return JSONResponse(status_code=401, content={"error": {"code": "AUTHENTICATION_REQUIRED", "message": "Authentication required."}})
+            return await call_next(request)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=list(cors_origins),
-        allow_credentials=False,
+        allow_credentials=True,
         allow_methods=["GET", "POST", "OPTIONS"],
         allow_headers=["Accept", "Content-Type"],
     )
@@ -104,6 +119,10 @@ def create_app(
         app.include_router(
             create_sequential_quality_router(sequential_quality_gate_service)
         )
+    principal_dependency = None
+    if access_service is not None:
+        access_router, principal_dependency = create_access_router(access_service, secure_cookie=access_cookie_secure)
+        app.include_router(access_router)
     if project_service is not None:
         app.include_router(
             create_projects_router(
@@ -114,6 +133,7 @@ def create_app(
                 project_workspace_service,
                 session_memory_search_service,
                 project_engineering_execution_service,
+                principal_dependency,
             )
         )
     if ai_runtime_connection_service is not None:

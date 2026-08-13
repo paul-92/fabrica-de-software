@@ -41,6 +41,9 @@ class ApplicationSettings:
     cors_origins: tuple[str, ...] | str = DEFAULT_CORS_ORIGINS
     repair_workspace: Path | str | None = None
     agent_catalog_directory: Path | str = _DEFAULT_AGENT_CATALOG_DIRECTORY
+    access_cookie_secure: bool | str = False
+    legacy_admin_email: str = "admin@legacy.local"
+    legacy_admin_password: str = "change-me-local-admin"
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -92,6 +95,11 @@ class ApplicationSettings:
                 "agent_catalog_directory", self.agent_catalog_directory
             ),
         )
+        object.__setattr__(self, "access_cookie_secure", str(self.access_cookie_secure).casefold() in {"1", "true", "yes"})
+        if len(self.legacy_admin_password) < 12:
+            raise ConfigurationValidationError("legacy_admin_password deve conter ao menos 12 caracteres.")
+        if self.access_cookie_secure and self.legacy_admin_password == "change-me-local-admin":
+            raise ConfigurationValidationError("produção exige uma senha administrativa explícita.")
 
     @staticmethod
     def _validate_backend(

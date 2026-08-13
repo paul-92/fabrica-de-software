@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { loadBrandConfig } from "../branding/config";
 import { AppShell } from "../components/layout/AppShell";
+import { AccessGate } from "../components/access/AccessGate";
 import "../styles/globals.css";
 
 const brand = loadBrandConfig();
@@ -23,7 +24,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body>
-        <AppShell brand={brand}>{children}</AppShell>
+        <AccessGate><AppShell brand={brand}>{children}</AppShell></AccessGate>
       </body>
     </html>
   );

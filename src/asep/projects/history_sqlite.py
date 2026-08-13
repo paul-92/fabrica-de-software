@@ -35,6 +35,13 @@ class SQLiteProjectSessionRepository:
             raise ProjectSessionNotFoundError("Project session not found.")
         return ProjectSession.model_validate_json(row["payload"])
 
+    def get_by_project(self, project_id: str, session_id: str) -> ProjectSession:
+        with self._database.connect() as connection:
+            row = connection.execute("SELECT payload FROM project_sessions WHERE project_id=? AND id=?", (project_id, session_id)).fetchone()
+        if row is None:
+            raise ProjectSessionNotFoundError("Project session not found.")
+        return ProjectSession.model_validate_json(row["payload"])
+
     def list_by_project(self, project_id: str) -> tuple[ProjectSession, ...]:
         with self._database.connect() as connection:
             rows = connection.execute(
@@ -73,6 +80,13 @@ class SQLiteProjectExecutionRepository:
             row = connection.execute(
                 "SELECT payload FROM project_executions WHERE id = ?", (execution_id,)
             ).fetchone()
+        if row is None:
+            raise ProjectExecutionNotFoundError("Project execution not found.")
+        return ProjectExecution.model_validate_json(row["payload"])
+
+    def get_by_project(self, project_id: str, execution_id: str) -> ProjectExecution:
+        with self._database.connect() as connection:
+            row = connection.execute("SELECT payload FROM project_executions WHERE project_id=? AND id=?", (project_id, execution_id)).fetchone()
         if row is None:
             raise ProjectExecutionNotFoundError("Project execution not found.")
         return ProjectExecution.model_validate_json(row["payload"])

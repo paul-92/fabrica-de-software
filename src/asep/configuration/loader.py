@@ -22,6 +22,9 @@ class Configuration:
         "ASEP_CORS_ORIGINS": "cors_origins",
         "ASEP_REPAIR_WORKSPACE": "repair_workspace",
         "ASEP_AGENT_CATALOG_DIRECTORY": "agent_catalog_directory",
+        "ASEP_ACCESS_COOKIE_SECURE": "access_cookie_secure",
+        "ASEP_LEGACY_ADMIN_EMAIL": "legacy_admin_email",
+        "ASEP_LEGACY_ADMIN_PASSWORD": "legacy_admin_password",
     }
 
     @classmethod

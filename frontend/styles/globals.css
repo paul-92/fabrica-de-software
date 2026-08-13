@@ -32,6 +32,9 @@ button:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--color-brand-primary) 45%, transparent);
   outline-offset: 3px;
 }
+.access-screen { align-items: center; display: flex; justify-content: center; min-height: 100vh; padding: var(--space-5); }
+.access-card { max-width: 28rem; width: 100%; }
+.access-session { align-items: center; background: var(--color-surface-elevated); display: flex; gap: var(--space-3); justify-content: flex-end; padding: var(--space-2) var(--space-4); }
 
 .app-shell {
   display: grid;

@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from asep.errors import ProjectValidationError
 from asep.projects import ProjectRepository, WorkspaceProject
+from asep.access.models import LEGACY_ADMIN_USER_ID, LEGACY_ORGANIZATION_ID, RequestPrincipal
 
 
 class ProjectService:
@@ -19,7 +20,7 @@ class ProjectService:
         self._clock = clock or (lambda: datetime.now(UTC))
         self._id_generator = id_generator or (lambda: str(uuid4()))
 
-    def create(self, name: str, workspace_path: Path) -> WorkspaceProject:
+    def create(self, name: str, workspace_path: Path, principal: RequestPrincipal | None = None) -> WorkspaceProject:
         if not name.strip():
             raise ProjectValidationError("Nome do projeto não pode ser vazio.")
         if not str(workspace_path).strip():
@@ -32,6 +33,8 @@ class ProjectService:
         now = self._clock()
         project = WorkspaceProject(
             project_id=self._id_generator(),
+            organization_id=(principal.organization_id if principal else LEGACY_ORGANIZATION_ID),
+            created_by_user_id=(principal.user_id if principal else LEGACY_ADMIN_USER_ID),
             name=name.strip(),
             workspace_path=workspace,
             created_at=now,
@@ -40,8 +43,8 @@ class ProjectService:
         self._repository.save(project)
         return project
 
-    def list(self) -> tuple[WorkspaceProject, ...]:
-        return self._repository.list()
+    def list(self, principal: RequestPrincipal | None = None) -> tuple[WorkspaceProject, ...]:
+        return self._repository.list_for_organization(principal.organization_id) if principal else self._repository.list()
 
-    def get(self, project_id: str) -> WorkspaceProject:
-        return self._repository.get(project_id)
+    def get(self, project_id: str, principal: RequestPrincipal | None = None) -> WorkspaceProject:
+        return self._repository.get_for_organization(principal.organization_id, project_id) if principal else self._repository.get(project_id)

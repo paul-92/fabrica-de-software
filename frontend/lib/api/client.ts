@@ -33,6 +33,7 @@ export class ApiClient {
         signal,
       });
       if (!response.ok) {
+        if (response.status === 401 && typeof window !== "undefined") window.dispatchEvent(new Event("asep:unauthorized"));
         const envelope = this.errorEnvelope(response.body);
         throw new ApiHttpError(
           response.status,
