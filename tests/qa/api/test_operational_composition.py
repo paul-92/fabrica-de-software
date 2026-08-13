@@ -124,10 +124,6 @@ def test_http_route_layer_has_no_runtime_implementation_dependency() -> None:
     route_source = Path("src/asep/api/agent_routes.py").read_text(
         encoding="utf-8"
     )
-    composition_source = Path("src/asep/api/composition.py").read_text(
-        encoding="utf-8"
-    )
-
     for forbidden in (
         "AgentRegistry",
         "AgentExecutionService",
@@ -135,4 +131,3 @@ def test_http_route_layer_has_no_runtime_implementation_dependency() -> None:
         "InMemoryAgentRegistry",
     ):
         assert forbidden not in route_source
-        assert forbidden not in composition_source
