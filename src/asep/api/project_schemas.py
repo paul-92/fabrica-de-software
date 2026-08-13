@@ -367,6 +367,7 @@ class ProjectExecutionResponse(ProjectHttpSchema):
                     "failure_analyses", "repair", "quality_gate", "step_results",
                     "preparation_analysis", "preparation_workspace_fingerprint",
                     "preparation_context_fingerprint",
+                    "organization_id", "requested_by_user_id",
                 },
             ),
             "operational_plan": OperationalPlanResponse.from_domain(

@@ -1,4 +1,5 @@
 import { ApiClient } from "../api/client";
+import type { AIUsageResponseDto } from "../api/dtos";
 import type { AIRuntimeExecutionMode, JsonValue, ProjectAIRuntimeExecutionDto, ProjectEngineeringPreparationDto, ProjectExecutionDto, ProjectSessionDto, SessionMemoryDto, SessionMemoryKind, SessionMemorySearchPageDto, SessionMemorySearchParams } from "../api/dtos";
 
 export class ProjectRuntimeClient {
@@ -44,6 +45,9 @@ export class ProjectHistoryClient {
   }
   getExecution(projectId: string, executionId: string): Promise<ProjectExecutionDto> {
     return this.api.request({ path: `/api/v1/projects/${encodeURIComponent(projectId)}/executions/${encodeURIComponent(executionId)}` });
+  }
+  getExecutionUsage(projectId: string, executionId: string): Promise<AIUsageResponseDto> {
+    return this.api.request({ path: `/api/v1/projects/${encodeURIComponent(projectId)}/executions/${encodeURIComponent(executionId)}/ai-usage` });
   }
   async listMemory(projectId: string, sessionId: string): Promise<readonly SessionMemoryDto[]> {
     return (await this.api.request<MemoryResponse>({ path: `/api/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/memory` })).items;

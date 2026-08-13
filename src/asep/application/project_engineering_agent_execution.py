@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from enum import StrEnum
 from pathlib import Path, PurePosixPath
-from typing import Mapping, Protocol
+from typing import Mapping, Protocol, runtime_checkable
+from datetime import UTC, datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic import JsonValue
@@ -23,6 +24,9 @@ from asep.projects import (
     ProjectOperationalPlanOperation,
     ProjectOperationalPlanStep,
 )
+from asep.ai_runtime import AIRuntimeIdentity, AIRuntimeUsage
+from asep.ai_usage import AIUsageOperation, AIUsageService, AIUsageStatus
+from asep.access.models import LEGACY_ADMIN_USER_ID, LEGACY_ORGANIZATION_ID
 
 
 class EngineeringFileChangeOperation(StrEnum):
@@ -72,10 +76,59 @@ class EngineeringImplementationProvider(Protocol):
     ) -> tuple[EngineeringFileChange, ...]: ...
 
 
+class AIImplementationResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    changes: tuple[EngineeringFileChange, ...]
+    identity: AIRuntimeIdentity
+    provider: str
+    usage: AIRuntimeUsage | None = None
+    provider_request_id: str | None = None
+    already_metered: bool = False
+
+
+@runtime_checkable
+class AIBackedEngineeringImplementationProvider(Protocol):
+    def supports(self, step: ProjectOperationalPlanStep) -> bool: ...
+    def invoke_ai(self, context: "EngineeringImplementationContext") -> AIImplementationResult: ...
+
+
+class MeteredEngineeringImplementationProvider:
+    """Single metering boundary for AI-backed implementation providers."""
+    def __init__(self, provider: AIBackedEngineeringImplementationProvider, usage: AIUsageService) -> None:
+        self._provider, self._usage = provider, usage
+    def supports(self, step: ProjectOperationalPlanStep) -> bool: return self._provider.supports(step)
+    def changes_for(self, context: "EngineeringImplementationContext") -> tuple[EngineeringFileChange, ...]:
+        started = datetime.now(UTC)
+        try:
+            result = self._provider.invoke_ai(context)
+        except Exception as error:
+            identity = getattr(self._provider, "identity", None)
+            if not isinstance(identity, AIRuntimeIdentity):
+                raise RuntimeError("AI-backed provider must expose identity for failed metering") from error
+            self._usage.record(organization_id=context.organization_id,user_id=context.user_id,
+                project_id=context.project_id,session_id=context.session_id,execution_id=context.execution_id,
+                runtime_id=identity.runtime_id,provider=identity.runtime_id,model=identity.model_id,
+                operation=AIUsageOperation.IMPLEMENTATION,started_at=started,status=AIUsageStatus.FAILED)
+            raise
+        if not result.already_metered:
+            from asep.ai_runtime import AIRuntimeResult
+            normalized = AIRuntimeResult(output="implementation changes produced", identity=result.identity, usage=result.usage)
+            self._usage.record(organization_id=context.organization_id,user_id=context.user_id,
+                project_id=context.project_id,session_id=context.session_id,execution_id=context.execution_id,
+                runtime_id=result.identity.runtime_id,provider=result.provider,model=result.identity.model_id,
+                operation=AIUsageOperation.IMPLEMENTATION,started_at=started,status=AIUsageStatus.SUCCEEDED,
+                result=normalized,provider_request_id=result.provider_request_id)
+        return result.changes
+
+
 class EngineeringImplementationContext(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     execution_id: str
+    organization_id: str = LEGACY_ORGANIZATION_ID
+    user_id: str = LEGACY_ADMIN_USER_ID
+    project_id: str = "legacy-project"
+    session_id: str = "legacy-session"
     task: str
     analysis: BoundedProjectAnalysis
     plan: ProjectOperationalPlan
@@ -126,6 +179,10 @@ class ProjectEngineeringAgentExecutor:
             )
             changes = self._provider.changes_for(EngineeringImplementationContext(
                 execution_id=execution.execution_id,
+                organization_id=execution.organization_id,
+                user_id=execution.requested_by_user_id,
+                project_id=execution.project_id,
+                session_id=execution.session_id,
                 task=execution.instruction,
                 analysis=analysis,
                 plan=plan,

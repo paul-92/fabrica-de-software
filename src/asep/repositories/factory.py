@@ -58,6 +58,7 @@ from asep.branding import (
     SQLiteBrandingRepository,
 )
 from asep.access import AccessRepository, InMemoryAccessRepository, SQLiteAccessRepository
+from asep.ai_usage import AIUsageRepository, InMemoryAIUsageRepository, SQLiteAIUsageRepository
 
 
 RepositorySettings = ApplicationSettings
@@ -89,6 +90,7 @@ class RepositoryBundle:
         default_factory=InMemoryBrandingRepository
     )
     access_repository: AccessRepository = field(default_factory=InMemoryAccessRepository)
+    ai_usage_repository: AIUsageRepository = field(default_factory=InMemoryAIUsageRepository)
 
     def __post_init__(self) -> None:
         if not isinstance(
@@ -177,4 +179,5 @@ class RepositoryFactory:
             project_session_repository=SQLiteProjectSessionRepository(database),
             project_execution_repository=SQLiteProjectExecutionRepository(database),
             session_memory_repository=SQLiteSessionMemoryRepository(database),
+            ai_usage_repository=SQLiteAIUsageRepository(database),
         )

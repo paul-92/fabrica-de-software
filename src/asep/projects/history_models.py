@@ -6,6 +6,7 @@ from enum import StrEnum
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from asep.ai_runtime import AIRuntimeExecutionMode, AIRuntimeUsage
+from asep.access.models import LEGACY_ADMIN_USER_ID, LEGACY_ORGANIZATION_ID
 from asep.quality_results import StoredQualityGateResult
 from asep.repair import RepairResult
 from asep.workspace_changes import WorkspaceChange
@@ -234,6 +235,8 @@ class ProjectExecution(BaseModel):
     execution_id: str
     session_id: str
     project_id: str
+    organization_id: str = LEGACY_ORGANIZATION_ID
+    requested_by_user_id: str = LEGACY_ADMIN_USER_ID
     runtime_id: str
     instruction: str
     execution_mode: AIRuntimeExecutionMode

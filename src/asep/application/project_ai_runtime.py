@@ -14,6 +14,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from asep._json_values import freeze_json
 from asep.access.models import RequestPrincipal
+from asep.access.models import LEGACY_ADMIN_USER_ID, LEGACY_ORGANIZATION_ID
+from asep.ai_usage import AIUsageOperation, AIUsageService, AIUsageStatus
 from asep.ai_runtime import (
     AIRuntimeExecutionMode,
     AIRuntimeIdentity,
@@ -41,6 +43,7 @@ from asep.projects import (
     ProjectExecutionStatus,
     ProjectOperationalPlan,
     ProjectEngineeringStepResult,
+    ProjectOperationalPlanSource,
 )
 
 
@@ -128,8 +131,51 @@ class ProjectAIRuntimeExecutionService:
         self._defer_completion = defer_completion
         self._clock = clock or (lambda: datetime.now(UTC))
         self._id_generator = id_generator or (lambda: str(uuid4()))
+        self._usage: AIUsageService | None = None
         self._locks_guard = Lock()
         self._write_locks: dict[str, Lock] = {}
+
+    def with_usage_metering(self, service: AIUsageService) -> "ProjectAIRuntimeExecutionService":
+        self._usage = service
+        return self
+
+    def _invoke_runtime(self, runtime, runtime_request: AIRuntimeRequest,
+                        execution: ProjectExecution,
+                        principal: RequestPrincipal | None,
+                        operation: AIUsageOperation) -> AIRuntimeResult:
+        started = self._clock()
+        trusted_user = principal.user_id if principal else LEGACY_ADMIN_USER_ID
+        trusted_org = principal.organization_id if principal else LEGACY_ORGANIZATION_ID
+        try:
+            result = runtime.execute(runtime_request)
+        except Exception:
+            if self._usage is not None:
+                self._usage.record(organization_id=trusted_org, user_id=trusted_user,
+                    project_id=execution.project_id, session_id=execution.session_id,
+                    execution_id=execution.execution_id, runtime_id=runtime.identity.runtime_id,
+                    provider=runtime.identity.runtime_id, model=runtime.identity.model_id,
+                    operation=operation, started_at=started, status=AIUsageStatus.FAILED)
+            raise
+        if self._usage is not None:
+            self._usage.record(organization_id=trusted_org, user_id=trusted_user,
+                project_id=execution.project_id, session_id=execution.session_id,
+                execution_id=execution.execution_id, runtime_id=result.identity.runtime_id,
+                provider=str(result.metadata.get("provider", result.identity.runtime_id)),
+                model=result.identity.model_id, operation=operation, started_at=started,
+                status=AIUsageStatus.SUCCEEDED, result=result)
+        return result
+
+    def _record_ai_planning(self, execution: ProjectExecution, principal: RequestPrincipal | None, plan: ProjectOperationalPlan) -> None:
+        if self._usage is None or plan.source is not ProjectOperationalPlanSource.AI:
+            return
+        self._usage.record(
+            organization_id=principal.organization_id if principal else LEGACY_ORGANIZATION_ID,
+            user_id=principal.user_id if principal else LEGACY_ADMIN_USER_ID,
+            project_id=execution.project_id, session_id=execution.session_id,
+            execution_id=execution.execution_id, runtime_id="planning-runtime",
+            provider="planning-runtime", model=None, operation=AIUsageOperation.PLANNING,
+            started_at=self._clock(), status=AIUsageStatus.SUCCEEDED,
+        )
 
     def prepare(
         self, request: ProjectAIRuntimeExecutionRequest,
@@ -150,6 +196,8 @@ class ProjectAIRuntimeExecutionService:
         execution = ProjectExecution(
             execution_id=self._id_generator(), session_id=request.session_id,
             project_id=request.project_id, runtime_id=request.runtime_id,
+            organization_id=project.organization_id,
+            requested_by_user_id=request.principal.user_id if request.principal else LEGACY_ADMIN_USER_ID,
             instruction=request.instruction, execution_mode=request.execution_mode,
             status=ProjectExecutionStatus.PENDING,
             context_entry_count=len(session_context.entries),
@@ -165,6 +213,7 @@ class ProjectAIRuntimeExecutionService:
         plan = self._engineering_planning.plan_from_analysis(
             execution, analysis, session_context, memory_context,
         )
+        self._record_ai_planning(execution, request.principal, plan)
         after = self._snapshotter.capture(project.workspace_path)
         if self._snapshotter.changes(before, after):
             raise RuntimeError("planning mutated the workspace")
@@ -289,7 +338,7 @@ class ProjectAIRuntimeExecutionService:
                     ) if self._internal_execution is not None else None
                 )
                 if step_results is None:
-                    result = runtime.execute(runtime_request)
+                    result = self._invoke_runtime(runtime, runtime_request, execution, request.principal, AIUsageOperation.IMPLEMENTATION)
                 else:
                     execution = ProjectExecution.model_validate({
                         **execution.model_dump(mode="python"), "step_results": step_results,
@@ -348,6 +397,8 @@ class ProjectAIRuntimeExecutionService:
         execution = ProjectExecution(
             execution_id=self._id_generator(), session_id=request.session_id,
             project_id=request.project_id, runtime_id=request.runtime_id,
+            organization_id=project.organization_id,
+            requested_by_user_id=request.principal.user_id if request.principal else LEGACY_ADMIN_USER_ID,
             instruction=request.instruction, execution_mode=request.execution_mode,
             status=ProjectExecutionStatus.RUNNING,
             context_entry_count=len(session_context.entries),
@@ -372,6 +423,7 @@ class ProjectAIRuntimeExecutionService:
                     session_context,
                     memory_context,
                 )
+                self._record_ai_planning(execution, request.principal, plan)
                 execution = ProjectExecution.model_validate(
                     {**execution.model_dump(mode="python"), "operational_plan": plan}
                 )
@@ -424,7 +476,7 @@ class ProjectAIRuntimeExecutionService:
         )
         if request.execution_mode is AIRuntimeExecutionMode.READ_ONLY:
             try:
-                result = runtime.execute(runtime_request)
+                result = self._invoke_runtime(runtime, runtime_request, execution, request.principal, AIUsageOperation.OTHER)
             except Exception as error:
                 self._persist_failure(execution, error)
                 raise
@@ -452,7 +504,7 @@ class ProjectAIRuntimeExecutionService:
                     else None
                 )
                 if step_results is None:
-                    result = runtime.execute(runtime_request)
+                    result = self._invoke_runtime(runtime, runtime_request, execution, request.principal, AIUsageOperation.IMPLEMENTATION)
                 else:
                     execution = ProjectExecution.model_validate({
                         **execution.model_dump(mode="python"),

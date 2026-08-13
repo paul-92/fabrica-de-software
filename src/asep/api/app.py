@@ -43,6 +43,8 @@ from asep.metrics import MetricsService
 from asep.configuration.models import DEFAULT_CORS_ORIGINS
 from asep.access import AccessDeniedError, AccessService
 from asep.api.access_routes import create_access_router
+from asep.ai_usage import AIUsageService
+from asep.api.ai_usage_routes import create_ai_usage_router
 
 
 def create_app(
@@ -66,6 +68,7 @@ def create_app(
     project_engineering_execution_service: ProjectEngineeringExecutionService | None = None,
     access_service: AccessService | None = None,
     access_cookie_secure: bool = False,
+    ai_usage_service: AIUsageService | None = None,
 ) -> FastAPI:
     app = FastAPI(
         title="ASEP Dashboard API",
@@ -136,6 +139,8 @@ def create_app(
                 principal_dependency,
             )
         )
+        if ai_usage_service is not None and principal_dependency is not None:
+            app.include_router(create_ai_usage_router(ai_usage_service, project_service, principal_dependency))
     if ai_runtime_connection_service is not None:
         app.include_router(
             create_ai_runtime_router(ai_runtime_connection_service)

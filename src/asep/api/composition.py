@@ -37,6 +37,8 @@ from asep.application import (
     DeterministicEngineeringTaskDecomposer,
     EngineeringTaskDecomposer,
     EngineeringImplementationProvider,
+    AIBackedEngineeringImplementationProvider,
+    MeteredEngineeringImplementationProvider,
     ProjectEngineeringAgentExecutor,
     ProjectEngineeringExecutionService,
     ProjectEngineeringPlanningService,
@@ -96,6 +98,7 @@ from asep.access.models import (
     OrganizationRole, User, UserStatus,
 )
 from asep.projects import HostedWorkspaceManager
+from asep.ai_usage import AIUsageService
 from datetime import UTC, datetime
 
 
@@ -134,6 +137,7 @@ class _ProjectApplicationServices:
     memory: ProjectSessionMemoryService
     memory_search: SessionMemorySearchService
     workspace: ProjectWorkspaceService
+    usage: AIUsageService
 
 
 def _create_intelligent_engineering_service(
@@ -203,13 +207,14 @@ def _create_project_application_services(
         sessions,
         repositories.session_memory_repository,
     )
+    usage = AIUsageService(repositories.ai_usage_repository)
     runtime_execution = ProjectAIRuntimeExecutionService(
         project_service,
         registry,
         sessions,
         repositories.project_execution_repository,
         memory_service=memory,
-    )
+    ).with_usage_metering(usage)
     internal_execution = None
     engineering_tools = None
     if include_engineering_execution:
@@ -232,9 +237,14 @@ def _create_project_application_services(
                 timeline=TimelineRecorder(repositories.timeline_repository),
                 policy=AgentExecutionPolicy(fail_fast=False),
             )
+            effective_provider = (
+                MeteredEngineeringImplementationProvider(implementation_provider, usage)
+                if isinstance(implementation_provider, AIBackedEngineeringImplementationProvider)
+                else implementation_provider
+            )
             internal_execution = ProjectEngineeringAgentExecutor(
                 agent_execution,
-                implementation_provider,
+                effective_provider,
             )
     engineering_runtime_execution = ProjectAIRuntimeExecutionService(
         project_service,
@@ -253,7 +263,7 @@ def _create_project_application_services(
         ),
         internal_execution=internal_execution,
         defer_completion=include_engineering_execution,
-    )
+    ).with_usage_metering(usage)
     engineering_execution = None
     if include_engineering_execution:
         assert engineering_tools is not None
@@ -284,7 +294,7 @@ def _create_project_application_services(
             sessions,
             repositories.session_memory_query_source,
         ),
-        workspace=ProjectWorkspaceService(project_service),
+        workspace=ProjectWorkspaceService(project_service), usage=usage,
     )
 
 
@@ -337,6 +347,7 @@ def _create_configured_app(
         branding_query_service=branding_query_service,
         access_service=access_service,
         access_cookie_secure=settings.access_cookie_secure,
+        ai_usage_service=project_services.usage,
     )
 
 

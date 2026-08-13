@@ -240,6 +240,9 @@ export type CreateProjectDto = Readonly<{
   name: string;
 }>;
 
+export type AIUsageAggregateDto = Readonly<{ calls: number; known_input_tokens: number; known_output_tokens: number; known_total_tokens: number; calls_with_unknown_usage: number }>;
+export type AIUsageResponseDto = Readonly<{ items: readonly Readonly<{ usage_id: string; operation: "planning" | "implementation" | "repair" | "other"; status: "succeeded" | "failed"; runtime_id: string; provider: string; model: string | null; input_tokens: number | null; output_tokens: number | null; total_tokens: number | null; started_at: string; completed_at: string }>[]; aggregate: AIUsageAggregateDto }>;
+
 export type MemoryEntryDto = Readonly<{
   memory_id: string;
   agent_id: string;
