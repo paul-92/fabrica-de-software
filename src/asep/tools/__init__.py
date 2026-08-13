@@ -1,6 +1,7 @@
 """Contratos e implementações oficiais de Tools da ASEP."""
 
 from asep.tools.builtin import (
+    CompileAllTool,
     ListDirectoryTool,
     ReadDocumentationTool,
     ReadFileTool,
@@ -39,14 +40,21 @@ from asep.tools.models import (
     ToolRequest,
     ToolResult,
 )
+from asep.tools.node_validation import (
+    NpmScriptValidationTool,
+    node_validation_tools,
+    resolve_npm_executable,
+)
 from asep.tools.registry import InMemoryToolRegistry, ToolRegistry
 from asep.tools.validator import ToolValidator
 
 __all__ = [
+    "CompileAllTool",
     "InMemoryToolMetrics",
     "InMemoryToolRegistry",
     "InvalidToolRegistrationError",
     "ListDirectoryTool",
+    "NpmScriptValidationTool",
     "ReadDocumentationTool",
     "ReadFileTool",
     "RunTestsTool",
@@ -78,5 +86,6 @@ __all__ = [
     "ToolValidationError",
     "ToolValidator",
     "WriteFileTool",
+    "node_validation_tools",
+    "resolve_npm_executable",
 ]
-

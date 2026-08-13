@@ -11,6 +11,8 @@ from asep.errors import ProjectExecutionNotFoundError, ProjectHistoryConflictErr
 from asep.projects import (
     InMemoryProjectExecutionRepository, InMemoryProjectSessionRepository,
     ProjectExecution, ProjectExecutionStatus, ProjectSession,
+    ProjectOperationalPlan, ProjectOperationalPlanOperation,
+    ProjectOperationalPlanStep,
     SQLiteProjectExecutionRepository, SQLiteProjectRepository, SQLiteProjectSessionRepository,
     WorkspaceProject,
 )
@@ -90,6 +92,7 @@ def test_sqlite_loads_pre_23_8_execution_payload_with_safe_context_defaults(tmp_
     legacy_payload.pop("context_truncated")
     legacy_payload.pop("context_char_count")
     legacy_payload.pop("context_omitted_execution_count")
+    legacy_payload.pop("step_results")
     with sqlite3.connect(database) as connection:
         connection.execute(
             "INSERT INTO project_executions (id, session_id, project_id, status, created_at, payload) VALUES (?, ?, ?, ?, ?, ?)",
@@ -100,3 +103,59 @@ def test_sqlite_loads_pre_23_8_execution_payload_with_safe_context_defaults(tmp_
     assert restored.context_truncated is False
     assert restored.context_char_count == 0
     assert restored.context_omitted_execution_count == 0
+    assert restored.step_results == ()
+
+
+def test_sqlite_reconstructs_structured_plan_and_historical_step_defaults(
+    tmp_path: Path,
+) -> None:
+    database = tmp_path / "asep.db"
+    SQLiteProjectRepository(database).save(WorkspaceProject(
+        project_id="p-1", name="P", workspace_path=tmp_path,
+        created_at=NOW, updated_at=NOW,
+    ))
+    SQLiteProjectSessionRepository(database).create(session())
+    structured = execution().model_copy(update={
+        "operational_plan": ProjectOperationalPlan(
+            execution_id="e-1",
+            steps=(ProjectOperationalPlanStep(
+                step_id="validate",
+                operation=ProjectOperationalPlanOperation.VALIDATE,
+                description="Validate",
+                dependencies=("inspect",),
+                target_hints=("tests",),
+                validation_hints=("pytest",),
+            ), ProjectOperationalPlanStep(
+                step_id="inspect",
+                operation=ProjectOperationalPlanOperation.INSPECT,
+                description="Inspect",
+            )),
+            created_at=NOW,
+        )
+    })
+    SQLiteProjectExecutionRepository(database).create(structured)
+    restored = SQLiteProjectExecutionRepository(database).get("e-1")
+    assert restored.operational_plan == structured.operational_plan
+
+    payload = structured.model_dump(mode="json")
+    legacy_step = payload["operational_plan"]["steps"][1]
+    legacy_step.pop("dependencies")
+    legacy_step.pop("target_hints")
+    legacy_step.pop("validation_hints")
+    payload["operational_plan"].pop("source")
+    payload.pop("validation_strategy")
+    payload.pop("failure_analyses")
+    payload["execution_id"] = "legacy-plan"
+    payload["operational_plan"]["execution_id"] = "legacy-plan"
+    with sqlite3.connect(database) as connection:
+        connection.execute(
+            "INSERT INTO project_executions (id, session_id, project_id, status, created_at, payload) VALUES (?, ?, ?, ?, ?, ?)",
+            ("legacy-plan", "s-1", "p-1", "succeeded", NOW.isoformat(), json.dumps(payload)),
+        )
+    legacy = SQLiteProjectExecutionRepository(database).get("legacy-plan")
+    assert legacy.operational_plan.steps[1].dependencies == ()
+    assert legacy.operational_plan.steps[1].target_hints == ()
+    assert legacy.operational_plan.steps[1].validation_hints == ()
+    assert legacy.operational_plan.source.value == "deterministic"
+    assert legacy.validation_strategy is None
+    assert legacy.failure_analyses == ()

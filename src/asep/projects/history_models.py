@@ -22,6 +22,15 @@ class ProjectOperationalPlanOperation(StrEnum):
     ANALYZE_CONTEXT = "analyze_context"
     EXECUTE_WORKSPACE_TASK = "execute_workspace_task"
     CAPTURE_WORKSPACE_CHANGES = "capture_workspace_changes"
+    INSPECT = "inspect"
+    IMPLEMENT = "implement"
+    VALIDATE = "validate"
+
+
+class ProjectOperationalPlanSource(StrEnum):
+    DETERMINISTIC = "deterministic"
+    AI = "ai"
+    DETERMINISTIC_FALLBACK = "deterministic_fallback"
 
 
 class ProjectOperationalPlanStep(BaseModel):
@@ -30,6 +39,9 @@ class ProjectOperationalPlanStep(BaseModel):
     step_id: str
     operation: ProjectOperationalPlanOperation
     description: str
+    dependencies: tuple[str, ...] = ()
+    target_hints: tuple[str, ...] = ()
+    validation_hints: tuple[str, ...] = ()
 
     @field_validator("step_id", "description")
     @classmethod
@@ -37,6 +49,16 @@ class ProjectOperationalPlanStep(BaseModel):
         normalized = value.strip()
         if not normalized:
             raise ValueError("operational plan fields must not be blank")
+        return normalized
+
+    @field_validator("dependencies", "target_hints", "validation_hints")
+    @classmethod
+    def entries_not_blank(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        normalized = tuple(item.strip() for item in value)
+        if any(not item for item in normalized):
+            raise ValueError("operational plan entries must not be blank")
+        if len(normalized) != len(set(normalized)):
+            raise ValueError("operational plan entries must be unique")
         return normalized
 
 
@@ -48,9 +70,10 @@ class ProjectOperationalPlan(BaseModel):
     execution_id: str
     steps: tuple[ProjectOperationalPlanStep, ...] = Field(
         min_length=1,
-        max_length=5,
+        max_length=7,
     )
     created_at: datetime
+    source: ProjectOperationalPlanSource = ProjectOperationalPlanSource.DETERMINISTIC
 
     @field_validator("execution_id")
     @classmethod
@@ -80,18 +103,56 @@ class ProjectValidationStatus(StrEnum):
     FAILED = "failed"
 
 
+class ProjectValidationTarget(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    validator_id: str
+    targets: tuple[str, ...] = ()
+
+
+class ProjectValidationStrategy(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    execution_id: str
+    validators: tuple[str, ...] = Field(min_length=1)
+    reason: str
+    target_hints: tuple[ProjectValidationTarget, ...] = ()
+
+
+class ProjectValidationFailureCategory(StrEnum):
+    SYNTAX_OR_COMPILE_ERROR = "syntax_or_compile_error"
+    TEST_FAILURE = "test_failure"
+    IMPORT_ERROR = "import_error"
+    ASSERTION_FAILURE = "assertion_failure"
+    LINT_FAILURE = "lint_failure"
+    BUILD_FAILURE = "build_failure"
+    UNKNOWN = "unknown"
+
+
+class ProjectValidationFailureAnalysis(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    execution_id: str
+    validator_id: str
+    category: ProjectValidationFailureCategory
+    summary: str
+    relevant_paths: tuple[str, ...] = ()
+    evidence: str = ""
+
+
 class ProjectValidationResult(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     execution_id: str
     sequence: int = Field(ge=1)
+    validator: str = "pytest"
     command: tuple[str, ...] = Field(min_length=1)
     exit_code: int
     status: ProjectValidationStatus
     output: str
     completed_at: datetime
 
-    @field_validator("execution_id")
+    @field_validator("execution_id", "validator")
     @classmethod
     def validation_execution_id_not_blank(cls, value: str) -> str:
         normalized = value.strip()
@@ -127,6 +188,19 @@ class ProjectRepairResult(BaseModel):
         if not normalized:
             raise ValueError("repair execution_id must not be blank")
         return normalized
+
+
+class ProjectEngineeringStepResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    execution_id: str
+    step_id: str
+    executor: str = "developer_agent"
+    tool_id: str
+    succeeded: bool
+    output: str
+    started_at: datetime
+    completed_at: datetime
 
 
 class ProjectSession(BaseModel):
@@ -165,9 +239,12 @@ class ProjectExecution(BaseModel):
     execution_mode: AIRuntimeExecutionMode
     status: ProjectExecutionStatus
     operational_plan: ProjectOperationalPlan | None = None
+    validation_strategy: ProjectValidationStrategy | None = None
     validations: tuple[ProjectValidationResult, ...] = ()
+    failure_analyses: tuple[ProjectValidationFailureAnalysis, ...] = ()
     repair: ProjectRepairResult | None = None
     quality_gate: StoredQualityGateResult | None = None
+    step_results: tuple[ProjectEngineeringStepResult, ...] = ()
     output: str | None = None
     model: str | None = None
     usage: AIRuntimeUsage | None = None
@@ -220,6 +297,16 @@ class ProjectExecution(BaseModel):
             for validation in self.validations
         ):
             raise ValueError("validations must belong to the execution")
+        if (
+            self.validation_strategy is not None
+            and self.validation_strategy.execution_id != self.execution_id
+        ):
+            raise ValueError("validation strategy must belong to the execution")
+        if any(
+            analysis.execution_id != self.execution_id
+            for analysis in self.failure_analyses
+        ):
+            raise ValueError("failure analyses must belong to the execution")
         if self.repair is not None and self.repair.execution_id != self.execution_id:
             raise ValueError("repair must belong to the execution")
         if (
@@ -227,17 +314,25 @@ class ProjectExecution(BaseModel):
             and self.quality_gate.run_id != self.execution_id
         ):
             raise ValueError("quality gate must belong to the execution")
+        if any(item.execution_id != self.execution_id for item in self.step_results):
+            raise ValueError("step results must belong to the execution")
         return self
 
 
 __all__ = [
     "ProjectExecution",
+    "ProjectEngineeringStepResult",
     "ProjectExecutionStatus",
     "ProjectOperationalPlan",
     "ProjectOperationalPlanOperation",
+    "ProjectOperationalPlanSource",
     "ProjectOperationalPlanStep",
     "ProjectRepairResult",
     "ProjectValidationResult",
+    "ProjectValidationFailureAnalysis",
+    "ProjectValidationFailureCategory",
+    "ProjectValidationStrategy",
+    "ProjectValidationTarget",
     "ProjectValidationStatus",
     "ProjectSession",
 ]

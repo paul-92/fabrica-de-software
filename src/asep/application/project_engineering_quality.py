@@ -33,7 +33,7 @@ class ProjectQualityGateCapability(Protocol):
     def evaluate_and_record(
         self,
         execution: ProjectExecution,
-        validation: ProjectValidationResult,
+        validation: ProjectValidationResult | tuple[ProjectValidationResult, ...],
         workspace: Path,
     ) -> StoredQualityGateResult: ...
 
@@ -50,10 +50,14 @@ class ProjectQualityGateService:
     def evaluate_and_record(
         self,
         execution: ProjectExecution,
-        validation: ProjectValidationResult,
+        validation: ProjectValidationResult | tuple[ProjectValidationResult, ...],
         workspace: Path,
     ) -> StoredQualityGateResult:
-        passed = validation.status is ProjectValidationStatus.PASSED
+        validations = validation if isinstance(validation, tuple) else (validation,)
+        passed = bool(validations) and all(
+            item.status is ProjectValidationStatus.PASSED for item in validations
+        )
+        completed_at = max(item.completed_at for item in validations)
         agent_result = AgentResult(
             status=(
                 AgentResultStatus.COMPLETED if passed else AgentResultStatus.FAILED
@@ -62,12 +66,15 @@ class ProjectQualityGateService:
             stage_id=_STAGE_ID,
             run_id=execution.execution_id,
             started_at=execution.created_at,
-            finished_at=validation.completed_at,
+            finished_at=completed_at,
             messages=["Project validation passed."] if passed else [],
             errors=[] if passed else ["Project validation failed."],
             metadata={
                 "project_execution_id": execution.execution_id,
-                "validation_exit_code": validation.exit_code,
+                "validation_exit_code": validations[-1].exit_code,
+                "validation_exit_codes": {
+                    item.validator: item.exit_code for item in validations
+                },
             },
         )
         gate = self._engine.evaluate(

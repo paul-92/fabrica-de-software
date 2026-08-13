@@ -85,6 +85,7 @@ class ValidationSequence:
         statuses: tuple[ProjectValidationStatus, ...],
     ) -> None:
         self.calls: list[tuple[str, int]] = []
+        self.strategies: list[tuple[str, ...]] = []
         self._statuses = iter(statuses)
 
     def validate(self, execution_id, workspace, *, sequence, test_paths=None):
@@ -104,6 +105,15 @@ class ValidationSequence:
             ),
             completed_at=datetime.now(UTC),
         )
+
+    def validate_plan(self, execution_id, workspace, plan, *, start_sequence):
+        hints = tuple(dict.fromkeys(
+            hint for step in plan.steps for hint in step.validation_hints
+        )) or ("pytest",)
+        self.strategies.append(hints)
+        return (self.validate(
+            execution_id, workspace, sequence=start_sequence
+        ),)
 
 
 class RepairOnce:
@@ -290,6 +300,7 @@ def test_repair_success_keeps_identity_and_approves_quality_gate(
     assert result.execution.repair.result.status is RepairStatus.SUCCEEDED
     assert repair.analyze_calls == repair.repair_calls == 1
     assert validation.calls == [("execution-1", 1), ("execution-1", 2)]
+    assert validation.strategies == [("pytest",), ("pytest",)]
     assert result.execution.quality_gate.run_id == "execution-1"
     assert result.execution.quality_gate.decision.value == "APPROVED"
     assert quality.list_by_run("execution-1") == (result.execution.quality_gate,)

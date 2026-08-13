@@ -167,6 +167,33 @@ def test_historical_malicious_instruction_is_context_only(tmp_path: Path) -> Non
     assert "only active task" in process_input
 
 
+def test_validated_engineering_plan_has_an_explicit_prompt_boundary(
+    tmp_path: Path,
+) -> None:
+    runner = FakeProcessRunner()
+    runtime(tmp_path, runner).execute(AIRuntimeRequest(
+        instruction="Add health endpoint",
+        context={
+            "project_session": {"entries": []},
+            "project_engineering": {
+                "task": "Add health endpoint",
+                "project_analysis": {"frameworks": ["FastAPI"]},
+                "ordered_steps": [{
+                    "step_id": "inspect",
+                    "target_hints": ["src/app/main.py"],
+                }],
+            },
+        },
+    ))
+    process_input = str(runner.calls[0]["input_text"])
+    assert "ASEP VALIDATED ENGINEERING PLAN" in process_input
+    assert '"step_id":"inspect"' in process_input
+    assert "candidate areas" in process_input
+    assert process_input.index("ASEP VALIDATED ENGINEERING PLAN") < (
+        process_input.index("CURRENT USER INSTRUCTION")
+    )
+
+
 def test_empty_context_and_unicode_multiline_keep_current_boundary(tmp_path: Path) -> None:
     runner = FakeProcessRunner()
     runtime(tmp_path, runner).execute(AIRuntimeRequest(

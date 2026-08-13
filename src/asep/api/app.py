@@ -12,6 +12,7 @@ from asep.application import (
     RunQueryService,
     ProjectService,
     ProjectAIRuntimeExecutionService,
+    ProjectEngineeringExecutionService,
     ProjectSessionService,
     ProjectSessionMemoryService,
     ProjectWorkspaceService,
@@ -59,6 +60,7 @@ def create_app(
     sequential_quality_gate_service: SequentialQualityGateQueryService | None = None,
     session_memory_search_service: SessionMemorySearchService | None = None,
     branding_query_service: BrandingQueryService | None = None,
+    project_engineering_execution_service: ProjectEngineeringExecutionService | None = None,
 ) -> FastAPI:
     app = FastAPI(
         title="ASEP Dashboard API",
@@ -111,6 +113,7 @@ def create_app(
                 project_session_memory_service,
                 project_workspace_service,
                 session_memory_search_service,
+                project_engineering_execution_service,
             )
         )
     if ai_runtime_connection_service is not None:

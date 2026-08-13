@@ -400,7 +400,103 @@ class RunTestsTool:
         )
 
 
+class CompileAllTool:
+    metadata = ToolMetadata(
+        id=ToolId(value="compileall"),
+        name="Compile Python",
+        description="Compila fontes Python em alvos restritos ao workspace.",
+        version="1.0.0",
+        author="ASEP",
+        category="validation",
+        capabilities=(ToolCapability(id="compile"),),
+    )
+
+    def __init__(
+        self,
+        runner: ProcessRunnerProtocol | None = None,
+        *,
+        executable: str | None = None,
+    ) -> None:
+        self._runner = runner or ProcessRunner()
+        self._executable = executable or sys.executable
+
+    def execute(self, request: ToolRequest, context: ToolContext) -> ToolResult:
+        if set(request.payload) - {"targets"}:
+            raise ToolExecutionError(
+                str(request.tool_id), error_type="InvalidCompileOptions"
+            )
+        targets = request.payload.get("targets", ["."])
+        if not isinstance(targets, (list, tuple)) or not targets:
+            raise ToolExecutionError(
+                str(request.tool_id), error_type="InvalidCompileTargets"
+            )
+        safe_targets: list[str] = []
+        for index, value in enumerate(targets):
+            if not isinstance(value, str):
+                raise ToolExecutionError(
+                    str(request.tool_id),
+                    error_type="InvalidCompileTargets",
+                    safe_detail=f"payload.targets[{index}] deve ser texto.",
+                )
+            try:
+                path = resolve_workspace_path(context.workspace, value)
+            except ToolSecurityError:
+                raise
+            except ToolValidationError as exc:
+                raise ToolExecutionError(
+                    str(request.tool_id),
+                    error_type="InvalidCompileTarget",
+                    safe_detail=f"payload.targets[{index}] deve existir dentro do workspace.",
+                ) from exc
+            safe_targets.append(path.relative_to(context.workspace).as_posix() or ".")
+        command = (self._executable, "-m", "compileall", "-q", *safe_targets)
+        try:
+            result = self._runner.run(
+                command,
+                input_text="",
+                timeout=request.timeout_seconds or 300.0,
+                working_directory=context.workspace,
+                environment={},
+                encoding="utf-8",
+            )
+        except ProcessTimeoutError as exc:
+            raise ToolTimeoutError(
+                str(request.tool_id), error_type="ProcessTimeout", retryable=True
+            ) from exc
+        except (
+            ProcessExecutableNotFoundError,
+            ProcessInterruptedError,
+            ProcessStartError,
+        ) as exc:
+            raise ToolExecutionError(
+                str(request.tool_id), error_type=type(exc).__name__
+            ) from exc
+        output = {
+            "exit_code": result.exit_code,
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "command": list(result.command),
+        }
+        if result.exit_code == 0:
+            return _success(request, context, output)
+        return ToolResult(
+            execution_id=request.execution_id,
+            tool_id=request.tool_id,
+            status=ToolExecutionStatus.FAILED,
+            output=output,
+            duration_seconds=0,
+            started_at=context.started_at,
+            completed_at=context.started_at,
+            attempts=context.attempt,
+            error=ToolError(
+                code="compile_failed",
+                message="A compilação Python retornou código diferente de zero.",
+            ),
+        )
+
+
 __all__ = [
+    "CompileAllTool",
     "ListDirectoryTool",
     "ReadDocumentationTool",
     "ReadFileTool",

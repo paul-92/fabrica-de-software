@@ -51,6 +51,23 @@ from asep.application.project_engineering_execution import (
     ProjectEngineeringExecutionService,
     ProjectRuntimeExecutionCapability,
 )
+from asep.application.project_engineering_agent_execution import (
+    EngineeringFileChange,
+    EngineeringFileChangeOperation,
+    EngineeringImplementationProvider,
+    EngineeringImplementationContext,
+    ProjectEngineeringAgentExecutor,
+    ProjectEngineeringStepExecution,
+)
+from asep.application.project_engineering_planning import (
+    BoundedProjectAnalysis,
+    DeterministicEngineeringTaskDecomposer,
+    EngineeringDecomposition,
+    EngineeringPlanningContext,
+    EngineeringTaskDecomposer,
+    ProjectEngineeringPlanningService,
+    ProjectEngineeringPlanValidator,
+)
 from asep.application.project_engineering_quality import (
     ProjectQualityGateCapability,
     ProjectQualityGateService,
@@ -62,6 +79,7 @@ from asep.application.project_engineering_repair import (
 from asep.application.project_engineering_validation import (
     ProjectValidationCapability,
     ProjectValidationService,
+    ProjectValidator,
 )
 from asep.application.project_sessions import ProjectSessionService
 from asep.application.session_context import (
@@ -137,6 +155,19 @@ __all__ = [
     "ProjectAIRuntimeExecutionService",
     "DeterministicProjectOperationalPlanBuilder",
     "ProjectEngineeringExecutionService",
+    "EngineeringFileChange",
+    "EngineeringFileChangeOperation",
+    "EngineeringImplementationProvider",
+    "EngineeringImplementationContext",
+    "ProjectEngineeringAgentExecutor",
+    "ProjectEngineeringStepExecution",
+    "BoundedProjectAnalysis",
+    "DeterministicEngineeringTaskDecomposer",
+    "EngineeringDecomposition",
+    "EngineeringPlanningContext",
+    "EngineeringTaskDecomposer",
+    "ProjectEngineeringPlanningService",
+    "ProjectEngineeringPlanValidator",
     "ProjectRuntimeExecutionCapability",
     "ProjectQualityGateCapability",
     "ProjectQualityGateService",
@@ -144,6 +175,7 @@ __all__ = [
     "ProjectRepairService",
     "ProjectValidationCapability",
     "ProjectValidationService",
+    "ProjectValidator",
     "ProjectSessionService",
     "ContextCompactor",
     "SessionContextBuilder",

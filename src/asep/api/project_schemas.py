@@ -12,7 +12,11 @@ from asep.projects import (
     WorkspaceProject,
     WorkspaceDirectory,
     WorkspaceFileContent,
+    ProjectOperationalPlan,
+    ProjectRepairResult,
+    ProjectValidationResult,
 )
+from asep.quality_results import StoredQualityGateResult
 from asep.application import SessionMemorySearchItem, SessionMemorySearchPage
 from asep.ai_runtime import AIRuntimeExecutionMode
 from asep.workspace_changes import WorkspaceChangeType
@@ -114,6 +118,92 @@ class WorkspaceChangeResponse(ProjectHttpSchema):
     size_after: int | None
 
 
+class OperationalPlanStepResponse(ProjectHttpSchema):
+    step_id: str
+    operation: str
+    description: str
+    dependencies: tuple[str, ...] = ()
+    target_hints: tuple[str, ...] = ()
+    validation_hints: tuple[str, ...] = ()
+
+
+class OperationalPlanResponse(ProjectHttpSchema):
+    execution_id: str
+    steps: tuple[OperationalPlanStepResponse, ...]
+    created_at: datetime
+    source: str = "deterministic"
+
+    @classmethod
+    def from_domain(cls, plan: ProjectOperationalPlan | None):
+        return None if plan is None else cls.model_validate(plan.model_dump(mode="json"))
+
+
+class ValidationResponse(ProjectHttpSchema):
+    execution_id: str
+    sequence: int
+    validator: str = "pytest"
+    command: tuple[str, ...]
+    exit_code: int
+    status: str
+    output: str
+    completed_at: datetime
+
+    @classmethod
+    def from_domain(cls, result: ProjectValidationResult):
+        return cls.model_validate(result.model_dump(mode="json"))
+
+
+class RepairResponse(ProjectHttpSchema):
+    execution_id: str
+    outcome: str
+    attempt_count: int
+
+    @classmethod
+    def from_domain(cls, repair: ProjectRepairResult | None):
+        if repair is None:
+            return None
+        return cls(
+            execution_id=repair.execution_id,
+            outcome=repair.result.status.value,
+            attempt_count=len(repair.result.attempts),
+        )
+
+
+class ProjectQualityGateResponse(ProjectHttpSchema):
+    gate_id: str
+    execution_id: str
+    stage_id: str
+    decision: str
+    satisfied_criteria: tuple[str, ...]
+    unsatisfied_criteria: tuple[str, ...]
+    evaluated_at: datetime
+
+    @classmethod
+    def from_domain(cls, gate: StoredQualityGateResult | None):
+        if gate is None:
+            return None
+        return cls(
+            gate_id=gate.gate_id,
+            execution_id=gate.run_id,
+            stage_id=gate.stage_id,
+            decision=gate.decision.value,
+            satisfied_criteria=gate.satisfied_criteria,
+            unsatisfied_criteria=gate.unsatisfied_criteria,
+            evaluated_at=gate.evaluated_at,
+        )
+
+
+class ProjectEngineeringStepResultResponse(ProjectHttpSchema):
+    execution_id: str
+    step_id: str
+    executor: str
+    tool_id: str
+    succeeded: bool
+    output: str
+    started_at: datetime
+    completed_at: datetime
+
+
 class ProjectAIRuntimeExecutionResponse(ProjectHttpSchema):
     execution_id: str
     output: str
@@ -130,6 +220,16 @@ class ProjectAIRuntimeExecutionResponse(ProjectHttpSchema):
     memory_entry_count: int
     memory_char_count: int
     memory_truncated: bool
+    status: str | None = None
+    instruction: str | None = None
+    operational_plan: OperationalPlanResponse | None = None
+    validations: tuple[ValidationResponse, ...] | None = None
+    repair: RepairResponse | None = None
+    quality_gate: ProjectQualityGateResponse | None = None
+    step_results: tuple[ProjectEngineeringStepResultResponse, ...] | None = None
+    error_code: str | None = None
+    created_at: datetime | None = None
+    completed_at: datetime | None = None
 
 
 class CreateProjectSessionRequest(ProjectHttpSchema):
@@ -238,20 +338,40 @@ class ProjectExecutionResponse(ProjectHttpSchema):
     memory_truncated: bool
     created_at: datetime
     completed_at: datetime | None
+    operational_plan: OperationalPlanResponse | None
+    validations: tuple[ValidationResponse, ...]
+    repair: RepairResponse | None
+    quality_gate: ProjectQualityGateResponse | None
+    step_results: tuple[ProjectEngineeringStepResultResponse, ...]
 
     @classmethod
     def from_domain(cls, execution: ProjectExecution) -> "ProjectExecutionResponse":
-        return cls.model_validate(
-            execution.model_dump(
+        return cls.model_validate({
+            **execution.model_dump(
                 mode="json",
                 exclude={
-                    "operational_plan",
-                    "validations",
-                    "repair",
-                    "quality_gate",
+                    "operational_plan", "validation_strategy", "validations",
+                    "failure_analyses", "repair", "quality_gate", "step_results",
                 },
-            )
-        )
+            ),
+            "operational_plan": OperationalPlanResponse.from_domain(
+                execution.operational_plan
+            ),
+            "validations": tuple(
+                ValidationResponse.from_domain(item)
+                for item in execution.validations
+            ),
+            "repair": RepairResponse.from_domain(execution.repair),
+            "quality_gate": ProjectQualityGateResponse.from_domain(
+                execution.quality_gate
+            ),
+            "step_results": tuple(
+                ProjectEngineeringStepResultResponse.model_validate(
+                    item.model_dump(mode="json")
+                )
+                for item in execution.step_results
+            ),
+        })
 
 
 class ProjectExecutionListResponse(ProjectHttpSchema):

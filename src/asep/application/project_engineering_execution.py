@@ -30,6 +30,7 @@ from asep.projects import (
     ProjectOperationalPlanStep,
     ProjectRepairResult,
     ProjectValidationStatus,
+    ProjectValidationFailureAnalysis,
 )
 from asep.repair import RepairStatus
 
@@ -120,16 +121,57 @@ class ProjectEngineeringExecutionService:
                 "project engineering runtime completed before validation"
             )
         workspace = self._projects.get(execution.project_id).workspace_path
-        validations = [
-            self._validation.validate(
+        strategy_builder = getattr(self._validation, "strategy", None)
+        strategy_runner = getattr(self._validation, "validate_strategy", None)
+        strategy = None
+        if strategy_builder is not None and execution.operational_plan is not None:
+            strategy = strategy_builder(
                 execution.execution_id,
                 workspace,
-                sequence=1,
+                execution.operational_plan,
+                analysis=runtime_result.bounded_analysis,
+                changed_paths=tuple(item.path for item in execution.changes),
             )
-        ]
+            execution = ProjectExecution.model_validate({
+                **execution.model_dump(mode="python"),
+                "validation_strategy": strategy,
+            })
+            self._executions.update(execution)
+            validations = list(strategy_runner(
+                strategy, workspace, start_sequence=1,
+            ))
+        else:
+            validations = list(self._validate_strategy(
+                execution.execution_id,
+                workspace,
+                execution.operational_plan,
+                start_sequence=1,
+            ))
         repair_result = None
-        if validations[0].status is ProjectValidationStatus.FAILED:
-            analysis = self._repair.analyze(validations[0].output)
+        failure_analyses: list[ProjectValidationFailureAnalysis] = []
+        failed = next(
+            (item for item in validations if item.status is ProjectValidationStatus.FAILED),
+            None,
+        )
+        if failed is not None:
+            bounded_analyzer = getattr(self._validation, "analyze_failure", None)
+            if bounded_analyzer is not None:
+                bounded = bounded_analyzer(failed)
+                failure_analyses.append(bounded)
+                repair_evidence = (
+                    f"task={execution.instruction}\n"
+                    f"validator={bounded.validator_id}\n"
+                    f"category={bounded.category.value}\n"
+                    f"summary={bounded.summary}\n"
+                    f"project_analysis={runtime_result.bounded_analysis.model_dump(mode='json') if runtime_result.bounded_analysis else {}}\n"
+                    f"diff_paths={tuple(item.path for item in execution.changes)}\n"
+                    f"plan_steps={tuple(item.step_id for item in execution.operational_plan.steps) if execution.operational_plan else ()}\n"
+                    f"step_results={tuple(item.step_id for item in execution.step_results)}\n"
+                    f"evidence={bounded.evidence}"
+                )
+            else:
+                repair_evidence = f"[{failed.validator}] {failed.output}"
+            analysis = self._repair.analyze(repair_evidence)
             repaired = self._repair.repair(
                 execution.execution_id,
                 workspace,
@@ -139,20 +181,44 @@ class ProjectEngineeringExecutionService:
                 execution_id=execution.execution_id,
                 result=repaired,
             )
-            validations.append(self._validation.validate(
-                execution.execution_id,
-                workspace,
-                sequence=2,
-            ))
+            if strategy is not None and strategy_runner is not None:
+                validations.extend(strategy_runner(
+                    strategy,
+                    workspace,
+                    start_sequence=len(validations) + 1,
+                    validators=(failed.validator,),
+                ))
+                latest_failed = validations[-1]
+                if latest_failed.status is ProjectValidationStatus.PASSED:
+                    failed_index = strategy.validators.index(failed.validator)
+                    remaining = strategy.validators[failed_index + 1:]
+                    if remaining:
+                        validations.extend(strategy_runner(
+                            strategy,
+                            workspace,
+                            start_sequence=len(validations) + 1,
+                            validators=remaining,
+                        ))
+            else:
+                validations.extend(self._validate_strategy(
+                    execution.execution_id,
+                    workspace,
+                    execution.operational_plan,
+                    start_sequence=len(validations) + 1,
+                ))
 
-        final_validation = validations[-1]
+        final_by_validator = {item.validator: item for item in validations}
+        required = strategy.validators if strategy is not None else tuple(final_by_validator)
+        final_validations = tuple(final_by_validator[item] for item in required if item in final_by_validator)
+        final_validation = final_validations[-1]
         gate = self._quality.evaluate_and_record(
             execution,
-            final_validation,
+            final_validations,
             workspace,
         )
         validation_passed = (
-            final_validation.status is ProjectValidationStatus.PASSED
+            len(final_validations) == len(required)
+            and all(item.status is ProjectValidationStatus.PASSED for item in final_validations)
         )
         gate_passed = gate.decision is not GateDecision.BLOCKED
         succeeded = validation_passed and gate_passed
@@ -175,6 +241,7 @@ class ProjectEngineeringExecutionService:
                 else ProjectExecutionStatus.FAILED
             ),
             "validations": tuple(validations),
+            "failure_analyses": tuple(failure_analyses),
             "repair": repair_result,
             "quality_gate": gate,
             "error_code": error_code,
@@ -188,6 +255,30 @@ class ProjectEngineeringExecutionService:
             changes=runtime_result.changes,
             execution_mode=runtime_result.execution_mode,
             execution=completed,
+        )
+
+    def _validate_strategy(
+        self,
+        execution_id: str,
+        workspace,
+        plan,
+        *,
+        start_sequence: int,
+    ):
+        validate_plan = getattr(self._validation, "validate_plan", None)
+        if validate_plan is not None and plan is not None:
+            return validate_plan(
+                execution_id,
+                workspace,
+                plan,
+                start_sequence=start_sequence,
+            )
+        return (
+            self._validation.validate(
+                execution_id,
+                workspace,
+                sequence=start_sequence,
+            ),
         )
 
 

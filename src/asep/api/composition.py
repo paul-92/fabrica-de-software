@@ -34,8 +34,12 @@ from asep.application import (
     SessionMemorySearchService,
     BrandingQueryService,
     BrandingAdministrationService,
-    DeterministicProjectOperationalPlanBuilder,
+    DeterministicEngineeringTaskDecomposer,
+    EngineeringTaskDecomposer,
+    EngineeringImplementationProvider,
+    ProjectEngineeringAgentExecutor,
     ProjectEngineeringExecutionService,
+    ProjectEngineeringPlanningService,
     ProjectQualityGateService,
     ProjectRepairService,
     ProjectValidationService,
@@ -47,6 +51,12 @@ from asep.ai_planning import (
     DeterministicRepairPlanGenerator,
     DeterministicRepairProposalPlanner,
 )
+from asep.agents import (
+    AgentExecutionPolicy,
+    AgentExecutionService,
+    InMemoryAgentRegistry,
+)
+from asep.agents.developer import DeveloperAgent
 from asep.configuration import ApplicationSettings, Configuration
 from asep.metrics import MetricsService
 from asep.intelligence import (
@@ -54,6 +64,7 @@ from asep.intelligence import (
     ToolAwarePlanningAdapter,
 )
 from asep.planning import PlanningEngine
+from asep.project_analysis import ProjectAnalyzer
 from asep.pipeline import ASEPEngine, PipelineBuilder
 from asep.orchestrator import (
     Orchestrator,
@@ -65,15 +76,18 @@ from asep.repair import (
     ControlledRepairExecutor,
     DeterministicRepairPlanner,
     PytestFailureAnalyzer,
+    RepairPlanner,
 )
 from asep.repositories import RepositoryBundle, RepositoryFactory
 from asep.timeline import TimelineRecorder
 from asep.tools import (
     InMemoryToolRegistry,
     RunTestsTool,
+    CompileAllTool,
     ToolExecutionPolicy,
     ToolExecutionService,
     WriteFileTool,
+    node_validation_tools,
 )
 from asep.registry.agent_catalog_source import DeclarativeAgentCatalogSource
 
@@ -150,6 +164,9 @@ def _create_project_application_services(
     *,
     runtime_registry: AIRuntimeRegistry | None = None,
     include_engineering_execution: bool = False,
+    engineering_decomposer: EngineeringTaskDecomposer | None = None,
+    implementation_provider: EngineeringImplementationProvider | None = None,
+    repair_planner: RepairPlanner | None = None,
 ) -> _ProjectApplicationServices:
     project_service = ProjectService(repositories.project_repository)
     runtime_connection = AIRuntimeConnectionService(
@@ -180,33 +197,64 @@ def _create_project_application_services(
         sessions,
         repositories.project_execution_repository,
         memory_service=memory,
-        operational_plan_builder=(
-            DeterministicProjectOperationalPlanBuilder()
-            if include_engineering_execution
-            else None
-        ),
-        defer_completion=include_engineering_execution,
     )
-    engineering_execution = None
+    internal_execution = None
+    engineering_tools = None
     if include_engineering_execution:
         tools_registry = InMemoryToolRegistry()
-        for tool in (WriteFileTool(), RunTestsTool()):
+        for tool in (
+            WriteFileTool(), RunTestsTool(), CompileAllTool(),
+            *node_validation_tools(),
+        ):
             tools_registry.register(tool)
-        tools = ToolExecutionService(
+        engineering_tools = ToolExecutionService(
             tools_registry,
             timeline=TimelineRecorder(repositories.timeline_repository),
             policy=ToolExecutionPolicy(fail_fast=False),
         )
+        if implementation_provider is not None:
+            agent_registry = InMemoryAgentRegistry()
+            agent_registry.register(DeveloperAgent(engineering_tools))
+            agent_execution = AgentExecutionService(
+                agent_registry,
+                timeline=TimelineRecorder(repositories.timeline_repository),
+                policy=AgentExecutionPolicy(fail_fast=False),
+            )
+            internal_execution = ProjectEngineeringAgentExecutor(
+                agent_execution,
+                implementation_provider,
+            )
+    engineering_runtime_execution = ProjectAIRuntimeExecutionService(
+        project_service,
+        registry,
+        sessions,
+        repositories.project_execution_repository,
+        memory_service=memory,
+        engineering_planning=(
+            ProjectEngineeringPlanningService(
+                ProjectAnalyzer(),
+                engineering_decomposer
+                or DeterministicEngineeringTaskDecomposer(),
+            )
+            if include_engineering_execution
+            else None
+        ),
+        internal_execution=internal_execution,
+        defer_completion=include_engineering_execution,
+    )
+    engineering_execution = None
+    if include_engineering_execution:
+        assert engineering_tools is not None
         engineering_execution = ProjectEngineeringExecutionService(
-            runtime_execution,
+            engineering_runtime_execution,
             project_service,
             repositories.project_execution_repository,
             memory,
-            ProjectValidationService(tools),
+            ProjectValidationService(engineering_tools),
             ProjectRepairService(
                 PytestFailureAnalyzer(),
-                DeterministicRepairPlanner(),
-                tools,
+                repair_planner or DeterministicRepairPlanner(),
+                engineering_tools,
             ),
             ProjectQualityGateService(
                 QualityGateEngine(),
@@ -263,6 +311,9 @@ def _create_configured_app(
         project_service=project_services.projects,
         ai_runtime_connection_service=project_services.runtime_connection,
         project_ai_runtime_execution_service=project_services.runtime_execution,
+        project_engineering_execution_service=(
+            project_services.engineering_execution
+        ),
         project_session_service=project_services.sessions,
         project_session_memory_service=project_services.memory,
         project_workspace_service=project_services.workspace,
@@ -317,6 +368,9 @@ def create_project_engineering_operational_composition(
     repository_settings: ApplicationSettings | None = None,
     *,
     runtime_registry: AIRuntimeRegistry | None = None,
+    engineering_decomposer: EngineeringTaskDecomposer | None = None,
+    implementation_provider: EngineeringImplementationProvider | None = None,
+    repair_planner: RepairPlanner | None = None,
 ) -> ProjectEngineeringOperationalComposition:
     settings = repository_settings or Configuration.load()
     repositories = RepositoryFactory(settings).create()
@@ -324,6 +378,9 @@ def create_project_engineering_operational_composition(
         repositories,
         runtime_registry=runtime_registry,
         include_engineering_execution=True,
+        engineering_decomposer=engineering_decomposer,
+        implementation_provider=implementation_provider,
+        repair_planner=repair_planner,
     )
     engineering = project_services.engineering_execution
     if engineering is None:  # pragma: no cover - composition invariant

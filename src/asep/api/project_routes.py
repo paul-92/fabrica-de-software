@@ -20,10 +20,15 @@ from asep.api.project_schemas import (
     SessionMemorySearchResponse,
     WorkspaceDirectoryResponse,
     WorkspaceFileContentResponse,
+    OperationalPlanResponse,
+    ProjectQualityGateResponse,
+    RepairResponse,
+    ValidationResponse,
 )
 from asep.application import (
     ProjectAIRuntimeExecutionRequest,
     ProjectAIRuntimeExecutionService,
+    ProjectEngineeringExecutionService,
     ProjectService,
     ProjectSessionService,
     ProjectSessionMemoryService,
@@ -47,6 +52,7 @@ def create_projects_router(
     memory_service: ProjectSessionMemoryService | None = None,
     workspace_service: ProjectWorkspaceService | None = None,
     memory_search_service: SessionMemorySearchService | None = None,
+    engineering_execution: ProjectEngineeringExecutionService | None = None,
 ) -> APIRouter:
     router = APIRouter(prefix="/api/v1/projects", tags=["projects"])
 
@@ -111,13 +117,13 @@ def create_projects_router(
         @router.post(
             "/{project_id}/ai-runtime/execute",
             response_model=ProjectAIRuntimeExecutionResponse,
+            response_model_exclude_unset=True,
         )
         def execute_runtime(
             project_id: str,
             body: ProjectAIRuntimeExecutionRequestBody,
         ) -> ProjectAIRuntimeExecutionResponse:
-            result = runtime_execution.execute(
-                ProjectAIRuntimeExecutionRequest(
+            request = ProjectAIRuntimeExecutionRequest(
                     project_id=project_id,
                     session_id=body.session_id,
                     runtime_id=body.runtime_id,
@@ -125,34 +131,65 @@ def create_projects_router(
                     metadata=body.metadata,
                     execution_mode=body.execution_mode,
                 )
+            result = (
+                engineering_execution.execute(request)
+                if (
+                    engineering_execution is not None
+                    and body.execution_mode.value == "workspace_write"
+                )
+                else runtime_execution.execute(request)
             )
             runtime_result = result.runtime_result
-            return ProjectAIRuntimeExecutionResponse(
-                execution_id=result.execution.execution_id,
-                output=runtime_result.output,
-                runtime_id=runtime_result.identity.runtime_id,
-                model_id=runtime_result.identity.model_id,
-                usage=(
+            public = {
+                "execution_id": result.execution.execution_id,
+                "output": runtime_result.output,
+                "runtime_id": runtime_result.identity.runtime_id,
+                "model_id": runtime_result.identity.model_id,
+                "usage": (
                     None
                     if runtime_result.usage is None
                     else runtime_result.usage.model_dump(mode="json")
                 ),
-                metadata=runtime_result.model_dump(mode="json")["metadata"],
-                execution_mode=result.execution_mode,
-                changes=tuple(
+                "metadata": runtime_result.model_dump(mode="json")["metadata"],
+                "execution_mode": result.execution_mode,
+                "changes": tuple(
                     change.model_dump(mode="json")
                     for change in result.changes
                 ),
-                context_entry_count=result.execution.context_entry_count,
-                context_truncated=result.execution.context_truncated,
-                context_char_count=result.execution.context_char_count,
-                context_omitted_execution_count=(
+                "context_entry_count": result.execution.context_entry_count,
+                "context_truncated": result.execution.context_truncated,
+                "context_char_count": result.execution.context_char_count,
+                "context_omitted_execution_count": (
                     result.execution.context_omitted_execution_count
                 ),
-                memory_entry_count=result.execution.memory_entry_count,
-                memory_char_count=result.execution.memory_char_count,
-                memory_truncated=result.execution.memory_truncated,
-            )
+                "memory_entry_count": result.execution.memory_entry_count,
+                "memory_char_count": result.execution.memory_char_count,
+                "memory_truncated": result.execution.memory_truncated,
+            }
+            if result.execution.operational_plan is not None:
+                public.update({
+                "status": result.execution.status,
+                "instruction": result.execution.instruction,
+                "operational_plan": OperationalPlanResponse.from_domain(
+                    result.execution.operational_plan
+                ),
+                "validations": tuple(
+                    ValidationResponse.from_domain(item)
+                    for item in result.execution.validations
+                ),
+                "repair": RepairResponse.from_domain(result.execution.repair),
+                "quality_gate": ProjectQualityGateResponse.from_domain(
+                    result.execution.quality_gate
+                ),
+                "step_results": tuple(
+                    item.model_dump(mode="json")
+                    for item in result.execution.step_results
+                ),
+                "error_code": result.execution.error_code,
+                "created_at": result.execution.created_at,
+                "completed_at": result.execution.completed_at,
+                })
+            return ProjectAIRuntimeExecutionResponse.model_validate(public)
 
     if memory_service is not None:
         @router.get(

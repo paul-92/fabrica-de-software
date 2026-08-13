@@ -9,6 +9,7 @@ from asep.providers.process import (
     ProcessTimeoutError,
 )
 from asep.tools import (
+    CompileAllTool,
     ListDirectoryTool,
     ReadDocumentationTool,
     ReadFileTool,
@@ -242,6 +243,50 @@ def test_run_tests_uses_fixed_command_and_workspace(tmp_path: Path) -> None:
     assert command == ("python-safe", "-m", "pytest", "tests")
     assert kwargs["working_directory"] == tmp_path.resolve()
     assert result.status is ToolExecutionStatus.SUCCEEDED
+
+
+def test_compileall_uses_fixed_command_and_workspace(tmp_path: Path) -> None:
+    source = tmp_path / "src"
+    source.mkdir()
+    runner = FakeRunner()
+    result = call(
+        CompileAllTool(runner, executable="python-safe"),
+        tmp_path,
+        {"targets": ["src"]},
+        "compile",
+    )
+
+    command, kwargs = runner.calls[0]
+    assert command == ("python-safe", "-m", "compileall", "-q", "src")
+    assert kwargs["working_directory"] == tmp_path.resolve()
+    assert result.status is ToolExecutionStatus.SUCCEEDED
+
+
+@pytest.mark.parametrize("target", ["../outside", "C:/outside", "; rm -rf ."])
+def test_compileall_rejects_unsafe_or_nonexistent_targets(
+    tmp_path: Path, target: str,
+) -> None:
+    runner = FakeRunner()
+    with pytest.raises((ToolSecurityError, ToolExecutionError)):
+        call(
+            CompileAllTool(runner, executable="python-safe"),
+            tmp_path,
+            {"targets": [target]},
+            "compile",
+        )
+    assert runner.calls == []
+
+
+def test_compileall_rejects_ai_controlled_flags(tmp_path: Path) -> None:
+    runner = FakeRunner()
+    with pytest.raises(ToolExecutionError):
+        call(
+            CompileAllTool(runner, executable="python-safe"),
+            tmp_path,
+            {"targets": ["."], "flags": ["--invalidation-mode", "unchecked-hash"]},
+            "compile",
+        )
+    assert runner.calls == []
 
 
 def test_run_tests_reports_failure_and_timeout(tmp_path: Path) -> None:
