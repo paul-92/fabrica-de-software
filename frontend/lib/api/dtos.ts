@@ -111,6 +111,29 @@ export type ProjectEngineeringEvidenceDto = Readonly<{
   created_at?: string;
   completed_at?: string | null;
 }>;
+export type ProjectEngineeringPreparationDto = Readonly<{
+  execution_id: string;
+  project_id: string;
+  session_id: string;
+  runtime_id: string;
+  instruction: string;
+  status: "pending";
+  analysis: Readonly<{
+    languages: readonly string[];
+    frameworks: readonly string[];
+    package_managers: readonly string[];
+    package_manifests: readonly string[];
+    modules: readonly string[];
+    entrypoints: readonly string[];
+    dependencies: readonly string[];
+    architecture: readonly string[];
+    has_tests: boolean;
+    file_count: number;
+    test_file_count: number;
+  }>;
+  operational_plan: ProjectOperationalPlanDto;
+  created_at: string;
+}>;
 export type AIRuntimeStatusDto = Readonly<{
   runtime_id: string;
   installed: boolean;

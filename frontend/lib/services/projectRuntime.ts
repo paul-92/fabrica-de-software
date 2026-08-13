@@ -1,5 +1,5 @@
 import { ApiClient } from "../api/client";
-import type { AIRuntimeExecutionMode, JsonValue, ProjectAIRuntimeExecutionDto, ProjectExecutionDto, ProjectSessionDto, SessionMemoryDto, SessionMemoryKind, SessionMemorySearchPageDto, SessionMemorySearchParams } from "../api/dtos";
+import type { AIRuntimeExecutionMode, JsonValue, ProjectAIRuntimeExecutionDto, ProjectEngineeringPreparationDto, ProjectExecutionDto, ProjectSessionDto, SessionMemoryDto, SessionMemoryKind, SessionMemorySearchPageDto, SessionMemorySearchParams } from "../api/dtos";
 
 export class ProjectRuntimeClient {
   constructor(private readonly api: ApiClient) {}
@@ -15,6 +15,15 @@ export class ProjectRuntimeClient {
       method: "POST",
       body: request,
     });
+  }
+  prepare(projectId: string, request: Readonly<{ session_id: string; runtime_id: string; instruction: string; execution_mode: "workspace_write" }>): Promise<ProjectEngineeringPreparationDto> {
+    return this.api.request({ path: `/api/v1/projects/${encodeURIComponent(projectId)}/engineering/prepare`, method: "POST", body: request });
+  }
+  approve(projectId: string, preparationId: string, request: Readonly<{ session_id: string; runtime_id: string; instruction: string; execution_mode: "workspace_write" }>): Promise<ProjectAIRuntimeExecutionDto> {
+    return this.api.request({ path: `/api/v1/projects/${encodeURIComponent(projectId)}/engineering/${encodeURIComponent(preparationId)}/approve`, method: "POST", body: request });
+  }
+  cancel(projectId: string, preparationId: string, request: Readonly<{ session_id: string; runtime_id: string; instruction: string; execution_mode: "workspace_write" }>): Promise<ProjectExecutionDto> {
+    return this.api.request({ path: `/api/v1/projects/${encodeURIComponent(projectId)}/engineering/${encodeURIComponent(preparationId)}/cancel`, method: "POST", body: request });
   }
 }
 

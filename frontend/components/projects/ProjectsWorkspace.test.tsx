@@ -15,6 +15,9 @@ function runtimeService(): ProjectRuntimeWorkspaceService {
   return {
     status: vi.fn().mockResolvedValue({ runtime_id: "codex", installed: true, authenticated: true, ready: true, state: "ready", version: "1", message: "Ready", authentication_command: null }),
     execute: vi.fn(),
+    prepare: vi.fn(),
+    approve: vi.fn(),
+    cancel: vi.fn(),
     listSessions: vi.fn().mockResolvedValue([]),
     createSession: vi.fn(),
     listExecutions: vi.fn().mockResolvedValue([]),

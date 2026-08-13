@@ -239,6 +239,9 @@ class ProjectExecution(BaseModel):
     execution_mode: AIRuntimeExecutionMode
     status: ProjectExecutionStatus
     operational_plan: ProjectOperationalPlan | None = None
+    preparation_analysis: dict = Field(default_factory=dict)
+    preparation_workspace_fingerprint: str | None = None
+    preparation_context_fingerprint: str | None = None
     validation_strategy: ProjectValidationStrategy | None = None
     validations: tuple[ProjectValidationResult, ...] = ()
     failure_analyses: tuple[ProjectValidationFailureAnalysis, ...] = ()

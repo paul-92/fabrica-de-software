@@ -82,6 +82,16 @@ class ProjectRuntimeExecutionCapability(Protocol):
         request: ProjectAIRuntimeExecutionRequest,
     ) -> ProjectAIRuntimeExecutionResult: ...
 
+    def prepare(self, request: ProjectAIRuntimeExecutionRequest) -> ProjectExecution: ...
+
+    def execute_prepared(
+        self, preparation_id: str, request: ProjectAIRuntimeExecutionRequest,
+    ) -> ProjectAIRuntimeExecutionResult: ...
+
+    def cancel_prepared(
+        self, preparation_id: str, request: ProjectAIRuntimeExecutionRequest,
+    ) -> ProjectExecution: ...
+
 
 class ProjectEngineeringExecutionService:
     """Application boundary for one real, project-scoped engineering task."""
@@ -126,6 +136,33 @@ class ProjectEngineeringExecutionService:
         except Exception as error:
             self._persist_unexpected_failure(execution.execution_id, error)
             raise
+
+    def prepare(self, request: ProjectAIRuntimeExecutionRequest) -> ProjectExecution:
+        if request.execution_mode is not AIRuntimeExecutionMode.WORKSPACE_WRITE:
+            raise ValueError("project engineering preparation requires workspace_write mode")
+        return self._runtime_execution.prepare(request)
+
+    def approve(
+        self, preparation_id: str, request: ProjectAIRuntimeExecutionRequest,
+    ) -> ProjectAIRuntimeExecutionResult:
+        runtime_result = self._runtime_execution.execute_prepared(
+            preparation_id, request,
+        )
+        execution = runtime_result.execution
+        if execution.execution_id != preparation_id:
+            raise RuntimeError("prepared execution identity changed")
+        if execution.status is not ProjectExecutionStatus.RUNNING:
+            raise RuntimeError("prepared runtime completed before validation")
+        try:
+            return self._complete_execution(runtime_result, execution)
+        except Exception as error:
+            self._persist_unexpected_failure(execution.execution_id, error)
+            raise
+
+    def cancel(
+        self, preparation_id: str, request: ProjectAIRuntimeExecutionRequest,
+    ) -> ProjectExecution:
+        return self._runtime_execution.cancel_prepared(preparation_id, request)
 
     def _complete_execution(
         self,

@@ -104,6 +104,18 @@ class ProjectAIRuntimeExecutionRequestBody(ProjectHttpSchema):
         return value.strip()
 
 
+class ProjectEngineeringPreparationResponse(ProjectHttpSchema):
+    execution_id: str
+    project_id: str
+    session_id: str
+    runtime_id: str
+    instruction: str
+    status: str
+    analysis: dict[str, Any]
+    operational_plan: "OperationalPlanResponse"
+    created_at: datetime
+
+
 class AIRuntimeUsageResponse(ProjectHttpSchema):
     input_units: int | None
     output_units: int | None
@@ -352,6 +364,8 @@ class ProjectExecutionResponse(ProjectHttpSchema):
                 exclude={
                     "operational_plan", "validation_strategy", "validations",
                     "failure_analyses", "repair", "quality_gate", "step_results",
+                    "preparation_analysis", "preparation_workspace_fingerprint",
+                    "preparation_context_fingerprint",
                 },
             ),
             "operational_plan": OperationalPlanResponse.from_domain(

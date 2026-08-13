@@ -9,6 +9,7 @@ from asep.api.project_schemas import (
     ProjectResponse,
     ProjectAIRuntimeExecutionRequestBody,
     ProjectAIRuntimeExecutionResponse,
+    ProjectEngineeringPreparationResponse,
     CreateProjectSessionRequest,
     ProjectSessionResponse,
     ProjectSessionListResponse,
@@ -43,6 +44,41 @@ from asep.api.schemas import ErrorResponse
 
 Identifier = Annotated[str, PathParameter(min_length=1, pattern=r".*\S.*")]
 SignificantText = Annotated[str, Query(min_length=1, pattern=r".*\S.*")]
+
+
+def _runtime_response(result) -> ProjectAIRuntimeExecutionResponse:
+    runtime_result = result.runtime_result
+    public = {
+        "execution_id": result.execution.execution_id,
+        "output": runtime_result.output,
+        "runtime_id": runtime_result.identity.runtime_id,
+        "model_id": runtime_result.identity.model_id,
+        "usage": None if runtime_result.usage is None else runtime_result.usage.model_dump(mode="json"),
+        "metadata": runtime_result.model_dump(mode="json")["metadata"],
+        "execution_mode": result.execution_mode,
+        "changes": tuple(change.model_dump(mode="json") for change in result.changes),
+        "context_entry_count": result.execution.context_entry_count,
+        "context_truncated": result.execution.context_truncated,
+        "context_char_count": result.execution.context_char_count,
+        "context_omitted_execution_count": result.execution.context_omitted_execution_count,
+        "memory_entry_count": result.execution.memory_entry_count,
+        "memory_char_count": result.execution.memory_char_count,
+        "memory_truncated": result.execution.memory_truncated,
+    }
+    if result.execution.operational_plan is not None:
+        public.update({
+            "status": result.execution.status,
+            "instruction": result.execution.instruction,
+            "operational_plan": OperationalPlanResponse.from_domain(result.execution.operational_plan),
+            "validations": tuple(ValidationResponse.from_domain(item) for item in result.execution.validations),
+            "repair": RepairResponse.from_domain(result.execution.repair),
+            "quality_gate": ProjectQualityGateResponse.from_domain(result.execution.quality_gate),
+            "step_results": tuple(item.model_dump(mode="json") for item in result.execution.step_results),
+            "error_code": result.execution.error_code,
+            "created_at": result.execution.created_at,
+            "completed_at": result.execution.completed_at,
+        })
+    return ProjectAIRuntimeExecutionResponse.model_validate(public)
 
 
 def create_projects_router(
@@ -114,6 +150,81 @@ def create_projects_router(
             return ProjectExecutionResponse.from_domain(session_service.get_execution(project_id, execution_id))
 
     if runtime_execution is not None:
+        if engineering_execution is not None:
+            @router.post(
+                "/{project_id}/engineering/prepare",
+                response_model=ProjectEngineeringPreparationResponse,
+                status_code=201,
+            )
+            def prepare_engineering(
+                project_id: str,
+                body: ProjectAIRuntimeExecutionRequestBody,
+            ) -> ProjectEngineeringPreparationResponse:
+                request = ProjectAIRuntimeExecutionRequest(
+                    project_id=project_id,
+                    session_id=body.session_id,
+                    runtime_id=body.runtime_id,
+                    instruction=body.instruction,
+                    metadata=body.metadata,
+                    execution_mode=body.execution_mode,
+                )
+                prepared = engineering_execution.prepare(request)
+                return ProjectEngineeringPreparationResponse(
+                    execution_id=prepared.execution_id,
+                    project_id=prepared.project_id,
+                    session_id=prepared.session_id,
+                    runtime_id=prepared.runtime_id,
+                    instruction=prepared.instruction,
+                    status=prepared.status,
+                    analysis=prepared.preparation_analysis,
+                    operational_plan=OperationalPlanResponse.from_domain(
+                        prepared.operational_plan
+                    ),
+                    created_at=prepared.created_at,
+                )
+
+            @router.post(
+                "/{project_id}/engineering/{preparation_id}/approve",
+                response_model=ProjectAIRuntimeExecutionResponse,
+                response_model_exclude_unset=True,
+            )
+            def approve_engineering(
+                project_id: str,
+                preparation_id: str,
+                body: ProjectAIRuntimeExecutionRequestBody,
+            ) -> ProjectAIRuntimeExecutionResponse:
+                request = ProjectAIRuntimeExecutionRequest(
+                    project_id=project_id,
+                    session_id=body.session_id,
+                    runtime_id=body.runtime_id,
+                    instruction=body.instruction,
+                    metadata=body.metadata,
+                    execution_mode=body.execution_mode,
+                )
+                result = engineering_execution.approve(preparation_id, request)
+                return _runtime_response(result)
+
+            @router.post(
+                "/{project_id}/engineering/{preparation_id}/cancel",
+                response_model=ProjectExecutionResponse,
+            )
+            def cancel_engineering(
+                project_id: str,
+                preparation_id: str,
+                body: ProjectAIRuntimeExecutionRequestBody,
+            ) -> ProjectExecutionResponse:
+                request = ProjectAIRuntimeExecutionRequest(
+                    project_id=project_id,
+                    session_id=body.session_id,
+                    runtime_id=body.runtime_id,
+                    instruction=body.instruction,
+                    metadata=body.metadata,
+                    execution_mode=body.execution_mode,
+                )
+                return ProjectExecutionResponse.from_domain(
+                    engineering_execution.cancel(preparation_id, request)
+                )
+
         @router.post(
             "/{project_id}/ai-runtime/execute",
             response_model=ProjectAIRuntimeExecutionResponse,
@@ -139,57 +250,7 @@ def create_projects_router(
                 )
                 else runtime_execution.execute(request)
             )
-            runtime_result = result.runtime_result
-            public = {
-                "execution_id": result.execution.execution_id,
-                "output": runtime_result.output,
-                "runtime_id": runtime_result.identity.runtime_id,
-                "model_id": runtime_result.identity.model_id,
-                "usage": (
-                    None
-                    if runtime_result.usage is None
-                    else runtime_result.usage.model_dump(mode="json")
-                ),
-                "metadata": runtime_result.model_dump(mode="json")["metadata"],
-                "execution_mode": result.execution_mode,
-                "changes": tuple(
-                    change.model_dump(mode="json")
-                    for change in result.changes
-                ),
-                "context_entry_count": result.execution.context_entry_count,
-                "context_truncated": result.execution.context_truncated,
-                "context_char_count": result.execution.context_char_count,
-                "context_omitted_execution_count": (
-                    result.execution.context_omitted_execution_count
-                ),
-                "memory_entry_count": result.execution.memory_entry_count,
-                "memory_char_count": result.execution.memory_char_count,
-                "memory_truncated": result.execution.memory_truncated,
-            }
-            if result.execution.operational_plan is not None:
-                public.update({
-                "status": result.execution.status,
-                "instruction": result.execution.instruction,
-                "operational_plan": OperationalPlanResponse.from_domain(
-                    result.execution.operational_plan
-                ),
-                "validations": tuple(
-                    ValidationResponse.from_domain(item)
-                    for item in result.execution.validations
-                ),
-                "repair": RepairResponse.from_domain(result.execution.repair),
-                "quality_gate": ProjectQualityGateResponse.from_domain(
-                    result.execution.quality_gate
-                ),
-                "step_results": tuple(
-                    item.model_dump(mode="json")
-                    for item in result.execution.step_results
-                ),
-                "error_code": result.execution.error_code,
-                "created_at": result.execution.created_at,
-                "completed_at": result.execution.completed_at,
-                })
-            return ProjectAIRuntimeExecutionResponse.model_validate(public)
+            return _runtime_response(result)
 
     if memory_service is not None:
         @router.get(

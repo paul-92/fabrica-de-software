@@ -12,7 +12,8 @@ const session = { session_id: "s-1", project_id: "p-1", title: "Pilot session", 
 const failedExecution = { execution_id: "e-failed", session_id: "s-1", project_id: "p-1", runtime_id: "codex", instruction: "Change file", execution_mode: "workspace_write" as const, status: "failed" as const, output: null, model: null, usage: { input_units: 10, output_units: 2, total_units: 12, cost: null }, changes: [{ path: "partial.txt", change_type: "created" as const, size_before: null, size_after: 2 }], error_code: "AI_RUNTIME_TIMEOUT", context_entry_count: 2, context_truncated: true, context_char_count: 17432, context_omitted_execution_count: 9, memory_entry_count: 1, memory_char_count: 120, memory_truncated: false, created_at: "2026-08-07T00:00:00Z", completed_at: "2026-08-07T00:00:01Z" };
 const props = { projectId: "p-1", projectName: "Pilot", workspacePath: "C:/pilot" };
 function service(overrides: Partial<ProjectRuntimeWorkspaceService> = {}): ProjectRuntimeWorkspaceService {
-  return { status: vi.fn().mockResolvedValue(ready), execute: vi.fn().mockResolvedValue(result), listSessions: vi.fn().mockResolvedValue([session]), createSession: vi.fn().mockResolvedValue(session), listExecutions: vi.fn().mockResolvedValue([]), getExecution: vi.fn(), listMemory: vi.fn().mockResolvedValue([]), addMemory: vi.fn(), ...overrides };
+  const preparation = { execution_id: "e-1", project_id: "p-1", session_id: "s-1", runtime_id: "codex", instruction: "Write safely", status: "pending" as const, analysis: { languages: ["TypeScript"], frameworks: ["Next.js"], package_managers: ["npm"], package_manifests: ["package.json"], modules: ["src"], entrypoints: [], dependencies: [], architecture: [], has_tests: true, file_count: 3, test_file_count: 1 }, operational_plan: { execution_id: "e-1", source: "ai", created_at: "2026-08-12T00:00:00Z", steps: [{ step_id: "execute", operation: "execute_workspace_task", description: "Implementar a tarefa.", dependencies: [], target_hints: ["src"], validation_hints: ["typecheck", "vitest"] }] }, created_at: "2026-08-12T00:00:00Z" };
+  return { status: vi.fn().mockResolvedValue(ready), execute: vi.fn().mockResolvedValue(result), prepare: vi.fn().mockImplementation(async (_projectId, _sessionId, instruction) => ({ ...preparation, instruction })), approve: vi.fn().mockResolvedValue(result), cancel: vi.fn().mockResolvedValue(failedExecution), listSessions: vi.fn().mockResolvedValue([session]), createSession: vi.fn().mockResolvedValue(session), listExecutions: vi.fn().mockResolvedValue([]), getExecution: vi.fn(), listMemory: vi.fn().mockResolvedValue([]), addMemory: vi.fn(), ...overrides };
 }
 
 describe("ProjectRuntimePanel", () => {
@@ -103,27 +104,32 @@ describe("ProjectRuntimePanel", () => {
       { path: "src/changed.ts", change_type: "modified" as const, size_before: 4, size_after: 8 },
       { path: "src/old.ts", change_type: "deleted" as const, size_before: 5, size_after: null },
     ] };
-    const execute = vi.fn().mockResolvedValue(writeResult);
-    render(<ProjectRuntimePanel {...props} service={service({ execute })} />);
+    const prepare = vi.fn().mockImplementation(async (_projectId, _sessionId, instruction) => ({ ...(await service().prepare("p-1", "s-1", instruction)), instruction }));
+    const approve = vi.fn().mockResolvedValue(writeResult);
+    const cancel = vi.fn().mockResolvedValue(failedExecution);
+    render(<ProjectRuntimePanel {...props} service={service({ prepare, approve, cancel })} />);
     await screen.findByText("● Pronto");
     fireEvent.click(screen.getByLabelText("Permitir alterações no projeto"));
     fireEvent.change(screen.getByLabelText("Tarefa"), { target: { value: " Write safely " } });
-    fireEvent.click(screen.getByRole("button", { name: "Executar com Codex" }));
-    expect(execute).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Preparar plano" }));
+    expect(approve).not.toHaveBeenCalled();
     const confirmation = await screen.findByRole("alertdialog");
     expect(confirmation.textContent).toContain("Pilot");
     expect(confirmation.textContent).toContain("C:/pilot");
-    expect(confirmation.textContent).toContain("Permitir alterações");
+    expect(confirmation.textContent).toContain("workspace ainda não foi alterado");
+    expect(confirmation.textContent).toContain("typecheck");
     fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
-    expect(execute).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "Executar com Codex" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Confirmar e executar" }));
+    expect(approve).not.toHaveBeenCalled();
+    fireEvent.click(await screen.findByRole("button", { name: "Preparar plano" }));
+    expect(cancel).toHaveBeenCalledWith("p-1", "e-1", "s-1", "Write safely");
+    fireEvent.click(await screen.findByRole("button", { name: "Aprovar e executar" }));
     expect(await screen.findByText("src/new.ts")).toBeTruthy();
     expect(screen.getByText("src/changed.ts")).toBeTruthy();
     expect(screen.getByText("src/old.ts")).toBeTruthy();
     expect((screen.getByLabelText("Permitir alterações no projeto") as HTMLInputElement).checked).toBe(true);
-    expect(execute).toHaveBeenCalledOnce();
-    expect(execute).toHaveBeenCalledWith("p-1", "s-1", "Write safely", "workspace_write");
+    expect(prepare).toHaveBeenCalledWith("p-1", "s-1", "Write safely");
+    expect(approve).toHaveBeenCalledOnce();
+    expect(approve).toHaveBeenCalledWith("p-1", "e-1", "s-1", "Write safely");
   });
 
   it("renders bounded engineering plan, validation, repair and quality evidence", async () => {
@@ -145,12 +151,12 @@ describe("ProjectRuntimePanel", () => {
       repair: { execution_id: "e-1", outcome: "succeeded" as const, attempt_count: 1 },
       quality_gate: { gate_id: "PROJECT-ENGINEERING-VALIDATION", execution_id: "e-1", stage_id: "validation", decision: "APPROVED" as const, satisfied_criteria: ["pytest passed", "vitest passed"], unsatisfied_criteria: [], evaluated_at: "2026-08-12T00:00:03Z" },
     } satisfies ProjectAIRuntimeExecutionDto;
-    render(<ProjectRuntimePanel {...props} service={service({ execute: vi.fn().mockResolvedValue(engineeringResult) })} />);
+    render(<ProjectRuntimePanel {...props} service={service({ approve: vi.fn().mockResolvedValue(engineeringResult) })} />);
     await screen.findByText("● Pronto");
     fireEvent.click(screen.getByLabelText("Permitir alterações no projeto"));
     fireEvent.change(screen.getByLabelText("Tarefa"), { target: { value: "Add health endpoint" } });
-    fireEvent.click(screen.getByRole("button", { name: "Executar com Codex" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Confirmar e executar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Preparar plano" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Aprovar e executar" }));
 
     expect(await screen.findByRole("region", { name: "Evidências da execução de engenharia" })).toBeTruthy();
     expect(screen.getByText("e-1")).toBeTruthy();

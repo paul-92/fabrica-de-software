@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import type { AIRuntimeExecutionMode, AIRuntimeStatusDto, ProjectAIRuntimeExecutionDto, ProjectExecutionDto, ProjectSessionDto, SessionMemoryDto, SessionMemoryKind } from "../../lib/api/dtos";
+import type { AIRuntimeExecutionMode, AIRuntimeStatusDto, ProjectAIRuntimeExecutionDto, ProjectEngineeringPreparationDto, ProjectExecutionDto, ProjectSessionDto, SessionMemoryDto, SessionMemoryKind } from "../../lib/api/dtos";
 import { createProjectRuntimeWorkspaceService, type ProjectRuntimeWorkspaceService } from "../../lib/services/projectRuntimeWorkspace";
 import { Button } from "../Button";
 import { Card } from "../Card";
@@ -29,6 +29,7 @@ export function ProjectRuntimePanel({ projectId, projectName, workspacePath, ser
   const [instruction, setInstruction] = useState("");
   const [mode, setMode] = useState<AIRuntimeExecutionMode>("read_only");
   const [confirmingWrite, setConfirmingWrite] = useState(false);
+  const [preparation, setPreparation] = useState<ProjectEngineeringPreparationDto | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ProjectAIRuntimeExecutionDto | null>(null);
@@ -88,7 +89,7 @@ export function ProjectRuntimePanel({ projectId, projectName, workspacePath, ser
     try {
       const created = await api.createSession(projectId, sessionTitle.trim());
       setSessions((items) => [created, ...(items ?? [])]);
-      setHistory(null); setMemory(null); setMemoryError(null); setMemoryContent(""); setSelectedExecution(null); setResult(null); setSelectedSession(created); setSessionTitle("");
+      setHistory(null); setMemory(null); setMemoryError(null); setMemoryContent(""); setSelectedExecution(null); setResult(null); setPreparation(null); setSelectedSession(created); setSessionTitle("");
     } catch { setSessionError("Não foi possível criar a sessão. Tente novamente."); }
     finally { setCreatingSession(false); }
   }
@@ -97,8 +98,11 @@ export function ProjectRuntimePanel({ projectId, projectName, workspacePath, ser
     if (submitting || !selectedSession) return;
     setSubmitting(true); setError(null); setResult(null); setConfirmingWrite(false);
     try {
-      const completed = await api.execute(projectId, selectedSession.session_id, instruction.trim(), mode);
+      const completed = preparation
+        ? await api.approve(projectId, preparation.execution_id, selectedSession.session_id, preparation.instruction)
+        : await api.execute(projectId, selectedSession.session_id, instruction.trim(), mode);
       setResult(completed);
+      setPreparation(null);
       setHistory(await api.listExecutions(projectId, selectedSession.session_id));
       const refreshedMemory = await api.listMemory(projectId, selectedSession.session_id).catch(() => null);
       if (refreshedMemory !== null) setMemory(refreshedMemory);
@@ -111,8 +115,27 @@ export function ProjectRuntimePanel({ projectId, projectName, workspacePath, ser
   async function submit(event: FormEvent) {
     event.preventDefault(); if (submitting) return;
     if (!instruction.trim()) { setError("Descreva a tarefa antes de executar."); return; }
-    if (mode === "workspace_write") { setConfirmingWrite(true); return; }
+    if (mode === "workspace_write") {
+      setSubmitting(true); setError(null); setResult(null);
+      try {
+        setPreparation(await api.prepare(projectId, selectedSession!.session_id, instruction.trim()));
+        setConfirmingWrite(true);
+      } catch { setError("Não foi possível preparar o plano de engenharia."); }
+      finally { setSubmitting(false); }
+      return;
+    }
     await run();
+  }
+
+  async function cancelPreparation() {
+    if (!preparation || !selectedSession || submitting) return;
+    setSubmitting(true); setError(null);
+    try {
+      await api.cancel(projectId, preparation.execution_id, selectedSession.session_id, preparation.instruction);
+      setPreparation(null); setConfirmingWrite(false);
+      setHistory(await api.listExecutions(projectId, selectedSession.session_id));
+    } catch { setError("Não foi possível cancelar a preparação."); }
+    finally { setSubmitting(false); }
   }
 
   const runtimeReady = status?.ready === true || status?.state === "ready";
@@ -122,8 +145,8 @@ export function ProjectRuntimePanel({ projectId, projectName, workspacePath, ser
     <Card title="Sessões" eyebrow="Trabalho do projeto"><form className="engineering-form" onSubmit={createSession}><label>Nome da sessão<input placeholder="Ex.: Implementação da API de clientes" value={sessionTitle} onChange={(event) => setSessionTitle(event.target.value)} disabled={creatingSession} /></label>{sessionError ? <p role="alert" className="engineering-form__error">{sessionError}</p> : null}<Button type="submit" disabled={creatingSession}>{creatingSession ? "Criando…" : "Nova sessão"}</Button></form>{sessions === null ? <p role="status">Carregando sessões...</p> : sessionsLoadError ? <div role="alert"><p>Não foi possível carregar as sessões.</p><Button onClick={() => { setSessions(null); setSessionsAttempt((value) => value + 1); }}>Tentar novamente</Button></div> : sessions.length === 0 ? <p>Nenhuma sessão ainda.</p> : <ul>{sessions.map((session) => <li key={session.session_id}><button type="button" onClick={() => { setHistory(null); setMemory(null); setMemoryError(null); setMemoryContent(""); setSelectedExecution(null); setResult(null); setError(null); setConfirmingWrite(false); setSelectedSession(session); }} aria-pressed={selectedSession?.session_id === session.session_id}>{session.title}</button></li>)}</ul>}</Card>
     {selectedSession ? <Card title={selectedSession.title} eyebrow="Assistente de IA">
       <div className="status-row"><StatusBadge status={runtimeReady ? "success" : "warning"}>{`● ${runtimeLabel}`}</StatusBadge><StatusBadge>{mode === "read_only" ? "Sessão somente leitura" : "Alterações permitidas"}</StatusBadge></div>
-      {statusFailed ? <Button onClick={() => { setStatus(null); setStatusFailed(false); setStatusAttempt((value) => value + 1); }}>Verificar novamente</Button> : status === null ? null : !runtimeReady ? <p><Link href="/settings/ai">Configurar assistente de IA</Link></p> : <form className="engineering-form" onSubmit={submit}><fieldset className="mode-selector" disabled={submitting}><legend>Modo de execução</legend><label><input type="radio" name="execution-mode" value="read_only" checked={mode === "read_only"} onChange={() => { setMode("read_only"); setConfirmingWrite(false); }} /> Somente leitura</label><label><input type="radio" name="execution-mode" value="workspace_write" checked={mode === "workspace_write"} onChange={() => setMode("workspace_write")} /> Permitir alterações no projeto</label></fieldset><label>Tarefa<textarea placeholder="Descreva o que você quer que o Codex faça neste projeto..." value={instruction} onChange={(event) => setInstruction(event.target.value)} disabled={submitting} /></label>{error ? <p role="alert" className="engineering-form__error">{error}</p> : null}<Button type="submit" disabled={submitting}>{submitting ? "Executando — a pasta pode estar sendo alterada…" : "Executar com Codex"}</Button></form>}
-      {confirmingWrite ? <section role="alertdialog" aria-labelledby="write-confirmation-title"><h3 id="write-confirmation-title">Confirmar alterações no projeto</h3><p>O Codex pode criar, modificar ou excluir arquivos nesta pasta. As alterações não são desfeitas automaticamente.</p><dl><div><dt>Projeto</dt><dd>{projectName}</dd></div><div><dt>Pasta</dt><dd>{workspacePath}</dd></div><div><dt>Modo</dt><dd>{formatExecutionMode("workspace_write")}</dd></div></dl><Button onClick={() => setConfirmingWrite(false)} disabled={submitting}>Cancelar</Button><Button onClick={run} disabled={submitting}>Confirmar e executar</Button></section> : null}
+      {statusFailed ? <Button onClick={() => { setStatus(null); setStatusFailed(false); setStatusAttempt((value) => value + 1); }}>Verificar novamente</Button> : status === null ? null : !runtimeReady ? <p><Link href="/settings/ai">Configurar assistente de IA</Link></p> : <form className="engineering-form" onSubmit={submit}><fieldset className="mode-selector" disabled={submitting}><legend>Modo de execução</legend><label><input type="radio" name="execution-mode" value="read_only" checked={mode === "read_only"} onChange={() => { setMode("read_only"); setConfirmingWrite(false); setPreparation(null); }} /> Somente leitura</label><label><input type="radio" name="execution-mode" value="workspace_write" checked={mode === "workspace_write"} onChange={() => setMode("workspace_write")} /> Permitir alterações no projeto</label></fieldset><label>Tarefa<textarea placeholder="Descreva o que você quer que o Codex faça neste projeto..." value={instruction} onChange={(event) => setInstruction(event.target.value)} disabled={submitting || preparation !== null} /></label>{error ? <p role="alert" className="engineering-form__error">{error}</p> : null}<Button type="submit" disabled={submitting || preparation !== null}>{submitting ? (mode === "workspace_write" ? "Preparando plano…" : "Executando…") : mode === "workspace_write" ? "Preparar plano" : "Executar com Codex"}</Button></form>}
+      {confirmingWrite && preparation ? <section role="alertdialog" aria-labelledby="write-confirmation-title"><h3 id="write-confirmation-title">Revisar e aprovar plano</h3><p>O workspace ainda não foi alterado. Após a aprovação, o plano abaixo poderá criar, modificar ou excluir arquivos.</p><dl className="execution-facts"><div><dt>Execution ID</dt><dd><code>{preparation.execution_id}</code></dd></div><div><dt>Projeto</dt><dd>{projectName}</dd></div><div><dt>Pasta</dt><dd>{workspacePath}</dd></div><div><dt>Linguagens</dt><dd>{preparation.analysis.languages.join(", ") || "Não detectadas"}</dd></div><div><dt>Frameworks</dt><dd>{preparation.analysis.frameworks.join(", ") || "Não detectados"}</dd></div></dl><h4>Plano operacional</h4><ol>{preparation.operational_plan.steps.map((step) => <li key={step.step_id}><strong>{step.description}</strong><p>Dependências: {step.dependencies.join(", ") || "nenhuma"}</p><p>Targets: {step.target_hints.join(", ") || "nenhum"}</p><p>Validators: {step.validation_hints.join(", ") || "nenhum"}</p></li>)}</ol><Button onClick={cancelPreparation} disabled={submitting}>Cancelar</Button><Button onClick={run} disabled={submitting}>Aprovar e executar</Button></section> : null}
       {result ? <div className="runtime-result"><p>Modo: {formatExecutionMode(result.execution_mode)}</p><ProjectExecutionEvidence evidence={result} changes={result.changes} output={result.output} /><ContextUsage count={result.context_entry_count} truncated={result.context_truncated} charCount={result.context_char_count} omittedCount={result.context_omitted_execution_count} /><MemoryUsage count={result.memory_entry_count} charCount={result.memory_char_count} truncated={result.memory_truncated} /></div> : null}
     </Card> : null}
     {selectedSession ? <Card title="Memória da sessão" eyebrow="Informações duráveis"><form className="engineering-form" onSubmit={addMemory}><label>Tipo<select value={memoryKind} onChange={(event) => setMemoryKind(event.target.value as SessionMemoryKind)} disabled={addingMemory}><option value="fact">Fato</option><option value="decision">Decisão</option><option value="constraint">Restrição</option><option value="artifact">Artefato</option><option value="goal">Objetivo</option></select></label><label>Memória<input placeholder="Registre uma informação importante desta sessão" value={memoryContent} onChange={(event) => setMemoryContent(event.target.value)} disabled={addingMemory} /></label>{memoryError ? <p role="alert">{memoryError}</p> : null}<Button type="submit" disabled={addingMemory}>{addingMemory ? "Adicionando…" : "Adicionar memória"}</Button></form>{memory === null ? <p role="status">Carregando memória...</p> : memory.length === 0 ? <p>Nenhuma memória nesta sessão.</p> : <ul>{memory.map((entry) => <li key={entry.memory_id}><strong>{formatMemoryKind(entry.kind)}</strong> {entry.content}<small>{entry.source_execution_id ? `Execução ${entry.source_execution_id}` : "Manual"}</small></li>)}</ul>}</Card> : null}

@@ -154,6 +154,9 @@ describe("specialized API clients", () => {
       { status: 200, ok: true, body: { items: [], next_cursor: "opaque" } },
       { status: 201, ok: true, body: { memory_id: "m/1" } },
       { status: 200, ok: true, body: { execution_id: "e/1" } },
+      { status: 201, ok: true, body: { execution_id: "prep/1" } },
+      { status: 200, ok: true, body: { execution_id: "prep/1" } },
+      { status: 200, ok: true, body: { execution_id: "prep/1" } },
     );
     const history = new ProjectHistoryClient(api);
     await history.createSession("p/1", "Work");
@@ -165,9 +168,14 @@ describe("specialized API clients", () => {
       text: "safe % text", kind: "fact", order: "oldest", page_size: 1, cursor: "opaque/+",
     })).toEqual({ items: [], next_cursor: "opaque" });
     await history.addMemory("p/1", "s/1", "constraint", "Use PostgreSQL for persistence.");
-    await new ProjectRuntimeClient(api).execute("p/1", {
+    const runtime = new ProjectRuntimeClient(api);
+    await runtime.execute("p/1", {
       session_id: "s/1", runtime_id: "codex", instruction: "Inspect",
     });
+    const preparedRequest = { session_id: "s/1", runtime_id: "codex", instruction: "Change", execution_mode: "workspace_write" as const };
+    await runtime.prepare("p/1", preparedRequest);
+    await runtime.approve("p/1", "prep/1", preparedRequest);
+    await runtime.cancel("p/1", "prep/1", preparedRequest);
     expect(transport.requests).toMatchObject([
       { url: "https://example.test/api/v1/projects/p%2F1/sessions", method: "POST", body: { title: "Work" } },
       { url: "https://example.test/api/v1/projects/p%2F1/sessions" },
@@ -177,6 +185,9 @@ describe("specialized API clients", () => {
       { url: "https://example.test/api/v1/projects/p%2F1/sessions/s%2F1/memory/search?text=safe+%25+text&kind=fact&order=oldest&page_size=1&cursor=opaque%2F%2B", method: "GET" },
       { url: "https://example.test/api/v1/projects/p%2F1/sessions/s%2F1/memory", method: "POST", body: { kind: "constraint", content: "Use PostgreSQL for persistence." } },
       { url: "https://example.test/api/v1/projects/p%2F1/ai-runtime/execute", body: { session_id: "s/1", runtime_id: "codex", instruction: "Inspect" } },
+      { url: "https://example.test/api/v1/projects/p%2F1/engineering/prepare", method: "POST", body: preparedRequest },
+      { url: "https://example.test/api/v1/projects/p%2F1/engineering/prep%2F1/approve", method: "POST", body: preparedRequest },
+      { url: "https://example.test/api/v1/projects/p%2F1/engineering/prep%2F1/cancel", method: "POST", body: preparedRequest },
     ]);
   });
 

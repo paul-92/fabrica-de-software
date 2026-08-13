@@ -213,21 +213,36 @@ def test_http_acceptance_task_to_public_result_uses_one_execution(
     client = TestClient(composition.app)
     project_id, session_id = create_project_and_session(client, tmp_path)
 
+    request_body = {
+                "session_id": session_id,
+                "runtime_id": "codex",
+                "instruction": (
+                    "Add GET /health returning {'status': 'ok'} and create a test."
+                ),
+                "execution_mode": "workspace_write",
+            }
+    before = sorted(path.relative_to(tmp_path).as_posix() for path in tmp_path.rglob("*") if path.is_file())
+    prepared_response = client.post(
+        f"/api/v1/projects/{project_id}/engineering/prepare",
+        json=request_body,
+    )
+    assert prepared_response.status_code == 201
+    prepared = prepared_response.json()
+    assert prepared["status"] == "pending"
+    assert prepared["analysis"]["frameworks"] == ["FastAPI"]
+    assert prepared["operational_plan"]["execution_id"] == prepared["execution_id"]
+    assert sorted(path.relative_to(tmp_path).as_posix() for path in tmp_path.rglob("*") if path.is_file()) == before
+    assert implementation_runtime.requests == []
+
     response = client.post(
-        f"/api/v1/projects/{project_id}/ai-runtime/execute",
-        json={
-            "session_id": session_id,
-            "runtime_id": "codex",
-            "instruction": (
-                "Add GET /health returning {'status': 'ok'} and create a test."
-            ),
-            "execution_mode": "workspace_write",
-        },
+        f"/api/v1/projects/{project_id}/engineering/{prepared['execution_id']}/approve",
+        json=request_body,
     )
 
     assert response.status_code == 200
     body = response.json()
     execution_id = body["execution_id"]
+    assert execution_id == prepared["execution_id"]
     assert body["status"] == "succeeded"
     assert body["instruction"].startswith("Add GET /health")
     assert body["operational_plan"]["execution_id"] == execution_id
