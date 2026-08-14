@@ -10,6 +10,7 @@ export class AccessClient {
   login(email: string, password: string) { return this.api.request<AccessPrincipal>({ path: "api/v1/access/login", method: "POST", body: { email, password } }); }
   logout() { return this.api.request<unknown>({ path: "api/v1/access/logout", method: "POST" }); }
   users() { return this.api.request<{ items: AccessUser[] }>({ path: "api/v1/access/users" }); }
+  invite(email: string, password: string, role: "admin" | "member" = "member") { return this.api.request<AccessUser>({ path: "api/v1/access/users", method: "POST", body: { email, password, role } }); }
   quota(userId?: string) { return this.api.request<QuotaView>({ path: userId ? `api/v1/ai-quotas/users/${userId}` : "api/v1/ai-quotas/me" }); }
   setQuota(userId: string, body: { enabled:boolean; call_limit:number|null; token_limit:number|null }) { return this.api.request({ path:`api/v1/ai-quotas/users/${userId}`,method:"PUT",body }); }
   setStatus(userId:string,status:"active"|"suspended") { return this.api.request({path:`api/v1/access/users/${userId}/status`,method:"PATCH",body:{status}}); }

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { createPlatformClients } from "../../lib/api";
 import type { AccessClient, AccessPrincipal } from "../../lib/services/access";
 import { BetaUsagePanel } from "./BetaUsagePanel";
+import { UsersAdminPanel } from "./UsersAdminPanel";
 
 type Props = PropsWithChildren<{ client?: AccessClient }>;
 
@@ -35,5 +36,5 @@ export function AccessGate({ client, children }: Props) {
 
   if (!principal) return <main className="access-screen"><section className="card access-card"><h1>Acesso à ASEP</h1><p>Private Beta por convite.</p><form className="engineering-form" onSubmit={login}><label>Email<input type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} required /></label><label>Senha<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>{error ? <p role="alert">Não foi possível autenticar.</p> : null}<button className="button button--primary" disabled={busy}>{busy ? "Entrando…" : "Entrar"}</button></form></section></main>;
 
-  return <><div className="access-session" aria-label="Sessão atual"><span>{principal.user_id} · {principal.role}</span><BetaUsagePanel access={access!} principal={principal}/><button type="button" onClick={logout}>Sair</button></div>{children}</>;
+  return <><div className="access-session" aria-label="Sessão atual"><span>{principal.user_id} · {principal.role}</span><BetaUsagePanel access={access!} principal={principal}/>{principal.role === "admin" ? <UsersAdminPanel access={access!} principal={principal} /> : null}<button type="button" onClick={logout}>Sair</button></div>{children}</>;
 }
