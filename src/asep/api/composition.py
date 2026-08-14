@@ -103,6 +103,7 @@ from asep.projects import HostedWorkspaceManager
 from asep.ai_usage import AIUsageService
 from asep.ai_quotas import AIQuotaService
 from datetime import UTC, datetime
+from asep.maintenance import MaintenanceGate
 
 
 @dataclass(frozen=True, slots=True)
@@ -373,6 +374,7 @@ def _create_configured_app(
         ai_usage_service=project_services.usage,
         ai_quota_service=project_services.quotas,
         readiness=readiness,
+        maintenance_gate=MaintenanceGate(settings.maintenance_directory),
     )
 
 

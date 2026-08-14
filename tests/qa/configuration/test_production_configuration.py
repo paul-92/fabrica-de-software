@@ -12,6 +12,7 @@ def production(tmp_path: Path, **overrides):
         environment="production", storage_backend="sqlite",
         sqlite_database=tmp_path / "database" / "asep.db",
         hosted_root=tmp_path / "workspaces",
+        maintenance_directory=tmp_path / "maintenance",
         cors_origins=("https://beta.example",), access_cookie_secure=True,
         legacy_admin_email="admin@example.test",
         legacy_admin_password="strong-private-beta-password",
@@ -42,6 +43,7 @@ def test_valid_production_starts_and_is_ready(tmp_path):
 @pytest.mark.parametrize("updates",[
     {"storage_backend":"memory"},{"storage_backend":"file"},
     {"sqlite_database":"relative.db"},{"hosted_root":"relative-workspaces"},
+    {"maintenance_directory":"relative-maintenance"},
     {"access_cookie_secure":False},{"legacy_admin_password":"change-me-local-admin"},
     {"legacy_admin_email":"invalid"},{"cors_origins":("http://beta.example",)},
     {"cors_origins":("https://localhost",)},{"cors_origins":("https://127.0.0.1",)},
@@ -53,6 +55,13 @@ def test_invalid_production_is_rejected(tmp_path, updates):
 def test_database_inside_hosted_root_is_rejected(tmp_path):
     with pytest.raises(ConfigurationValidationError):
         production(tmp_path,hosted_root=tmp_path/"root",sqlite_database=tmp_path/"root"/"db.sqlite")
+
+
+def test_maintenance_is_disjoint_from_persistence(tmp_path):
+    with pytest.raises(ConfigurationValidationError):
+        production(tmp_path, hosted_root=tmp_path/"root", maintenance_directory=tmp_path/"root"/"maintenance")
+    with pytest.raises(ConfigurationValidationError):
+        production(tmp_path, maintenance_directory=tmp_path/"database")
 
 
 def test_wildcard_cors_is_rejected(tmp_path):

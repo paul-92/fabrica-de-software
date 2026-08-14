@@ -10,6 +10,8 @@ from typing import Iterator
 
 from asep.sqlite.errors import SQLiteConnectionError, SQLiteSchemaError
 
+SCHEMA_VERSION = "4"
+
 
 class SQLiteDatabase:
     """Inicializa o banco e fornece conexões transacionais curtas."""
@@ -232,7 +234,7 @@ class SQLiteDatabase:
             with self.connect() as connection:
                 self._migrate(connection)
                 connection.executescript(self._SCHEMA)
-                connection.execute("INSERT OR REPLACE INTO schema_metadata (key,value) VALUES ('schema_version','4')")
+                connection.execute("INSERT OR REPLACE INTO schema_metadata (key,value) VALUES ('schema_version',?)", (SCHEMA_VERSION,))
                 self._validate_schema(connection)
         except SQLiteConnectionError:
             raise
@@ -271,3 +273,6 @@ class SQLiteDatabase:
                     f"Schema SQLite incompatível para tabela {table}.",
                     path=self.path,
                 )
+
+
+__all__ = ["SCHEMA_VERSION", "SQLiteDatabase"]

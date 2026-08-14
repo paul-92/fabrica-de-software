@@ -53,6 +53,7 @@ class ApplicationSettings:
     legacy_admin_email: str = "admin@legacy.local"
     legacy_admin_password: str = "change-me-local-admin"
     hosted_root: Path | str = _DEFAULT_STORAGE_DIRECTORY / "hosted-workspaces"
+    maintenance_directory: Path | str = _DEFAULT_STORAGE_DIRECTORY / "maintenance"
 
     def __post_init__(self) -> None:
         try:
@@ -112,6 +113,7 @@ class ApplicationSettings:
         )
         object.__setattr__(self, "access_cookie_secure", str(self.access_cookie_secure).casefold() in {"1", "true", "yes"})
         object.__setattr__(self, "hosted_root", self._validate_path("hosted_root", self.hosted_root))
+        object.__setattr__(self, "maintenance_directory", self._validate_path("maintenance_directory", self.maintenance_directory))
         if len(self.legacy_admin_password) < 12:
             raise ConfigurationValidationError("legacy_admin_password deve conter ao menos 12 caracteres.")
         if self.access_cookie_secure and self.legacy_admin_password == "change-me-local-admin":
@@ -124,18 +126,34 @@ class ApplicationSettings:
             raise ConfigurationValidationError("production exige storage_backend sqlite.")
         database = self.sqlite_database.expanduser()
         hosted = self.hosted_root.expanduser()
+        maintenance = self.maintenance_directory.expanduser()
         if not database.is_absolute():
             raise ConfigurationValidationError("production exige sqlite_database absoluto.")
         if not hosted.is_absolute():
             raise ConfigurationValidationError("production exige hosted_root absoluto.")
+        if not maintenance.is_absolute():
+            raise ConfigurationValidationError("production exige maintenance_directory absoluto.")
         database = database.resolve()
         hosted = hosted.resolve()
+        maintenance = maintenance.resolve()
         try:
             database.relative_to(hosted)
         except ValueError:
             pass
         else:
             raise ConfigurationValidationError("sqlite_database deve ficar fora do hosted_root.")
+        for first, second in ((maintenance, hosted), (hosted, maintenance)):
+            try:
+                first.relative_to(second)
+            except ValueError:
+                continue
+            raise ConfigurationValidationError("maintenance_directory deve ficar fora do hosted_root.")
+        try:
+            database.relative_to(maintenance)
+        except ValueError:
+            pass
+        else:
+            raise ConfigurationValidationError("sqlite_database deve ficar fora de maintenance_directory.")
         temporary = Path(tempfile.gettempdir()).resolve()
         try:
             hosted.relative_to(temporary)
@@ -166,8 +184,10 @@ class ApplicationSettings:
                 raise ConfigurationValidationError("production não aceita origins locais.")
         self._probe_directory(database.parent, "sqlite_database parent")
         self._probe_directory(hosted, "hosted_root")
+        self._probe_directory(maintenance, "maintenance_directory")
         object.__setattr__(self, "sqlite_database", database)
         object.__setattr__(self, "hosted_root", hosted)
+        object.__setattr__(self, "maintenance_directory", maintenance)
 
     @staticmethod
     def _probe_directory(path: Path, field: str) -> None:

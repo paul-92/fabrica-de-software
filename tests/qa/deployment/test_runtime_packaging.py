@@ -27,6 +27,7 @@ def valid_environment(tmp_path: Path) -> dict[str, str]:
         "ASEP_ENVIRONMENT": "production", "ASEP_STORAGE_BACKEND": "sqlite",
         "ASEP_SQLITE_DATABASE": str(database.resolve()),
         "ASEP_HOSTED_ROOT": str(hosted.resolve()),
+        "ASEP_MAINTENANCE_DIRECTORY": str((tmp_path / "maintenance").resolve()),
         "ASEP_CORS_ORIGINS": "https://beta.example",
         "ASEP_ACCESS_COOKIE_SECURE": "true",
         "ASEP_LEGACY_ADMIN_EMAIL": "admin@example.test",

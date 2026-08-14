@@ -1,6 +1,6 @@
 # ASEP Private Beta runtime packaging
 
-**Owner:** DevOps/Runtime Owner | **Status:** candidate | **Version:** 0.2.0
+**Owner:** DevOps/Runtime Owner | **Status:** candidate | **Version:** 0.3.0
 
 ## Objective and scope
 
@@ -83,4 +83,50 @@ Automatic public TLS requires a valid domain resolving to the VM and externally 
 
 ## Security notes and next boundary
 
-The hardening keeps the release read-only while permitting `/var/lib/asep` and `/var/tmp/asep`. `PrivateTmp` does not block hosted workspaces or validators. VM provisioning, real DNS/TLS activation, firewall application, backup/restore, release activation/rollback automation, monitoring, and remote deployment remain for 26.6E or a separately authorized sprint.
+The hardening keeps the release read-only while permitting `/var/lib/asep` and `/var/tmp/asep`. `PrivateTmp` does not block hosted workspaces or validators. VM provisioning, real DNS/TLS activation, firewall application, release activation/rollback automation, monitoring, and remote deployment remain for 26.6F or a separately authorized sprint.
+
+## Backup and restore
+
+SQLite and `ASEP_HOSTED_ROOT` form one logical backup. `deployment.backup` creates an online SQLite backup through SQLite's backup API, copies only safe hosted workspace entries, writes a versioned manifest with UTC timestamp, application version, schema version, sizes and SHA-256 checksums, validates the staged result, and atomically promotes its directory. Partial directories are hidden and never valid backups.
+
+The API maintenance gate rejects new POST/PUT/PATCH/DELETE requests with a bounded 503 while allowing health checks. Existing mutations hold leases; entering maintenance waits up to the configured timeout for those leases to drain. A normal daily backup enters and releases this boundary automatically:
+
+```bash
+/opt/asep/current/.venv/bin/python -m deployment.backup backup \
+  --database /var/lib/asep/asep.db \
+  --hosted-root /var/lib/asep/workspaces \
+  --backup-root /var/backups/asep \
+  --maintenance-root /var/tmp/asep/maintenance \
+  --release-root /opt/asep/current \
+  --retention-count 7
+```
+
+The destination must be absolute and disjoint from both persistence roots. It should be `asep:asep` mode `0700`, outside the release and never served by Caddy. Retention keeps the newest N completed backups and never removes the current or a `.partial` backup. Excluded workspace content includes `.env*`, logs, `.next`, caches, `node_modules`, `__pycache__`, and temporary directories. Any symlink/reparse point or malformed `organization/project/workspace` layout fails closed. External configuration, Codex state and credentials are never source paths.
+
+Deployment backup sequence:
+
+```bash
+python -m deployment.backup maintenance-enter --maintenance-root /var/tmp/asep/maintenance --timeout-seconds 30
+python -m deployment.backup backup --maintenance-active --database /var/lib/asep/asep.db --hosted-root /var/lib/asep/workspaces --backup-root /var/backups/asep --maintenance-root /var/tmp/asep/maintenance --release-root /opt/asep/current --retention-count 7
+python -m deployment.backup verify /var/backups/asep/<backup_id>
+# deploy/update, then run internal health/readiness and the bounded application smoke
+python -m deployment.backup maintenance-release --maintenance-root /var/tmp/asep/maintenance
+```
+
+Release maintenance only after the new release passes smoke. If the maintenance command is interrupted, the marker intentionally remains fail-closed; an operator must confirm no backup/deploy is active before releasing it.
+
+Restore requires backend/frontend services stopped, active maintenance, an already verified backup, a nonexistent SQLite target and an absent or empty hosted target:
+
+```bash
+systemctl stop asep-frontend.service asep-backend.service
+python -m deployment.backup maintenance-enter --maintenance-root /var/tmp/asep/maintenance
+python -m deployment.backup verify /var/backups/asep/<backup_id>
+python -m deployment.backup restore /var/backups/asep/<backup_id> --database /var/lib/asep/asep.db --hosted-root /var/lib/asep/workspaces --maintenance-root /var/tmp/asep/maintenance
+# run production preflight, start backend, check internal readiness and smoke
+# start frontend/Caddy only after validation, then reopen access
+python -m deployment.backup maintenance-release --maintenance-root /var/tmp/asep/maintenance
+```
+
+Restore stages both components, verifies checksums and supported schema without migration, reconstructs project ownership/workspace mappings, parses session/execution and AI usage/quota payloads, then promotes into the empty targets. It never overwrites active state. On failure it reports a bounded error, leaves the source backup untouched and does not declare success.
+
+Private Beta recommendation: back up daily, always back up before deploy, retain the latest seven completed backups, test restore regularly, and add an encrypted off-VM copy in a future authorized sprint. This sprint does not implement cloud storage, PITR, replication or remote scheduling.

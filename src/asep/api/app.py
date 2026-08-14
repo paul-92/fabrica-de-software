@@ -48,6 +48,7 @@ from asep.ai_usage import AIUsageService
 from asep.api.ai_usage_routes import create_ai_usage_router
 from asep.ai_quotas import AIQuotaService
 from asep.api.ai_quota_routes import create_ai_quota_router
+from asep.maintenance import MaintenanceActiveError, MaintenanceGate
 
 
 def create_app(
@@ -74,6 +75,7 @@ def create_app(
     ai_usage_service: AIUsageService | None = None,
     ai_quota_service: AIQuotaService | None = None,
     readiness: Callable[[], bool] | None = None,
+    maintenance_gate: MaintenanceGate | None = None,
 ) -> FastAPI:
     app = FastAPI(
         title="ASEP Dashboard API",
@@ -94,6 +96,20 @@ def create_app(
     app.state.project_session_service = project_session_service
     app.state.agent_catalog_service = agent_catalog_service
     app.state.agent_runtime_projection_service = agent_runtime_projection_service
+    if maintenance_gate is not None:
+        @app.middleware("http")
+        async def block_mutations_during_maintenance(request, call_next):
+            lease = None
+            if request.method in {"POST", "PUT", "PATCH", "DELETE"}:
+                try:
+                    lease = maintenance_gate.begin_mutation()
+                except MaintenanceActiveError:
+                    return JSONResponse(status_code=503, content={"error": {"code": "MAINTENANCE", "message": "Service temporarily unavailable."}})
+            try:
+                return await call_next(request)
+            finally:
+                if lease is not None:
+                    lease.release()
     if access_service is not None:
         @app.middleware("http")
         async def require_private_access(request, call_next):

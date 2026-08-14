@@ -25,6 +25,7 @@ def production(tmp_path: Path) -> ApplicationSettings:
         storage_backend="sqlite",
         sqlite_database=tmp_path / "database" / "asep.db",
         hosted_root=tmp_path / "workspaces",
+        maintenance_directory=tmp_path / "maintenance",
         cors_origins=("https://beta.example.com",),
         access_cookie_secure=True,
         legacy_admin_email="admin@example.test",

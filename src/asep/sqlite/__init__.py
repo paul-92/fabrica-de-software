@@ -1,6 +1,6 @@
 """Infraestrutura SQLite compartilhada."""
 
-from asep.sqlite.database import SQLiteDatabase
+from asep.sqlite.database import SCHEMA_VERSION, SQLiteDatabase
 from asep.sqlite.errors import (
     SQLiteConnectionError,
     SQLiteSchemaError,
@@ -8,6 +8,7 @@ from asep.sqlite.errors import (
 )
 
 __all__ = [
+    "SCHEMA_VERSION",
     "SQLiteConnectionError",
     "SQLiteDatabase",
     "SQLiteSchemaError",
