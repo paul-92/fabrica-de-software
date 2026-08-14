@@ -1,0 +1,31 @@
+[Unit]
+Description=ASEP Private Beta frontend
+After=network.target asep-backend.service
+Requires=asep-backend.service
+StartLimitIntervalSec=60s
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=asep
+Group=asep
+WorkingDirectory=/opt/asep/current/frontend
+EnvironmentFile=/etc/asep/asep.env
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/npm start -- --hostname 127.0.0.1 --port 3000
+Restart=on-failure
+RestartSec=5s
+TimeoutStartSec=30s
+TimeoutStopSec=30s
+KillSignal=SIGTERM
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+UMask=0027
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

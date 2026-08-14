@@ -61,6 +61,7 @@ class ProcessRunner:
     _HOST_ENVIRONMENT_ALLOWLIST = frozenset({
         "PATH", "PATHEXT", "SYSTEMROOT", "WINDIR", "COMSPEC",
         "TEMP", "TMP", "TMPDIR", "LANG", "LC_ALL", "LC_CTYPE",
+        "CODEX_HOME",
     })
     """Adaptador mínimo sobre subprocess, sem regras de provider."""
 

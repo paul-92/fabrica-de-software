@@ -1,0 +1,32 @@
+[Unit]
+Description=ASEP Private Beta backend
+After=network.target
+StartLimitIntervalSec=60s
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=asep
+Group=asep
+WorkingDirectory=/opt/asep/current
+EnvironmentFile=/etc/asep/asep.env
+Environment=PYTHONUNBUFFERED=1
+ExecStartPre=/opt/asep/current/.venv/bin/python -m deployment.preflight
+ExecStart=/opt/asep/current/.venv/bin/uvicorn asep.api.composition:create_default_app --factory --host 127.0.0.1 --port 8000
+Restart=on-failure
+RestartSec=5s
+TimeoutStartSec=45s
+TimeoutStopSec=30s
+KillSignal=SIGTERM
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/asep /var/tmp/asep
+UMask=0027
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

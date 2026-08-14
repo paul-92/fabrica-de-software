@@ -45,6 +45,8 @@ continuar o desenvolvimento, consulte o
 O estado do candidato atual está em
 [Release Candidate 2](docs/releases/ReleaseCandidate2.md). O
 [RC1](docs/releases/ReleaseCandidate_RC1.md) permanece como registro histórico.
+O empacotamento de processos para a VM Linux do Private Beta está no
+[runbook de deployment](deployment/README.md).
 
 1. Leia [VISION.md](VISION.md), [AGENTS.md](AGENTS.md) e [core/SYSTEM.md](core/SYSTEM.md).
 2. Copie `clients/_template/` se houver novo cliente.
