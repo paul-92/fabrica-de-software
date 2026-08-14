@@ -122,6 +122,8 @@ def test_windows_preflight_and_linux_contract(tmp_path,monkeypatch):
          "ASEP_RELEASE_ROOT":str(release),"CODEX_HOME":str(paths.root/"codex"),"ASEP_ACCESS_COOKIE_SECURE":"true",
          "ASEP_LEGACY_ADMIN_EMAIL":"admin@example.com","ASEP_LEGACY_ADMIN_PASSWORD":"strong-password",
          "ASEP_CORS_ORIGINS":"https://beta.example.com"}
+    env.update({"ASEP_PUBLIC_ORIGIN":"https://beta.example.com",
+                "NEXT_PUBLIC_API_URL":"https://beta.example.com"})
     monkeypatch.setattr(preflight.sys,"version_info",(3,12,0))
     monkeypatch.setattr(configuration_models.tempfile,"gettempdir",lambda:str(tmp_path.parent / "other-temp"))
     version=lambda executable:(30,0)

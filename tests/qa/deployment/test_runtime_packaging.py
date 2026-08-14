@@ -29,6 +29,8 @@ def valid_environment(tmp_path: Path) -> dict[str, str]:
         "ASEP_HOSTED_ROOT": str(hosted.resolve()),
         "ASEP_MAINTENANCE_DIRECTORY": str((tmp_path / "maintenance").resolve()),
         "ASEP_CORS_ORIGINS": "https://beta.example",
+        "ASEP_PUBLIC_ORIGIN": "https://beta.example",
+        "NEXT_PUBLIC_API_URL": "https://beta.example",
         "ASEP_ACCESS_COOKIE_SECURE": "true",
         "ASEP_LEGACY_ADMIN_EMAIL": "admin@example.test",
         "ASEP_LEGACY_ADMIN_PASSWORD": "strong-private-beta-password",

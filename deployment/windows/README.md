@@ -1,6 +1,6 @@
 # ASEP Windows Private Beta runtime
 
-**Owner:** DevOps/Runtime Owner | **Status:** candidate | **Version:** 0.1.0
+**Owner:** DevOps/Runtime Owner | **Status:** candidate | **Version:** 0.2.0
 
 This package operates one prepared ASEP release on a temporary Windows Private Beta host. It does not install dependencies, configure a tunnel, TLS, firewall, Task Scheduler or a Windows service.
 
@@ -19,4 +19,4 @@ Start launches a persistent supervisor, which exclusively acquires `temp\runtime
 
 Backend and frontend stdout/stderr are separated below `logs`; each active log rolls to one `.1` file at 5 MiB before a new runtime instance starts. The supervisor never prints environment values. Production configuration and Codex state remain outside releases. The application `ProcessRunner` continues to pass only its existing host allowlist to Codex and validators.
 
-The prepared release must contain `.venv\Scripts\python.exe`, installed Python dependencies, installed frontend dependencies and `frontend\.next\BUILD_ID`. Start and restart never install or build. The PC must remain powered, awake, connected and logged into the dedicated account. External access is intentionally absent until 26.7C.
+The prepared release must contain `.venv\Scripts\python.exe`, installed Python dependencies, installed frontend dependencies and `frontend\.next\BUILD_ID`. Start and restart never install or build. The PC must remain powered, awake, connected and logged into the dedicated account. External access remains inactive until a provider adapter is separately selected, installed and drilled. The provider-neutral architecture, local Caddy profile, origin/build contract and operational checklist are defined in [TUNNEL.md](TUNNEL.md).

@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import sys
 from typing import Callable, Mapping
+from urllib.parse import urlsplit
 
 MINIMUM_PYTHON = (3, 12)
 MINIMUM_NODE = (20, 9)
@@ -69,6 +70,19 @@ def check(
         failures.append("ASEP_ENVIRONMENT must be production.")
     if source.get("ASEP_STORAGE_BACKEND") != "sqlite":
         failures.append("ASEP_STORAGE_BACKEND must be sqlite.")
+
+    public_origin = source.get("ASEP_PUBLIC_ORIGIN", "").strip().rstrip("/")
+    parsed_origin = urlsplit(public_origin)
+    local_hosts = {"localhost", "127.0.0.1", "::1"}
+    if (parsed_origin.scheme != "https" or not parsed_origin.netloc
+            or parsed_origin.path or parsed_origin.query or parsed_origin.fragment
+            or (parsed_origin.hostname or "").casefold() in local_hosts):
+        failures.append("ASEP_PUBLIC_ORIGIN must be one non-local HTTPS origin.")
+    if source.get("NEXT_PUBLIC_API_URL", "").strip().rstrip("/") != public_origin:
+        failures.append("NEXT_PUBLIC_API_URL must equal ASEP_PUBLIC_ORIGIN at build time.")
+    cors = tuple(value.strip().rstrip("/") for value in source.get("ASEP_CORS_ORIGINS", "").split(",") if value.strip())
+    if cors != (public_origin,):
+        failures.append("ASEP_CORS_ORIGINS must contain only ASEP_PUBLIC_ORIGIN.")
 
     database_value = source.get("ASEP_SQLITE_DATABASE", "")
     hosted_value = source.get("ASEP_HOSTED_ROOT", "")
