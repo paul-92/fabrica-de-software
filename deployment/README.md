@@ -1,6 +1,6 @@
 # ASEP Private Beta runtime packaging
 
-**Owner:** DevOps/Runtime Owner | **Status:** candidate | **Version:** 0.4.0
+**Owner:** DevOps/Runtime Owner | **Status:** candidate | **Version:** 0.5.0
 
 ## Objective and scope
 
@@ -192,3 +192,37 @@ sudo /opt/asep/current/.venv/bin/python -m deployment.deploy deploy <release_id>
 ```
 
 Each real operation writes a bounded JSON audit record under `/var/lib/asep/deployment/deploys` with candidate, previous release, UTC timestamp, stage, outcome and pre-deploy backup ID. No environment, command output or secret is persisted.
+
+## Private Beta remote smoke and opening runbook
+
+The deploy workflow's local smoke remains intentionally limited to loopback health, frontend, readiness and anonymous access. After it passes, the operator runs the separate same-origin acceptance flow through Caddy and real TLS. Credentials are external secrets and never command-line arguments or versioned files:
+
+```bash
+export ASEP_SMOKE_EMAIL='<tenant-a-smoke-user>'
+export ASEP_SMOKE_PASSWORD='<external-secret>'
+export ASEP_SMOKE_TENANT_B_EMAIL='<tenant-b-smoke-user>'
+export ASEP_SMOKE_TENANT_B_PASSWORD='<external-secret>'
+export ASEP_SMOKE_RUNTIME_ID='<configured-provider-runtime>'
+export ASEP_RELEASE_ID='<active-release-id>'
+/opt/asep/current/.venv/bin/python -m deployment.smoke --base-url https://<approved-domain>
+```
+
+The controlled instruction creates one small Python module and focused test in a newly created hosted project. There is no project deletion API, so automation does not invent unsafe filesystem cleanup: identify these projects by the `Private Beta smoke <UTC>` name and retain/remove them only under an authorized data-retention procedure. Node coverage is conditional on the selected provider plan and already-installed project dependencies; ASEP never installs them during smoke.
+
+The remote sequence is fail-closed: HTTPS frontend, HTTP redirect, public health, externally hidden readiness, anonymous rejection, Beta login and secure cookie, session reconstruction, hosted project/session, non-mutating prepare, approve, real validator and Quality Gate, execution-scoped provider usage, quota call increment, history/direct reopen, cross-tenant denial, then logout and rejected old session. Output contains only release ID, UTC timestamp, execution ID, overall status and elapsed milliseconds. Failures identify one stage, return non-zero and omit bodies, credentials, cookies, prompts and provider output. Missing provider token counts are accepted; a recorded provider call and quota call increment are mandatory.
+
+Checks that require the real VM/network and cannot be proven by unit tests:
+
+- authoritative DNS resolves the approved hostname to the intended VM; public certificate chain and hostname validate;
+- ports 80/443 are reachable, while external probes to 3000/8000 fail and internal loopback probes succeed;
+- Caddy returns a public 404 for `/api/v1/ready`, redirects HTTP to HTTPS and preserves the secure same-origin cookie;
+- systemd units run as the dedicated identity, the release is immutable, and journal output contains no credential or sensitive payload;
+- the configured provider and allowlisted validators actually execute in the disposable hosted workspace.
+
+Opening checklist, in order: VM baseline and ownership; DNS; firewall; real TLS; systemd units; production preflight; known verified backup; prepared release; deploy dry-run; deploy; internal readiness/local smoke; remote smoke; restart smoke; restore drill; rollback drill; authorized Beta opening. Do not mark an item passed from templates or fake tests.
+
+Restart smoke: record the controlled project/session/execution and quota snapshot, restart only `asep-backend.service` and `asep-frontend.service`, wait for internal readiness, rerun the remote smoke, and directly reopen the recorded project/execution. Confirm project, hosted files, history, usage and quota survived; login again because in-memory cookie/session validity across process restart is not promised. Do not restart Caddy when its configuration is unchanged.
+
+Restore drill: choose and verify a known backup; close maintenance and stop application units; restore into clean, nonexistent/empty persistence targets using the 26.6E procedure; run preflight; start backend; verify internal readiness; start frontend; release maintenance; run the controlled remote smoke. Preserve the source backup and record its ID and result.
+
+Deploy drill: prepare the immutable release off-VM, run `deployment.deploy ... --dry-run`, deploy, verify internal readiness/local smoke, then run remote smoke. For rollback, use a deliberately invalid candidate that fails preflight or local validation without changing schema/data, confirm automatic reactivation of the previous release, internal readiness and remote smoke. Never inject corruption or an incompatible migration into future production.
