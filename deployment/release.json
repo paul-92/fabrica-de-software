@@ -1,0 +1,6 @@
+{
+  "format_version": 1,
+  "app_version": "0.1.0",
+  "expected_sqlite_schema": "4",
+  "minimum_sqlite_schema": "4"
+}

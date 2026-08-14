@@ -1,6 +1,6 @@
 # ASEP Private Beta runtime packaging
 
-**Owner:** DevOps/Runtime Owner | **Status:** candidate | **Version:** 0.3.0
+**Owner:** DevOps/Runtime Owner | **Status:** candidate | **Version:** 0.4.0
 
 ## Objective and scope
 
@@ -130,3 +130,65 @@ python -m deployment.backup maintenance-release --maintenance-root /var/tmp/asep
 Restore stages both components, verifies checksums and supported schema without migration, reconstructs project ownership/workspace mappings, parses session/execution and AI usage/quota payloads, then promotes into the empty targets. It never overwrites active state. On failure it reports a bounded error, leaves the source backup untouched and does not declare success.
 
 Private Beta recommendation: back up daily, always back up before deploy, retain the latest seven completed backups, test restore regularly, and add an encrypted off-VM copy in a future authorized sprint. This sprint does not implement cloud storage, PITR, replication or remote scheduling.
+
+## Immutable release deployment and rollback
+
+Prepared releases live at `/opt/asep/releases/<release_id>` and the active release is the atomic symlink `/opt/asep/current`. Release IDs are 1–64 characters from letters, digits, dot, underscore and hyphen, must start alphanumeric, and cannot contain separators, traversal or absolute paths. Candidate and previous releases are never edited or removed during activation.
+
+Every prepared release must already contain its Python virtual environment, installed frontend dependencies, `.next/BUILD_ID`, `deployment/preflight.py`, and `deployment/release.json`. Preparation performs dependency installation, build and quality gates before the release reaches the VM release directory. Activation performs no `pip`, `npm`, package registry access or `next build`.
+
+The release manifest declares the exact SQLite schema expected by that binary. Deployment reads `schema_metadata` directly in read-only mode and does not instantiate `SQLiteDatabase`, because initialization can run forward migrations. The current policy performs no migration: schema mismatch fails closed before activation. A future migration must be separately authorized, run under maintenance after the mandatory backup, and declare binary rollback compatibility. ASEP does not invent reverse migrations; if persistence no longer matches the previous binary, automatic rollback is blocked and maintenance remains active for the restore/operator runbook.
+
+Future Linux deployment command:
+
+```bash
+sudo /opt/asep/current/.venv/bin/python -m deployment.deploy deploy <release_id>
+```
+
+Workflow:
+
+```text
+PREPARE -> PREFLIGHT -> MAINTENANCE -> BACKUP -> ACTIVATE
+        -> RESTART -> READY -> LOCAL SMOKE -> OPEN
+```
+
+The operator process needs narrowly scoped authority to create the atomic `current` symlink, write `/var/lib/asep/deployment`, create `/var/backups/asep`, and restart only `asep-backend.service` and `asep-frontend.service`. The runtime `asep` user remains non-root and cannot change releases or invoke arbitrary systemd operations. Caddy is not restarted because its configuration is unchanged.
+
+Activation creates a temporary sibling symlink and promotes it with one filesystem `os.replace`; the previous release directory remains intact. A cross-process `deploy.lock` prevents concurrent deploys. An existing/abandoned lock fails closed and records PID/timestamp. Only after the operator confirms no deploy process exists may it run:
+
+```bash
+sudo /opt/asep/current/.venv/bin/python -m deployment.deploy unlock --confirm-abandoned
+```
+
+After restart, deployment polls only `http://127.0.0.1:8000/api/v1/ready` with finite timeout and interval. Local smoke checks backend health, the frontend root and the expected unauthenticated API session boundary. Internet, DNS, TLS and Caddy are not required.
+
+Failure after activation follows:
+
+```text
+FAIL -> KEEP MAINTENANCE -> REACTIVATE PREVIOUS -> RESTART
+     -> READY -> LOCAL SMOKE -> OPEN
+```
+
+If previous-schema compatibility or rollback validation fails:
+
+```text
+FAIL -> KEEP MAINTENANCE -> OPERATOR REVIEW / RESTORE RUNBOOK
+```
+
+No backup restore occurs automatically. Failure before activation leaves `current` untouched, avoids service restart, and releases maintenance only when active persistence remains safe.
+
+Manual rollback uses the same compatibility, preflight, maintenance, atomic activation, restart, readiness and smoke boundaries:
+
+```bash
+sudo /opt/asep/current/.venv/bin/python -m deployment.deploy rollback <previous_release_id>
+```
+
+Maintenance is released only after the rollback is healthy. A failed rollback remains closed for operator review.
+
+Dry-run performs structural path/release/build checks and read-only schema compatibility, and prints the intended services and probe URLs. It does not run candidate preflight, enter maintenance, create backup, change `current`, restart services or claim runtime checks succeeded:
+
+```bash
+sudo /opt/asep/current/.venv/bin/python -m deployment.deploy deploy <release_id> --dry-run
+```
+
+Each real operation writes a bounded JSON audit record under `/var/lib/asep/deployment/deploys` with candidate, previous release, UTC timestamp, stage, outcome and pre-deploy backup ID. No environment, command output or secret is persisted.
