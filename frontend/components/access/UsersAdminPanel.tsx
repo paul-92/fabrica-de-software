@@ -81,14 +81,16 @@ export function UsersAdminPanel({ access, principal }: { access: AccessClient; p
 
   async function toggleStatus(user: AccessUser) {
     setError("");
-    try { await access.setStatus(user.user_id,user.status === "active" ? "suspended" : "active"); await refresh(); }
-    catch { setError("Não foi possível atualizar o status do usuário. Tente novamente."); }
+    const nextStatus = user.status === "active" ? "suspended" : "active";
+    if (nextStatus === "suspended" && !window.confirm("Suspender este usuário?\nEle perderá acesso até ser reativado.")) return;
+    try { await access.setStatus(user.user_id, nextStatus); await refresh(); }
+    catch (statusError) { setError(statusError instanceof ApiHttpError && statusError.status === 409 ? "Você não pode suspender sua própria conta." : "Não foi possível atualizar o status do usuário. Tente novamente."); }
   }
 
   return <details className="users-admin"><summary>Usuários</summary>
     <div className="users-admin__header"><p>Gerencie os usuários do Private Beta.</p><button ref={openButton} className="button button--primary" type="button" onClick={() => { setError(""); setOpen(true); }}>Adicionar usuário</button></div>
     <div aria-live="polite">{message ? <p className="users-admin__success">{message}</p> : null}{error && !open ? <p role="alert" className="engineering-form__error">{error}</p> : null}</div>
-    {loading ? <p role="status">Carregando usuários…</p> : <ul className="users-admin__list">{users.map((user) => <li key={user.user_id}><span><strong>{user.email}</strong><small>{user.role} · {user.status}</small></span><button type="button" disabled={busy} onClick={() => void toggleStatus(user)}>{user.status === "active" ? "Suspender" : "Reativar"}</button></li>)}</ul>}
+    {loading ? <p role="status">Carregando usuários…</p> : <ul className="users-admin__list">{users.map((user) => { const current = user.user_id === principal.user_id; return <li key={user.user_id}><span><strong>{user.email}</strong><small>{user.role} · {user.status}{current ? " · Você" : ""}</small></span>{current && user.status === "active" ? null : <button type="button" disabled={busy} onClick={() => void toggleStatus(user)}>{user.status === "active" ? "Suspender" : "Reativar"}</button>}</li>; })}</ul>}
     {open ? <div className="users-admin__backdrop" role="presentation"><section className="users-admin__dialog" role="dialog" aria-modal="true" aria-labelledby="add-user-title"><h2 id="add-user-title">Adicionar usuário</h2><form className="engineering-form" onSubmit={submit}>
       <label>Email<input ref={emailInput} type="email" autoComplete="off" value={email} onChange={(event) => setEmail(event.target.value)} disabled={busy} required /></label>
       <label>Perfil<select value={role} onChange={(event) => setRole(event.target.value as Role)} disabled={busy}><option value="member">Member</option><option value="admin">Admin</option></select></label>

@@ -3,12 +3,13 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiHttpError, ApiNetworkError } from "../../lib/api/errors";
 import { UsersAdminPanel } from "./UsersAdminPanel";
+import { BetaUsagePanel } from "./BetaUsagePanel";
 
 const admin = { user_id: "admin-1", organization_id: "org-1", role: "admin" as const };
 const member = { user_id: "member-1", organization_id: "org-1", role: "member" as const };
 const existing = { user_id: "user-1", email: "one@example.test", role: "member" as const, status: "active" as const };
 
-afterEach(() => { cleanup(); localStorage.clear(); sessionStorage.clear(); });
+afterEach(() => { cleanup(); localStorage.clear(); sessionStorage.clear(); vi.restoreAllMocks(); });
 
 function client(overrides = {}) {
   return {
@@ -111,11 +112,42 @@ describe("UsersAdminPanel", () => {
   it("preserves suspension and reactivation with list refresh", async () => {
     const suspended = { ...existing, status: "suspended" as const };
     const access = client();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
     access.users.mockResolvedValueOnce({ items: [existing] }).mockResolvedValueOnce({ items: [suspended] }).mockResolvedValueOnce({ items: [existing] });
     render(<UsersAdminPanel access={access as never} principal={admin} />);
     fireEvent.click(await screen.findByRole("button", { name: "Suspender" }));
     await waitFor(() => expect(access.setStatus).toHaveBeenCalledWith("user-1", "suspended"));
     fireEvent.click(await screen.findByRole("button", { name: "Reativar" }));
     await waitFor(() => expect(access.setStatus).toHaveBeenCalledWith("user-1", "active"));
+  });
+
+  it("marks the current admin and removes only its suspend action", async () => {
+    const self = { ...existing, user_id: admin.user_id, role: "admin" as const };
+    render(<UsersAdminPanel access={client({ users: vi.fn().mockResolvedValue({ items: [self, existing] }) }) as never} principal={admin} />);
+    expect(await screen.findByText("admin · active · Você")).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: "Suspender" })).toHaveLength(1);
+  });
+
+  it("confirms suspension and cancellation does not call the API", async () => {
+    const access = client(); const confirmation = vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(<UsersAdminPanel access={access as never} principal={admin} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Suspender" }));
+    expect(confirmation).toHaveBeenCalledWith("Suspender este usuário?\nEle perderá acesso até ser reativado.");
+    expect(access.setStatus).not.toHaveBeenCalled();
+  });
+
+  it("maps a bypassed backend self-suspension rejection safely", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const access = client({ setStatus: vi.fn().mockRejectedValue(new ApiHttpError(409, "internal", "sensitive detail")) });
+    render(<UsersAdminPanel access={access as never} principal={admin} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Suspender" }));
+    expect(await screen.findByText("Você não pode suspender sua própria conta.")).toBeTruthy();
+    expect(screen.queryByText("sensitive detail")).toBeNull();
+  });
+
+  it("keeps quota presentation independent from user administration", async () => {
+    const quota = vi.fn().mockResolvedValue({ quota: { enabled: true, call_limit: 10, token_limit: 100, period: "monthly" }, usage: { calls: 2, known_total_tokens: 20, calls_with_unknown_usage: 0, period_started_at: "x", period_ends_at: "y" } });
+    render(<BetaUsagePanel access={{ quota } as never} principal={admin} />);
+    expect(await screen.findByText("2 / 10 chamadas; 20 / 100 tokens conhecidos.")).toBeTruthy();
   });
 });

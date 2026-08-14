@@ -6,7 +6,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from asep.access import AccessDeniedError, AccessService, InMemoryAccessRepository
+from asep.access import AccessDeniedError, AccessService, InMemoryAccessRepository, SelfSuspensionError
 from asep.access.models import Membership, Organization, OrganizationRole, User, UserStatus
 from asep.api import create_app
 from asep.application import ProjectService, ProjectSessionService, ProjectSessionMemoryService, ProjectWorkspaceService
@@ -102,6 +102,41 @@ def test_admin_invites_lists_and_reactivates_users(tmp_path: Path):
     assert invited.json()["email"] == "member@example.test"
     user_id = invited.json()["user_id"]
     assert len(client.get("/api/v1/access/users").json()["items"]) == 2
+    assert client.patch(f"/api/v1/access/users/{user_id}/status", json={"status": "suspended"}).json()["status"] == "suspended"
+    assert client.patch(f"/api/v1/access/users/{user_id}/status", json={"status": "active"}).json()["status"] == "active"
+
+
+def test_admin_cannot_suspend_itself_and_database_remains_active(tmp_path: Path):
+    client, repository = app_fixture(tmp_path); login(client)
+    response = client.patch("/api/v1/access/users/user-a/status", json={"status": "suspended"})
+    assert response.status_code == 409
+    assert response.json() == {"detail": "You cannot suspend your own account."}
+    assert repository.get_user("tenant-a", "user-a").status is UserStatus.ACTIVE
+    assert client.get("/api/v1/access/session").status_code == 200
+
+
+def test_service_self_suspension_uses_principal_id_and_allows_idempotent_active():
+    repository, access = access_fixture()
+    principal = access.login("tenant-a@example.test", "private-beta-password")[1]
+    with pytest.raises(SelfSuspensionError):
+        access.set_status(principal, principal.user_id, UserStatus.SUSPENDED)
+    assert repository.get_user("tenant-a", principal.user_id).status is UserStatus.ACTIVE
+    assert access.set_status(principal, principal.user_id, UserStatus.ACTIVE).status is UserStatus.ACTIVE
+
+
+def test_status_authorization_and_tenant_scope_remain_fail_closed(tmp_path: Path):
+    client, _ = app_fixture(tmp_path); login(client)
+    assert client.patch("/api/v1/access/users/user-b/status", json={"status": "suspended"}).status_code == 404
+    invited = client.post("/api/v1/access/users", json={"email": "member@example.test", "password": "member-password-strong", "role": "member"}).json()
+    client.post("/api/v1/access/logout")
+    assert client.post("/api/v1/access/login", json={"email": "member@example.test", "password": "member-password-strong"}).status_code == 200
+    assert client.patch(f"/api/v1/access/users/{invited['user_id']}/status", json={"status": "suspended"}).status_code == 403
+
+
+def test_admin_can_suspend_another_admin_and_reactivate_it(tmp_path: Path):
+    client, _ = app_fixture(tmp_path); login(client)
+    invited = client.post("/api/v1/access/users", json={"email": "other-admin@example.test", "password": "other-admin-password", "role": "admin"}).json()
+    user_id = invited["user_id"]
     assert client.patch(f"/api/v1/access/users/{user_id}/status", json={"status": "suspended"}).json()["status"] == "suspended"
     assert client.patch(f"/api/v1/access/users/{user_id}/status", json={"status": "active"}).json()["status"] == "active"
 

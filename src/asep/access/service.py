@@ -18,6 +18,10 @@ class AccessDeniedError(Exception):
     pass
 
 
+class SelfSuspensionError(Exception):
+    pass
+
+
 class AccessService:
     def __init__(self, repository: AccessRepository, *, session_ttl: timedelta = timedelta(hours=12),
                  clock: Callable[[], datetime] | None = None) -> None:
@@ -119,6 +123,8 @@ class AccessService:
 
     def set_status(self, principal: RequestPrincipal, user_id: str, status: UserStatus) -> User:
         self._require_admin(principal)
+        if user_id == principal.user_id and status is UserStatus.SUSPENDED:
+            raise SelfSuspensionError("an administrator cannot suspend its own account")
         user = self._repository.get_user(principal.organization_id, user_id)
         if user is None:
             raise KeyError(user_id)
@@ -132,4 +138,4 @@ class AccessService:
             raise AccessDeniedError("administrator access required")
 
 
-__all__ = ["AccessDeniedError", "AccessService"]
+__all__ = ["AccessDeniedError", "AccessService", "SelfSuspensionError"]
