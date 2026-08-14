@@ -1,4 +1,4 @@
-"""Read-only-oriented production runtime preflight for a Linux ASEP release."""
+"""Read-only-oriented production runtime preflight for an ASEP release."""
 
 from __future__ import annotations
 
@@ -21,9 +21,12 @@ def _version(value: str) -> tuple[int, ...] | None:
 
 
 def _command_version(executable: str) -> tuple[int, ...] | None:
+    allowed = {name: value for name, value in os.environ.items() if name.upper() in {
+        "PATH", "PATHEXT", "SYSTEMROOT", "WINDIR", "COMSPEC",
+    }}
     completed = subprocess.run(
         (executable, "--version"), capture_output=True, check=False,
-        text=True, timeout=10, env={"PATH": os.environ.get("PATH", "")},
+        text=True, timeout=10, env=allowed,
     )
     if completed.returncode != 0:
         return None
@@ -39,12 +42,17 @@ def check(
     *,
     which: Callable[[str], str | None] = shutil.which,
     command_version: Callable[[str], tuple[int, ...] | None] = _command_version,
+    platform_name: str | None = None,
+    python_version: tuple[int, ...] | None = None,
 ) -> tuple[str, ...]:
     """Return safe diagnostic messages; an empty tuple means success."""
     source = os.environ if environ is None else environ
     failures: list[str] = []
+    platform_name = platform_name or os.name
+    if platform_name not in {"nt", "posix"}:
+        failures.append("The operating system is not supported.")
 
-    if sys.version_info[:2] < MINIMUM_PYTHON:
+    if (python_version or sys.version_info[:2]) < MINIMUM_PYTHON:
         failures.append("Python 3.12 or newer is required.")
 
     for name, minimum in (("node", MINIMUM_NODE), ("npm", MINIMUM_NPM)):
@@ -77,6 +85,16 @@ def check(
     build = release / "frontend" / ".next" / "BUILD_ID"
     if not build.is_file():
         failures.append("The production frontend build is missing.")
+
+    if platform_name == "nt":
+        codex_home = Path(source.get("CODEX_HOME", "")) if source.get("CODEX_HOME") else None
+        maintenance = Path(source.get("ASEP_MAINTENANCE_DIRECTORY", "")) if source.get("ASEP_MAINTENANCE_DIRECTORY") else None
+        for label, directory in (("CODEX_HOME", codex_home), ("ASEP_MAINTENANCE_DIRECTORY", maintenance)):
+            if directory is None or not directory.is_absolute() or not _usable_directory(directory):
+                failures.append(f"{label} must be an absolute accessible directory on Windows.")
+        python = release / ".venv" / "Scripts" / "python.exe"
+        if not python.is_file():
+            failures.append("The prepared Windows release Python executable is missing.")
 
     try:
         from asep.configuration import Configuration

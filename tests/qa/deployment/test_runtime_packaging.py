@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 import sys
 
-from deployment.preflight import MINIMUM_NODE, MINIMUM_NPM, check
+from deployment.preflight import MINIMUM_NODE, MINIMUM_NPM, MINIMUM_PYTHON, check
 from asep.providers.process import ProcessRunner
 
 
@@ -51,7 +51,10 @@ def test_units_enforce_private_production_processes():
 
 def test_preflight_accepts_complete_runtime(tmp_path):
     versions = {"/bin/node": MINIMUM_NODE, "/bin/npm": MINIMUM_NPM, "/bin/codex": (1, 0)}
-    assert check(valid_environment(tmp_path), which=lambda name: f"/bin/{name}", command_version=versions.get) == ()
+    assert check(
+        valid_environment(tmp_path), which=lambda name: f"/bin/{name}",
+        command_version=versions.get, platform_name="posix", python_version=MINIMUM_PYTHON,
+    ) == ()
 
 
 def test_preflight_fails_without_node_and_npm(tmp_path):

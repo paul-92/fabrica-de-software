@@ -2,6 +2,8 @@
 
 **Owner:** DevOps/Runtime Owner | **Status:** candidate | **Version:** 0.5.0
 
+The temporary Windows Private Beta runtime is documented separately in [windows/README.md](windows/README.md); Linux packaging below remains unchanged.
+
 ## Objective and scope
 
 This directory packages the existing ASEP backend and frontend processes and its Caddy HTTPS edge for one Linux VM. It does not provision a VM, register a domain, issue a real certificate, configure a firewall, backup, containers, or remote deployment.
