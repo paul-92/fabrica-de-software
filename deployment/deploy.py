@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import re
 import sqlite3
+import stat
 import subprocess
 import sys
 import time
@@ -52,6 +53,7 @@ class DeployConfig:
     readiness_timeout: float = 30.0
     readiness_interval: float = 1.0
     retention_count: int = 7
+    windows_mode: bool = False
 
     def __post_init__(self) -> None:
         paths = (
@@ -63,8 +65,9 @@ class DeployConfig:
             if not value.is_absolute():
                 raise DeployError(f"{field} must be absolute.")
             object.__setattr__(self, field, value.absolute())
-        if self.current_link.parent != self.releases_root.parent:
-            raise DeployError("Current link and releases root must share the ASEP installation root.")
+        expected_parent = self.releases_root.parent / "current" if self.windows_mode else self.releases_root.parent
+        if self.current_link.parent != expected_parent:
+            raise DeployError("Current pointer and releases root must share the ASEP installation root.")
         if self.readiness_timeout <= 0 or self.readiness_interval <= 0 or self.readiness_interval > self.readiness_timeout:
             raise DeployError("Readiness timing must be positive and bounded.")
         if self.retention_count < 1:
@@ -92,6 +95,19 @@ class SystemdServiceController:
         )
         if completed.returncode != 0:
             raise DeployError("ASEP service restart failed.")
+
+
+class WindowsServiceController:
+    def __init__(self, root: Path) -> None:
+        self.root = root
+
+    def restart(self) -> None:
+        completed = subprocess.run(
+            (sys.executable, "-m", "deployment.windows_runtime", "restart", "--root", str(self.root)),
+            check=False, capture_output=True, text=True, timeout=90, shell=False,
+        )
+        if completed.returncode != 0:
+            raise DeployError("ASEP Windows runtime restart failed.")
 
 
 class LocalRuntimeProbe:
@@ -128,10 +144,19 @@ class LocalRuntimeProbe:
 
 
 class CandidatePreflightRunner:
+    def __init__(self, *, windows_mode: bool = False) -> None:
+        self.windows_mode = windows_mode
+
     def run(self, release: Path) -> None:
-        executable = release / ".venv" / "bin" / "python"
-        environment = dict(os.environ)
+        executable = release / ".venv" / ("Scripts/python.exe" if self.windows_mode else "bin/python")
+        if self.windows_mode:
+            from deployment.windows_runtime import load_environment
+
+            environment = load_environment(release.parent.parent / "config" / "production.env")
+        else:
+            environment = dict(os.environ)
         environment["ASEP_RELEASE_ROOT"] = str(release)
+        environment["ASEP_AGENT_CATALOG_DIRECTORY"] = str(release / "registry")
         completed = subprocess.run(
             (str(executable), "-m", "deployment.preflight"), cwd=release,
             env=environment, check=False, capture_output=True, text=True, timeout=60,
@@ -196,6 +221,62 @@ class ReleaseLayout:
             temporary.unlink(missing_ok=True)
 
 
+def _is_reparse(path: Path) -> bool:
+    info = path.stat(follow_symlinks=False)
+    return path.is_symlink() or bool(
+        getattr(info, "st_file_attributes", 0)
+        & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
+    )
+
+
+class WindowsReleaseLayout:
+    """Atomic JSON pointer activation without symlinks or junctions."""
+
+    def __init__(self, releases_root: Path, current_pointer: Path) -> None:
+        raw_releases = releases_root.expanduser().absolute()
+        if not raw_releases.is_dir() or _is_reparse(raw_releases):
+            raise DeployError("Windows releases root is unavailable or unsafe.")
+        self.releases_root = raw_releases.resolve()
+        self.current_pointer = current_pointer.expanduser().absolute()
+
+    def release(self, release_id: str) -> Path:
+        if not isinstance(release_id, str) or release_id in {".", ".."} or RELEASE_ID.fullmatch(release_id) is None:
+            raise DeployError("Release id is invalid.")
+        expected = self.releases_root / release_id
+        if not expected.is_dir() or _is_reparse(expected):
+            raise DeployError("Release does not exist as an immutable safe directory.")
+        resolved = expected.resolve()
+        if resolved.parent != self.releases_root:
+            raise DeployError("Release escaped releases root.")
+        return resolved
+
+    def active(self) -> Path:
+        if (_is_reparse(self.current_pointer.parent) or not self.current_pointer.is_file()
+                or _is_reparse(self.current_pointer)):
+            raise DeployError("Current release pointer is unavailable or unsafe.")
+        try:
+            value = json.loads(self.current_pointer.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise DeployError("Current release pointer is invalid.") from exc
+        if set(value) != {"release_id"}:
+            raise DeployError("Current release pointer format is invalid.")
+        return self.release(value["release_id"])
+
+    def activate(self, release: Path) -> None:
+        release = release.resolve()
+        if release.parent != self.releases_root or _is_reparse(release):
+            raise DeployError("Activation target escaped releases root or is unsafe.")
+        self.current_pointer.parent.mkdir(parents=True, exist_ok=True)
+        if _is_reparse(self.current_pointer.parent):
+            raise DeployError("Current pointer directory is unsafe.")
+        temporary = self.current_pointer.parent / f".{self.current_pointer.name}.{uuid4().hex}.tmp"
+        try:
+            temporary.write_text(json.dumps({"release_id": release.name}, separators=(",", ":")), encoding="utf-8")
+            os.replace(temporary, self.current_pointer)
+        finally:
+            temporary.unlink(missing_ok=True)
+
+
 def read_manifest(release: Path) -> ReleaseManifest:
     try:
         payload = json.loads((release / "deployment" / "release.json").read_text(encoding="utf-8"))
@@ -236,6 +317,7 @@ class AuditRecord:
             "candidate_release": candidate, "previous_release": previous,
             "timestamp_utc": datetime.now(UTC).isoformat(), "stage": "created",
             "outcome": "running", "backup_id": None,
+            "rollback_performed": False,
         }
         self.update("created", "running")
 
@@ -243,6 +325,8 @@ class AuditRecord:
         self.value.update({"stage": stage, "outcome": outcome})
         if backup_id is not None:
             self.value["backup_id"] = backup_id
+        if stage == "rollback":
+            self.value["rollback_performed"] = outcome == "rolled_back"
         temporary = self.path.with_suffix(".tmp")
         temporary.write_text(json.dumps(self.value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         os.replace(temporary, self.path)
@@ -254,10 +338,12 @@ class Deployer:
         probe: RuntimeProbe | None = None, preflight: PreflightRunner | None = None,
     ) -> None:
         self.config = config
-        self.layout = ReleaseLayout(config.releases_root, config.current_link)
-        self.services = services or SystemdServiceController()
+        self.layout = (WindowsReleaseLayout(config.releases_root, config.current_link)
+                       if config.windows_mode else ReleaseLayout(config.releases_root, config.current_link))
+        self.services = services or (WindowsServiceController(config.releases_root.parent)
+                                     if config.windows_mode else SystemdServiceController())
         self.probe = probe or LocalRuntimeProbe()
-        self.preflight = preflight or CandidatePreflightRunner()
+        self.preflight = preflight or CandidatePreflightRunner(windows_mode=config.windows_mode)
         self.gate = MaintenanceGate(config.maintenance_root)
         self.lock = DeployLock(config.operations_root / "deploy.lock")
 
@@ -272,7 +358,8 @@ class Deployer:
             "schema": manifest.expected_sqlite_schema,
             "actions": ["preflight", "maintenance", "backup", "activate", "restart", "readiness", "smoke", "release-maintenance"],
             "runtime_checks_executed": False,
-            "service_restart": ["asep-backend.service", "asep-frontend.service"],
+            "service_restart": (["deployment.windows_runtime restart"] if self.config.windows_mode
+                                else ["asep-backend.service", "asep-frontend.service"]),
             "readiness_url": "http://127.0.0.1:8000/api/v1/ready",
             "smoke_urls": ["http://127.0.0.1:8000/api/v1/health", "http://127.0.0.1:3000/", "http://127.0.0.1:8000/api/v1/access/session"],
         }
@@ -369,10 +456,11 @@ class Deployer:
         self.probe.wait_ready(self.config.readiness_timeout, self.config.readiness_interval)
         self.probe.smoke()
 
-    @staticmethod
-    def _structural_candidate(candidate: Path) -> None:
+    def _structural_candidate(self, candidate: Path) -> None:
+        python = (candidate / ".venv" / "Scripts" / "python.exe"
+                  if self.config.windows_mode else candidate / ".venv" / "bin" / "python")
         required = (
-            candidate / ".venv" / "bin" / "python",
+            python,
             candidate / "frontend" / ".next" / "BUILD_ID",
             candidate / "deployment" / "preflight.py",
         )
@@ -385,6 +473,7 @@ def _config(args) -> DeployConfig:
         releases_root=args.releases_root, current_link=args.current_link,
         database=args.database, hosted_root=args.hosted_root, backup_root=args.backup_root,
         maintenance_root=args.maintenance_root, operations_root=args.operations_root,
+        windows_mode=args.windows,
     )
 
 
@@ -398,6 +487,7 @@ def _parser() -> argparse.ArgumentParser:
     common.add_argument("--backup-root", type=Path, default=Path("/var/backups/asep"))
     common.add_argument("--maintenance-root", type=Path, default=Path("/var/tmp/asep/maintenance"))
     common.add_argument("--operations-root", type=Path, default=Path("/var/lib/asep/deployment"))
+    common.add_argument("--windows", action="store_true")
     commands = parser.add_subparsers(dest="command", required=True)
     deploy = commands.add_parser("deploy", parents=[common]); deploy.add_argument("release_id"); deploy.add_argument("--dry-run", action="store_true")
     rollback = commands.add_parser("rollback", parents=[common]); rollback.add_argument("release_id")

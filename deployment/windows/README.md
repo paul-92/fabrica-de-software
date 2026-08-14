@@ -20,3 +20,8 @@ Start launches a persistent supervisor, which exclusively acquires `temp\runtime
 Backend and frontend stdout/stderr are separated below `logs`; each active log rolls to one `.1` file at 5 MiB before a new runtime instance starts. The supervisor never prints environment values. Production configuration and Codex state remain outside releases. The application `ProcessRunner` continues to pass only its existing host allowlist to Codex and validators.
 
 The prepared release must contain `.venv\Scripts\python.exe`, installed Python dependencies, installed frontend dependencies and `frontend\.next\BUILD_ID`. Start and restart never install or build. The PC must remain powered, awake, connected and logged into the dedicated account. External access remains inactive until a provider adapter is separately selected, installed and drilled. The provider-neutral architecture, local Caddy profile, origin/build contract and operational checklist are defined in [TUNNEL.md](TUNNEL.md).
+
+Backup, maintenance, atomic pointer activation, deploy/rollback and isolated
+restore operations are documented in [DRILL.md](DRILL.md). The bounded launcher
+is `asep-deploy.ps1 plan|deploy|rollback <release-id>`; it does not prepare or
+build a release.
