@@ -128,6 +128,13 @@ describe("UsersAdminPanel", () => {
     expect(screen.getAllByRole("button", { name: "Suspender" })).toHaveLength(1);
   });
 
+  it("allows suspending another admin when two active admins are visible", async () => {
+    const self = { ...existing, user_id: admin.user_id, role: "admin" as const };
+    const other = { ...existing, user_id: "admin-2", email: "admin-2@example.test", role: "admin" as const };
+    render(<UsersAdminPanel access={client({ users: vi.fn().mockResolvedValue({ items: [self, other] }) }) as never} principal={admin} />);
+    expect(await screen.findByRole("button", { name: "Suspender" })).toBeTruthy();
+  });
+
   it("confirms suspension and cancellation does not call the API", async () => {
     const access = client(); const confirmation = vi.spyOn(window, "confirm").mockReturnValue(false);
     render(<UsersAdminPanel access={access as never} principal={admin} />);
@@ -143,6 +150,16 @@ describe("UsersAdminPanel", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Suspender" }));
     expect(await screen.findByText("Você não pode suspender sua própria conta.")).toBeTruthy();
     expect(screen.queryByText("sensitive detail")).toBeNull();
+  });
+
+  it("maps a last-active-admin rejection without exposing backend details", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const responseBody = { detail: "At least one active administrator is required.", internal_count: 1 };
+    const access = client({ setStatus: vi.fn().mockRejectedValue(new ApiHttpError(409, "internal", "sensitive detail", responseBody)) });
+    render(<UsersAdminPanel access={access as never} principal={admin} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Suspender" }));
+    expect(await screen.findByText("A organização precisa manter ao menos um administrador ativo.")).toBeTruthy();
+    expect(screen.queryByText(/internal_count|sensitive detail/)).toBeNull();
   });
 
   it("keeps quota presentation independent from user administration", async () => {

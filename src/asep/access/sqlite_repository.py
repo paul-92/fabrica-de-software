@@ -1,6 +1,8 @@
+from datetime import datetime
 from pathlib import Path
 
-from asep.access.models import AccessSession, Membership, Organization, User
+from asep.access.models import AccessSession, Membership, Organization, OrganizationRole, User, UserStatus
+from asep.access.repository import LastActiveAdminError
 from asep.sqlite import SQLiteDatabase
 
 
@@ -19,6 +21,29 @@ class SQLiteAccessRepository:
     def update_user(self, user: User) -> None:
         with self._database.connect() as connection:
             connection.execute("UPDATE users SET status=?, payload=? WHERE id=?", (user.status.value, user.model_dump_json(), user.user_id))
+
+    def set_status_preserving_active_admin(self, organization_id: str, user_id: str, status: UserStatus, updated_at: datetime) -> User:
+        with self._database.connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                "SELECT u.payload,m.role FROM users u JOIN memberships m ON m.user_id=u.id WHERE m.organization_id=? AND u.id=?",
+                (organization_id, user_id),
+            ).fetchone()
+            if row is None:
+                raise KeyError(user_id)
+            user = User.model_validate_json(row["payload"])
+            if user.status is status:
+                return user
+            if status is UserStatus.SUSPENDED and row["role"] == OrganizationRole.ADMIN.value:
+                active_admins = connection.execute(
+                    "SELECT COUNT(*) FROM users u JOIN memberships m ON m.user_id=u.id WHERE m.organization_id=? AND m.role=? AND u.status=?",
+                    (organization_id, OrganizationRole.ADMIN.value, UserStatus.ACTIVE.value),
+                ).fetchone()[0]
+                if active_admins <= 1:
+                    raise LastActiveAdminError("organization requires an active administrator")
+            updated = user.model_copy(update={"status": status, "updated_at": updated_at})
+            connection.execute("UPDATE users SET status=?, payload=? WHERE id=?", (updated.status.value, updated.model_dump_json(), user_id))
+            return updated
 
     def get_user_by_email(self, email: str) -> tuple[User, str] | None:
         with self._database.connect() as connection:

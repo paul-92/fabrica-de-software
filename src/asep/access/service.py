@@ -11,7 +11,7 @@ from asep.access.models import (
     AccessSession, Membership, OrganizationRole, RequestPrincipal, User,
     UserStatus,
 )
-from asep.access.repository import AccessRepository
+from asep.access.repository import AccessRepository, LastActiveAdminError
 
 
 class AccessDeniedError(Exception):
@@ -125,12 +125,9 @@ class AccessService:
         self._require_admin(principal)
         if user_id == principal.user_id and status is UserStatus.SUSPENDED:
             raise SelfSuspensionError("an administrator cannot suspend its own account")
-        user = self._repository.get_user(principal.organization_id, user_id)
-        if user is None:
-            raise KeyError(user_id)
-        updated = user.model_copy(update={"status": status, "updated_at": self._clock()})
-        self._repository.update_user(updated)
-        return updated
+        return self._repository.set_status_preserving_active_admin(
+            principal.organization_id, user_id, status, self._clock()
+        )
 
     @staticmethod
     def _require_admin(principal: RequestPrincipal) -> None:
@@ -138,4 +135,4 @@ class AccessService:
             raise AccessDeniedError("administrator access required")
 
 
-__all__ = ["AccessDeniedError", "AccessService", "SelfSuspensionError"]
+__all__ = ["AccessDeniedError", "AccessService", "LastActiveAdminError", "SelfSuspensionError"]

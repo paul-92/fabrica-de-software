@@ -2,7 +2,7 @@ from fastapi import APIRouter, Cookie, Depends, HTTPException, Response
 from pydantic import BaseModel, ConfigDict, Field
 from collections.abc import Callable
 
-from asep.access import AccessDeniedError, AccessService, SelfSuspensionError
+from asep.access import AccessDeniedError, AccessService, LastActiveAdminError, SelfSuspensionError
 from asep.access.models import OrganizationRole, RequestPrincipal, UserStatus
 
 COOKIE_NAME = "asep_session"
@@ -79,6 +79,8 @@ def create_access_router(service: AccessService, *, secure_cookie: bool) -> tupl
             raise HTTPException(status_code=403, detail="Administrator access required.") from exc
         except SelfSuspensionError as exc:
             raise HTTPException(status_code=409, detail="You cannot suspend your own account.") from exc
+        except LastActiveAdminError as exc:
+            raise HTTPException(status_code=409, detail="At least one active administrator is required.") from exc
         except KeyError as exc:
             raise HTTPException(status_code=404, detail="User not found.") from exc
 

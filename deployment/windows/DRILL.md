@@ -98,7 +98,8 @@ do not create fake business or AI activity merely to make non-zero counts.
 ## Administrative break-glass
 
 An authenticated administrator cannot suspend its own account through the access
-service or API. Recovery of an administrator suspended before this invariant is
+service or API, and every organization must retain at least one active
+administrator. Recovery of an administrator suspended before these invariants is
 a break-glass operation: preserve a backup and audit evidence, use an authorized
 maintenance procedure, and validate login afterward. Never record a password or
 hash, and do not treat direct SQLite editing as normal user administration.

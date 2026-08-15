@@ -1,12 +1,19 @@
 from typing import Protocol
 
-from asep.access.models import AccessSession, Membership, Organization, User
+from datetime import datetime
+
+from asep.access.models import AccessSession, Membership, Organization, User, UserStatus
+
+
+class LastActiveAdminError(Exception):
+    pass
 
 
 class AccessRepository(Protocol):
     def save_organization(self, organization: Organization) -> None: ...
     def save_user(self, user: User, password_hash: str) -> None: ...
     def update_user(self, user: User) -> None: ...
+    def set_status_preserving_active_admin(self, organization_id: str, user_id: str, status: UserStatus, updated_at: datetime) -> User: ...
     def get_user_by_email(self, email: str) -> tuple[User, str] | None: ...
     def get_user(self, organization_id: str, user_id: str) -> User | None: ...
     def list_users(self, organization_id: str) -> tuple[User, ...]: ...
@@ -17,4 +24,4 @@ class AccessRepository(Protocol):
     def delete_session_by_hash(self, token_hash: str) -> None: ...
 
 
-__all__ = ["AccessRepository"]
+__all__ = ["AccessRepository", "LastActiveAdminError"]
