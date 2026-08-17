@@ -99,6 +99,56 @@ describe("ProjectsWorkspace", () => {
     expect(runtime.listSessions).toHaveBeenCalledWith("p-1");
   });
 
+  it("keeps a completed runtime result after synchronizing the URL context", async () => {
+    const session = { session_id: "s-1", project_id: "p-1", title: "Runtime session", created_at: "2026-08-07T00:00:00Z", updated_at: "2026-08-07T00:00:00Z" };
+    const completed = { execution_id: "e-1", output: "Integrated result", runtime_id: "codex", model_id: "model", usage: null, metadata: {}, execution_mode: "read_only" as const, changes: [], context_entry_count: 0, context_truncated: false, context_char_count: 0, context_omitted_execution_count: 0, memory_entry_count: 0, memory_char_count: 0, memory_truncated: false };
+    const persisted = { ...completed, session_id: "s-1", project_id: "p-1", instruction: "Inspect", status: "succeeded" as const, model: "model", error_code: null, created_at: "2026-08-07T00:00:00Z", completed_at: "2026-08-07T00:00:01Z" };
+    const runtime = runtimeService();
+    vi.mocked(runtime.listSessions).mockResolvedValue([session]);
+    vi.mocked(runtime.execute).mockResolvedValue(completed);
+    vi.mocked(runtime.getExecution).mockResolvedValue(persisted);
+    render(<ProjectsWorkspace service={service({ list: vi.fn().mockResolvedValue([project]) })} runtimeService={runtime} workspaceService={workspaceService()} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Project.*Workspace hospedado.*p-1/i }));
+    await screen.findByText("● Pronto");
+    fireEvent.change(screen.getByLabelText("Tarefa"), { target: { value: "Inspect" } });
+    fireEvent.click(screen.getByRole("button", { name: "Executar com Codex" }));
+
+    expect((await screen.findAllByText("Integrated result")).length).toBeGreaterThan(0);
+    expect(window.location.search).toBe("?project_id=p-1&session_id=s-1&execution_id=e-1");
+    expect(runtime.listSessions).toHaveBeenCalledTimes(2);
+    expect(runtime.getExecution).toHaveBeenCalledWith("p-1", "e-1");
+  });
+
+  it("isolates runtime state when the user selects another project", async () => {
+    const secondProject = { ...project, project_id: "p-2", name: "Second project", workspace_id: "w-2" };
+    const firstSession = { session_id: "s-1", project_id: "p-1", title: "First session", created_at: "2026-08-07T00:00:00Z", updated_at: "2026-08-07T00:00:00Z" };
+    const secondSession = { ...firstSession, session_id: "s-2", project_id: "p-2", title: "Second session" };
+    const completed = { execution_id: "e-1", output: "First project result", runtime_id: "codex", model_id: "model", usage: null, metadata: {}, execution_mode: "read_only" as const, changes: [], context_entry_count: 0, context_truncated: false, context_char_count: 0, context_omitted_execution_count: 0, memory_entry_count: 0, memory_char_count: 0, memory_truncated: false };
+    const runtime = runtimeService();
+    vi.mocked(runtime.listSessions).mockImplementation(async (projectId) => (
+      projectId === "p-1" ? [firstSession] : [secondSession]
+    ));
+    vi.mocked(runtime.execute).mockResolvedValue(completed);
+    vi.mocked(runtime.getExecution).mockResolvedValue({ ...completed, session_id: "s-1", project_id: "p-1", instruction: "Inspect", status: "succeeded", model: "model", error_code: null, created_at: "2026-08-07T00:00:00Z", completed_at: "2026-08-07T00:00:01Z" });
+    render(<ProjectsWorkspace service={service({
+      list: vi.fn().mockResolvedValue([project, secondProject]),
+      get: vi.fn(async (projectId: string) =>
+        projectId === secondProject.project_id ? secondProject : project,
+      ),
+    })} runtimeService={runtime} workspaceService={workspaceService()} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Project.*Workspace hospedado.*p-1/i }));
+    await screen.findByText("● Pronto");
+    fireEvent.change(screen.getByLabelText("Tarefa"), { target: { value: "Inspect" } });
+    fireEvent.click(screen.getByRole("button", { name: "Executar com Codex" }));
+    expect(await screen.findByText("First project result")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /Second project.*Workspace hospedado.*p-2/i }));
+
+    expect(await screen.findByRole("button", { name: "Second session" })).toBeTruthy();
+    expect(screen.queryByText("First project result")).toBeNull();
+    expect(window.location.search).toBe("?project_id=p-2");
+  });
+
   it("validates and creates a project that appears in the list", async () => {
     const api = service();
     const runtime = runtimeService();

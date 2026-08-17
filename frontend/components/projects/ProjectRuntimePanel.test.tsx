@@ -120,6 +120,60 @@ describe("ProjectRuntimePanel", () => {
     expect(screen.queryByText(/O Codex não conseguiu concluir/)).toBeNull();
   });
 
+  it("preserves a read-only result when navigation syncs the already selected session", async () => {
+    const persisted = {
+      ...failedExecution,
+      execution_id: "e-1",
+      status: "succeeded" as const,
+      execution_mode: "read_only" as const,
+      output: "Project structure",
+      error_code: null,
+    };
+    const api = service({ getExecution: vi.fn().mockResolvedValue(persisted) });
+    const onNavigate = vi.fn();
+    const view = render(
+      <ProjectRuntimePanel {...props} service={api} onNavigate={onNavigate} />,
+    );
+    await screen.findByText("● Pronto");
+    fireEvent.change(screen.getByLabelText("Tarefa"), { target: { value: "Inspect" } });
+    fireEvent.click(screen.getByRole("button", { name: "Executar com Codex" }));
+    expect(await screen.findByText("Project structure")).toBeTruthy();
+    expect(onNavigate).toHaveBeenCalledWith("s-1", "e-1");
+
+    view.rerender(
+      <ProjectRuntimePanel {...props} service={api} initialSessionId="s-1" initialExecutionId="e-1" onNavigate={onNavigate} />,
+    );
+
+    expect((await screen.findAllByText("Project structure")).length).toBeGreaterThan(0);
+    expect(await screen.findByText("Fase persistida: Finalizada com sucesso")).toBeTruthy();
+    expect(api.listSessions).toHaveBeenCalledTimes(2);
+  });
+
+  it("preserves a workspace-write result when navigation syncs its execution", async () => {
+    const persisted = {
+      ...failedExecution,
+      execution_id: "e-1",
+      status: "succeeded" as const,
+      output: "Project structure",
+      error_code: null,
+    };
+    const api = service({ getExecution: vi.fn().mockResolvedValue(persisted) });
+    const view = render(<ProjectRuntimePanel {...props} service={api} />);
+    await screen.findByText("● Pronto");
+    fireEvent.click(screen.getByLabelText("Permitir alterações no projeto"));
+    fireEvent.change(screen.getByLabelText("Tarefa"), { target: { value: "Write safely" } });
+    fireEvent.click(screen.getByRole("button", { name: "Preparar plano" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Aprovar e executar" }));
+    expect(await screen.findByText("Project structure")).toBeTruthy();
+
+    view.rerender(
+      <ProjectRuntimePanel {...props} service={api} initialSessionId="s-1" initialExecutionId="e-1" />,
+    );
+
+    expect((await screen.findAllByText("Project structure")).length).toBeGreaterThan(0);
+    expect(await screen.findByText("Fase persistida: Finalizada com sucesso")).toBeTruthy();
+  });
+
   it("keeps a successful execution visible when history refresh fails", async () => {
     const listExecutions = vi.fn()
       .mockResolvedValueOnce([])

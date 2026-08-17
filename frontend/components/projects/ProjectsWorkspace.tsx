@@ -80,6 +80,7 @@ export function ProjectsWorkspace({ service, runtimeService, workspaceService, i
   }
 
   function selectContext(next: ProjectNavigationContext) {
+    if (sameNavigationContext(context, next)) return;
     setContext(next);
     writeNavigationContext(next);
   }
@@ -96,7 +97,7 @@ export function ProjectsWorkspace({ service, runtimeService, workspaceService, i
     {contextError ? <div role="alert" className="dashboard-state dashboard-state--error"><h2>Contexto do projeto não encontrado</h2><p>Não foi possível reconstruir o projeto informado pela URL.</p><Button onClick={() => { setContextError(false); setContextAttempt((value) => value + 1); }}>Tentar novamente</Button></div> : null}
     {items?.length === 0 ? <div className="dashboard-state"><h2>Nenhum projeto ainda</h2><p>Crie seu primeiro workspace na ASEP.</p></div> : null}
     {items && items.length > 0 ? <Card title="Projetos" eyebrow="Workspaces"><ul className="project-list">{items.map((project) => <li key={project.project_id}><button type="button" onClick={() => { setSelected(project); selectContext({ projectId: project.project_id }); }} aria-pressed={selected?.project_id === project.project_id}><strong>{project.name}</strong><span>{project.workspace_kind === "hosted" ? "Workspace hospedado" : "Workspace local legado"}</span><small>{project.project_id}</small></button></li>)}</ul></Card> : null}
-    {selected ? <div ref={detailsRef} className="project-details"><Card title={selected.name} eyebrow="Detalhes do projeto"><dl className="execution-facts"><div><dt>ID do projeto</dt><dd>{selected.project_id}</dd></div><div><dt>Workspace</dt><dd>{selected.workspace_id ?? "Local legado"}</dd></div></dl></Card><ProjectFilesPanel key={selected.project_id} projectId={selected.project_id} service={workspaceService} /><ProjectRuntimePanel projectId={selected.project_id} projectName={selected.name} workspaceLabel={selected.workspace_id ?? "Local legado"} service={runtimeService} initialSessionId={context.projectId === selected.project_id ? context.sessionId : undefined} initialExecutionId={context.projectId === selected.project_id ? context.executionId : undefined} onNavigate={(sessionId, executionId) => selectContext({ projectId: selected.project_id, sessionId, executionId })} /></div> : null}
+    {selected ? <div ref={detailsRef} className="project-details"><Card title={selected.name} eyebrow="Detalhes do projeto"><dl className="execution-facts"><div><dt>ID do projeto</dt><dd>{selected.project_id}</dd></div><div><dt>Workspace</dt><dd>{selected.workspace_id ?? "Local legado"}</dd></div></dl></Card><ProjectFilesPanel key={selected.project_id} projectId={selected.project_id} service={workspaceService} /><ProjectRuntimePanel key={`runtime-${selected.project_id}`} projectId={selected.project_id} projectName={selected.name} workspaceLabel={selected.workspace_id ?? "Local legado"} service={runtimeService} initialSessionId={context.projectId === selected.project_id ? context.sessionId : undefined} initialExecutionId={context.projectId === selected.project_id ? context.executionId : undefined} onNavigate={(sessionId, executionId) => selectContext({ projectId: selected.project_id, sessionId, executionId })} /></div> : null}
   </div>;
 }
 
@@ -113,4 +114,13 @@ function writeNavigationContext(context: ProjectNavigationContext) {
   if (context.sessionId) query.set("session_id", context.sessionId);
   if (context.executionId) query.set("execution_id", context.executionId);
   window.history.pushState(null, "", `${window.location.pathname}${query.size ? `?${query}` : ""}`);
+}
+
+function sameNavigationContext(
+  current: ProjectNavigationContext,
+  next: ProjectNavigationContext,
+) {
+  return current.projectId === next.projectId
+    && current.sessionId === next.sessionId
+    && current.executionId === next.executionId;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useEffectEvent, useMemo, useState } from "react";
 import type { AIRuntimeExecutionMode, AIRuntimeStatusDto, ProjectAIRuntimeExecutionDto, ProjectEngineeringPreparationDto, ProjectExecutionDto, ProjectSessionDto, SessionMemoryDto, SessionMemoryKind } from "../../lib/api/dtos";
 import { createProjectRuntimeWorkspaceService, type ProjectRuntimeWorkspaceService } from "../../lib/services/projectRuntimeWorkspace";
 import { Button } from "../Button";
@@ -51,9 +51,24 @@ export function ProjectRuntimePanel({ projectId, projectName, workspaceLabel, se
     return () => { active = false; };
   }, [api, statusAttempt]);
 
+  const applySessions = useEffectEvent((items: readonly ProjectSessionDto[]) => {
+    setSessions(items); setSessionsLoadError(false);
+    const requested = initialSessionId
+      ? items.find((item) => item.session_id === initialSessionId)
+      : items.find((item) => (
+        item.project_id === selectedSession?.project_id
+        && item.session_id === selectedSession?.session_id
+      )) ?? items[0];
+    setExecutionLoadError(initialSessionId && !requested ? "A sessão informada pela URL não foi encontrada." : null);
+    if (
+      requested?.project_id === selectedSession?.project_id
+      && requested?.session_id === selectedSession?.session_id
+    ) return;
+    setHistory(null); setHistoryRefreshError(null); setNavigationError(null); setMemory(null); setMemoryError(null); setMemoryContent(""); setSelectedExecution(null); setResult(null); setSelectedSession(requested ?? null);
+  });
   useEffect(() => {
     let active = true;
-    api.listSessions(projectId).then((items) => { if (active) { const requested = initialSessionId ? items.find((item) => item.session_id === initialSessionId) : items[0]; setSessions(items); setSessionsLoadError(false); setHistory(null); setHistoryRefreshError(null); setNavigationError(null); setMemory(null); setMemoryError(null); setMemoryContent(""); setSelectedExecution(null); setResult(null); setExecutionLoadError(initialSessionId && !requested ? "A sessão informada pela URL não foi encontrada." : null); setSelectedSession(requested ?? null); } }, () => { if (active) { setSessions([]); setSessionsLoadError(true); } });
+    api.listSessions(projectId).then((items) => { if (active) applySessions(items); }, () => { if (active) { setSessions([]); setSessionsLoadError(true); } });
     return () => { active = false; };
   }, [api, projectId, sessionsAttempt, initialSessionId]);
 
@@ -195,6 +210,9 @@ export function ProjectRuntimePanel({ projectId, projectName, workspaceLabel, se
 
   const runtimeReady = status?.ready === true || status?.state === "ready";
   const runtimeLabel = statusFailed ? "Indisponível" : status === null ? "Carregando status do Codex..." : runtimeReady ? "Pronto" : status.state === "not_installed" ? "Não instalado" : status.state === "error" ? "Indisponível" : "Não conectado";
+  const visibleSelectedExecution = initialExecutionId && selectedExecution?.execution_id !== initialExecutionId
+    ? null
+    : selectedExecution;
 
   return <div className="page-stack">
     <Card title="Sessões" eyebrow="Trabalho do projeto"><form className="engineering-form" onSubmit={createSession}><label>Nome da sessão<input placeholder="Ex.: Implementação da API de clientes" value={sessionTitle} onChange={(event) => setSessionTitle(event.target.value)} disabled={creatingSession} /></label>{sessionError ? <p role="alert" className="engineering-form__error">{sessionError}</p> : null}<Button type="submit" disabled={creatingSession}>{creatingSession ? "Criando…" : "Nova sessão"}</Button></form>{sessions === null ? <p role="status">Carregando sessões...</p> : sessionsLoadError ? <div role="alert"><p>Não foi possível carregar as sessões.</p><Button onClick={() => { setSessions(null); setSessionsAttempt((value) => value + 1); }}>Tentar novamente</Button></div> : sessions.length === 0 ? <p>Nenhuma sessão ainda.</p> : <ul className="project-runtime-selection-list">{sessions.map((session) => <li key={session.session_id}><button type="button" onClick={() => { setHistory(null); setHistoryRefreshError(null); setNavigationError(null); setMemory(null); setMemoryError(null); setMemoryContent(""); setSelectedExecution(null); setExecutionLoadError(null); setResult(null); setError(null); setConfirmingWrite(false); setSelectedSession(session); onNavigate?.(session.session_id); }} aria-pressed={selectedSession?.session_id === session.session_id}>{session.title}</button></li>)}</ul>}</Card>
@@ -207,10 +225,10 @@ export function ProjectRuntimePanel({ projectId, projectName, workspaceLabel, se
       {result ? <ExecutionAIUsage projectId={projectId} executionId={result.execution_id} service={api} /> : null}
     </Card> : null}
     {selectedSession ? <Card title="Memória da sessão" eyebrow="Informações duráveis"><form className="engineering-form" onSubmit={addMemory}><label>Tipo<select value={memoryKind} onChange={(event) => setMemoryKind(event.target.value as SessionMemoryKind)} disabled={addingMemory}><option value="fact">Fato</option><option value="decision">Decisão</option><option value="constraint">Restrição</option><option value="artifact">Artefato</option><option value="goal">Objetivo</option></select></label><label>Memória<input placeholder="Registre uma informação importante desta sessão" value={memoryContent} onChange={(event) => setMemoryContent(event.target.value)} disabled={addingMemory} /></label>{memoryError ? <p role="alert">{memoryError}</p> : null}<Button type="submit" disabled={addingMemory}>{addingMemory ? "Adicionando…" : "Adicionar memória"}</Button></form>{memory === null ? <p role="status">Carregando memória...</p> : memory.length === 0 ? <p>Nenhuma memória nesta sessão.</p> : <ul>{memory.map((entry) => <li key={entry.memory_id}><strong>{formatMemoryKind(entry.kind)}</strong> {entry.content}<small>{entry.source_execution_id ? `Execução ${entry.source_execution_id}` : "Manual"}</small></li>)}</ul>}</Card> : null}
-    {selectedSession ? <Card title="Histórico" eyebrow="Execuções">{historyRefreshError ? <p role="status">{historyRefreshError}</p> : null}{history === null ? <p role="status">Carregando histórico...</p> : history.length === 0 ? <p>Nenhuma execução ainda.</p> : <ul className="project-runtime-selection-list">{history.map((execution) => <li key={execution.execution_id}><button type="button" onClick={() => { setSelectedExecution(execution); setExecutionLoadError(null); onNavigate?.(selectedSession.session_id, execution.execution_id); }} aria-pressed={selectedExecution?.execution_id === execution.execution_id}><strong>{formatExecutionStatus(execution.status)}</strong> · {execution.runtime_id} · {formatExecutionMode(execution.execution_mode)}<br />{execution.instruction}<br />{execution.changes.length} arquivos alterados{execution.usage?.input_units != null ? ` · ${execution.usage.input_units} tokens de entrada` : ""}{execution.usage?.output_units != null ? ` · ${execution.usage.output_units} tokens de saída` : ""}</button></li>)}</ul>}</Card> : null}
+    {selectedSession ? <Card title="Histórico" eyebrow="Execuções">{historyRefreshError ? <p role="status">{historyRefreshError}</p> : null}{history === null ? <p role="status">Carregando histórico...</p> : history.length === 0 ? <p>Nenhuma execução ainda.</p> : <ul className="project-runtime-selection-list">{history.map((execution) => <li key={execution.execution_id}><button type="button" onClick={() => { setSelectedExecution(execution); setExecutionLoadError(null); onNavigate?.(selectedSession.session_id, execution.execution_id); }} aria-pressed={visibleSelectedExecution?.execution_id === execution.execution_id}><strong>{formatExecutionStatus(execution.status)}</strong> · {execution.runtime_id} · {formatExecutionMode(execution.execution_mode)}<br />{execution.instruction}<br />{execution.changes.length} arquivos alterados{execution.usage?.input_units != null ? ` · ${execution.usage.input_units} tokens de entrada` : ""}{execution.usage?.output_units != null ? ` · ${execution.usage.output_units} tokens de saída` : ""}</button></li>)}</ul>}</Card> : null}
     {executionLoadError ? <div role="alert" className="dashboard-state dashboard-state--error"><p>{executionLoadError}</p><Button onClick={() => setExecutionAttempt((value) => value + 1)}>Tentar novamente</Button></div> : null}
-    {selectedExecution ? <Card title="Detalhes da execução" eyebrow={formatExecutionStatus(selectedExecution.status)}><p><strong>Tarefa</strong><br />{selectedExecution.instruction}</p><ProjectExecutionEvidence evidence={selectedExecution} changes={selectedExecution.changes} output={selectedExecution.output} /><ContextUsage count={selectedExecution.context_entry_count} truncated={selectedExecution.context_truncated} charCount={selectedExecution.context_char_count} omittedCount={selectedExecution.context_omitted_execution_count} /><MemoryUsage count={selectedExecution.memory_entry_count} charCount={selectedExecution.memory_char_count} truncated={selectedExecution.memory_truncated} /><dl className="execution-facts"><div><dt>Assistente</dt><dd>{selectedExecution.runtime_id}</dd></div><div><dt>Modelo</dt><dd>{selectedExecution.model ?? "Desconhecido"}</dd></div><div><dt>Modo</dt><dd>{formatExecutionMode(selectedExecution.execution_mode)}</dd></div></dl></Card> : null}
-    {selectedExecution ? <ExecutionAIUsage projectId={projectId} executionId={selectedExecution.execution_id} service={api} /> : null}
+    {visibleSelectedExecution ? <Card title="Detalhes da execução" eyebrow={formatExecutionStatus(visibleSelectedExecution.status)}><p><strong>Tarefa</strong><br />{visibleSelectedExecution.instruction}</p><ProjectExecutionEvidence evidence={visibleSelectedExecution} changes={visibleSelectedExecution.changes} output={visibleSelectedExecution.output} /><ContextUsage count={visibleSelectedExecution.context_entry_count} truncated={visibleSelectedExecution.context_truncated} charCount={visibleSelectedExecution.context_char_count} omittedCount={visibleSelectedExecution.context_omitted_execution_count} /><MemoryUsage count={visibleSelectedExecution.memory_entry_count} charCount={visibleSelectedExecution.memory_char_count} truncated={visibleSelectedExecution.memory_truncated} /><dl className="execution-facts"><div><dt>Assistente</dt><dd>{visibleSelectedExecution.runtime_id}</dd></div><div><dt>Modelo</dt><dd>{visibleSelectedExecution.model ?? "Desconhecido"}</dd></div><div><dt>Modo</dt><dd>{formatExecutionMode(visibleSelectedExecution.execution_mode)}</dd></div></dl></Card> : null}
+    {visibleSelectedExecution ? <ExecutionAIUsage projectId={projectId} executionId={visibleSelectedExecution.execution_id} service={api} /> : null}
   </div>;
 }
 
