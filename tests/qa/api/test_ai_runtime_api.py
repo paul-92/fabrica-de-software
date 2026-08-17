@@ -2,7 +2,12 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from asep.ai_runtime import AIRuntimeConnectionState, AIRuntimeConnectionStatus
+from asep.ai_runtime import (
+    AIRuntimeConnectionState,
+    AIRuntimeConnectionStatus,
+    CodexAIRuntimeConfig,
+    CodexDiagnosticsConfig,
+)
 from asep.api.app import create_app
 from asep.api import create_default_app
 from asep.configuration import ApplicationSettings
@@ -58,3 +63,37 @@ def test_default_composition_exposes_runtime_endpoints_without_running_diagnosti
     paths = app.openapi()["paths"]
     assert "/api/v1/ai-runtimes" in paths
     assert "/api/v1/ai-runtimes/{runtime_id}/status" in paths
+
+
+def test_composition_injects_same_configured_codex_executable(
+    monkeypatch,
+) -> None:
+    captured: dict[str, str] = {}
+    diagnostics_config = CodexDiagnosticsConfig
+    runtime_config = CodexAIRuntimeConfig
+
+    def capture_diagnostics(**kwargs):
+        config = diagnostics_config(**kwargs)
+        captured["diagnostics"] = config.executable
+        return config
+
+    def capture_runtime(**kwargs):
+        config = runtime_config(**kwargs)
+        captured["runtime"] = config.executable
+        return config
+
+    monkeypatch.setattr(
+        "asep.api.composition.CodexDiagnosticsConfig", capture_diagnostics
+    )
+    monkeypatch.setattr(
+        "asep.api.composition.CodexAIRuntimeConfig", capture_runtime
+    )
+
+    create_default_app(
+        ApplicationSettings(codex_executable=r"C:\short\codex.cmd")
+    )
+
+    assert captured == {
+        "diagnostics": r"C:\short\codex.cmd",
+        "runtime": r"C:\short\codex.cmd",
+    }

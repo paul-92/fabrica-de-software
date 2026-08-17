@@ -63,6 +63,40 @@ def test_configuration_selects_sqlite_from_environment() -> None:
     assert settings.sqlite_database == Path("custom/asep.db")
 
 
+def test_codex_executable_defaults_to_codex() -> None:
+    assert Configuration.load({}).codex_executable == "codex"
+
+
+@pytest.mark.parametrize(
+    "executable",
+    [r"C:\Users\user\npm-global\codex.cmd", "/usr/local/bin/codex"],
+)
+def test_codex_executable_is_loaded_exactly(executable: str) -> None:
+    settings = Configuration.load({"ASEP_CODEX_EXECUTABLE": executable})
+
+    assert settings.codex_executable == executable
+
+
+@pytest.mark.parametrize(
+    "executable",
+    [
+        "",
+        "   ",
+        " codex",
+        "codex ",
+        "codex --version",
+        r"C:\short\codex.cmd --version",
+        "/usr/local/bin/codex --version",
+        '"codex"',
+    ],
+)
+def test_codex_executable_rejects_empty_or_composed_values(
+    executable: str,
+) -> None:
+    with pytest.raises(ConfigurationValidationError, match="codex_executable"):
+        Configuration.load({"ASEP_CODEX_EXECUTABLE": executable})
+
+
 @pytest.mark.parametrize("backend", ["postgres", "", "FILE"])
 def test_configuration_rejects_invalid_backend(backend: str) -> None:
     with pytest.raises(

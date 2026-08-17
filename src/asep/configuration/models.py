@@ -54,6 +54,7 @@ class ApplicationSettings:
     legacy_admin_password: str = "change-me-local-admin"
     hosted_root: Path | str = _DEFAULT_STORAGE_DIRECTORY / "hosted-workspaces"
     maintenance_directory: Path | str = _DEFAULT_STORAGE_DIRECTORY / "maintenance"
+    codex_executable: str = "codex"
 
     def __post_init__(self) -> None:
         try:
@@ -114,6 +115,11 @@ class ApplicationSettings:
         object.__setattr__(self, "access_cookie_secure", str(self.access_cookie_secure).casefold() in {"1", "true", "yes"})
         object.__setattr__(self, "hosted_root", self._validate_path("hosted_root", self.hosted_root))
         object.__setattr__(self, "maintenance_directory", self._validate_path("maintenance_directory", self.maintenance_directory))
+        object.__setattr__(
+            self,
+            "codex_executable",
+            self._validate_executable(self.codex_executable),
+        )
         if len(self.legacy_admin_password) < 12:
             raise ConfigurationValidationError("legacy_admin_password deve conter ao menos 12 caracteres.")
         if self.access_cookie_secure and self.legacy_admin_password == "change-me-local-admin":
@@ -299,3 +305,17 @@ class ApplicationSettings:
             raise ConfigurationValidationError(
                 f"{field} deve conter somente um nome de arquivo válido."
             )
+
+    @staticmethod
+    def _validate_executable(value: str) -> str:
+        if not isinstance(value, str) or not value.strip():
+            raise ConfigurationValidationError(
+                "codex_executable não pode ser vazio."
+            )
+        if any(character.isspace() for character in value) or any(
+            character in value for character in ('"', "'")
+        ):
+            raise ConfigurationValidationError(
+                "codex_executable deve conter somente o executável."
+            )
+        return value

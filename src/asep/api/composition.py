@@ -193,14 +193,22 @@ def _create_project_application_services(
     runtime_connection = AIRuntimeConnectionService(
         (
             CodexAIRuntimeDiagnostics(
-                CodexDiagnosticsConfig(working_directory=Path.cwd())
+                CodexDiagnosticsConfig(
+                    working_directory=Path.cwd(),
+                    executable=effective_settings.codex_executable,
+                )
             ),
         )
     )
     registry = runtime_registry or InMemoryAIRuntimeRegistry()
     if runtime_registry is None:
         registry.register(
-            CodexAIRuntime(CodexAIRuntimeConfig(workspace=Path.cwd()))
+            CodexAIRuntime(
+                CodexAIRuntimeConfig(
+                    workspace=Path.cwd(),
+                    executable=effective_settings.codex_executable,
+                )
+            )
         )
     sessions = ProjectSessionService(
         project_service,
