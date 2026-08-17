@@ -24,6 +24,7 @@ from asep.application.session_memory import ProjectSessionMemoryService
 from asep.execution.models import GateDecision
 from asep.projects import (
     ProjectExecution,
+    ProjectIdempotentNoOpEvidence,
     ProjectExecutionRepository,
     ProjectExecutionStatus,
     ProjectOperationalPlan,
@@ -176,11 +177,18 @@ class ProjectEngineeringExecutionService:
                 **execution.model_dump(mode="python"),
                 "changes": captured_changes,
             })
-            self._executions.update(execution)
-            runtime_result = runtime_result.model_copy(update={
-                "changes": captured_changes,
-                "execution": execution,
-            })
+        if not captured_changes:
+            noop_evidence = self._verified_noop_evidence(execution)
+            if noop_evidence is not None:
+                execution = ProjectExecution.model_validate({
+                    **execution.model_dump(mode="python"),
+                    "idempotent_noop_evidence": noop_evidence,
+                })
+        self._executions.update(execution)
+        runtime_result = runtime_result.model_copy(update={
+            "changes": captured_changes,
+            "execution": execution,
+        })
         strategy_builder = getattr(self._validation, "strategy", None)
         strategy_runner = getattr(self._validation, "validate_strategy", None)
         strategy = None
@@ -191,6 +199,11 @@ class ProjectEngineeringExecutionService:
                 execution.operational_plan,
                 analysis=runtime_result.bounded_analysis,
                 changed_paths=tuple(item.path for item in execution.changes),
+                idempotent_noop=execution.idempotent_noop_evidence is not None,
+                evidence_paths=(
+                    execution.idempotent_noop_evidence.artifact_paths
+                    if execution.idempotent_noop_evidence is not None else ()
+                ),
             )
             execution = ProjectExecution.model_validate({
                 **execution.model_dump(mode="python"),
@@ -344,6 +357,41 @@ class ProjectEngineeringExecutionService:
             execution_mode=runtime_result.execution_mode,
             execution=completed,
         )
+
+    def _verified_noop_evidence(
+        self, execution: ProjectExecution,
+    ) -> ProjectIdempotentNoOpEvidence | None:
+        fingerprint = execution.completion_workspace_fingerprint
+        if fingerprint is None:
+            return None
+        candidates = reversed(self._executions.list_by_session(execution.session_id))
+        for prior in candidates:
+            if (
+                prior.execution_id == execution.execution_id
+                or prior.project_id != execution.project_id
+                or prior.instruction != execution.instruction
+                or prior.runtime_id != execution.runtime_id
+                or prior.execution_mode is not AIRuntimeExecutionMode.WORKSPACE_WRITE
+                or prior.status is not ProjectExecutionStatus.SUCCEEDED
+                or prior.completion_workspace_fingerprint != fingerprint
+                or prior.quality_gate is None
+                or prior.quality_gate.decision is GateDecision.BLOCKED
+            ):
+                continue
+            paths = tuple(
+                item.path for item in prior.changes
+                if item.change_type.value != "deleted"
+            ) or (
+                prior.idempotent_noop_evidence.artifact_paths
+                if prior.idempotent_noop_evidence is not None else ()
+            )
+            if paths:
+                return ProjectIdempotentNoOpEvidence(
+                    prior_execution_id=prior.execution_id,
+                    workspace_fingerprint=fingerprint,
+                    artifact_paths=paths,
+                )
+        return None
 
     def _persist_progress(self, execution: ProjectExecution, **updates) -> ProjectExecution:
         current = self._executions.get(execution.execution_id)

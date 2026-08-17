@@ -78,6 +78,11 @@ def _runtime_response(result) -> ProjectAIRuntimeExecutionResponse:
             "error_code": result.execution.error_code,
             "created_at": result.execution.created_at,
             "completed_at": result.execution.completed_at,
+            "idempotent_noop_evidence": (
+                None
+                if result.execution.idempotent_noop_evidence is None
+                else result.execution.idempotent_noop_evidence.model_dump(mode="json")
+            ),
         })
     return ProjectAIRuntimeExecutionResponse.model_validate(public)
 

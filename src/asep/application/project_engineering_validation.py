@@ -23,7 +23,7 @@ from asep.tools import ToolCapability, ToolExecutionStatus, ToolExecutor, ToolId
 
 _MAX_PUBLIC_OUTPUT_CHARS = 20_000
 _ORDER = (
-    "workspace_changes", "compileall", "typecheck", "pytest", "vitest",
+    "idempotent_state", "workspace_changes", "compileall", "typecheck", "pytest", "vitest",
     "eslint", "next_build",
 )
 _NODE_VALIDATORS = frozenset({"typecheck", "vitest", "eslint", "next_build"})
@@ -52,6 +52,8 @@ class ProjectValidationCapability(Protocol):
         self, execution_id: str, workspace: Path, plan: ProjectOperationalPlan,
         *, analysis: BoundedProjectAnalysis | None = None,
         changed_paths: tuple[str, ...] = (),
+        idempotent_noop: bool = False,
+        evidence_paths: tuple[str, ...] = (),
     ) -> ProjectValidationStrategy: ...
 
     def validate_strategy(
@@ -172,9 +174,14 @@ class _WorkspaceChangeEvidenceValidator:
         )
 
 
+class _IdempotentStateValidator(_WorkspaceChangeEvidenceValidator):
+    validator_id = "idempotent_state"
+
+
 class ProjectValidationService:
     def __init__(self, tools: ToolExecutor) -> None:
         validators = (
+            _IdempotentStateValidator(),
             _WorkspaceChangeEvidenceValidator(),
             _ToolProjectValidator("compileall", "compileall", "compile", "targets", tools),
             _ToolProjectValidator(
@@ -217,20 +224,27 @@ class ProjectValidationService:
         self, execution_id: str, workspace: Path, plan: ProjectOperationalPlan,
         *, analysis: BoundedProjectAnalysis | None = None,
         changed_paths: tuple[str, ...] = (),
+        idempotent_noop: bool = False,
+        evidence_paths: tuple[str, ...] = (),
     ) -> ProjectValidationStrategy:
         hints = {hint for step in plan.steps for hint in step.validation_hints}
         unsupported = hints - self._validators.keys()
         if unsupported:
             raise ValueError("project validation hint is not executable")
-        selected = self._selected_validators(
-            workspace, hints, analysis, changed_paths,
+        selected = (
+            {"idempotent_state"}
+            if not changed_paths and idempotent_noop
+            else self._selected_validators(workspace, hints, analysis, changed_paths)
         )
         ordered = tuple(item for item in _ORDER if item in selected)
         targets = tuple(
             ProjectValidationTarget(
                 validator_id=item,
                 targets=self._safe_targets(
-                    workspace, item, changed_paths, analysis=analysis,
+                    workspace,
+                    item,
+                    evidence_paths if item == "idempotent_state" else changed_paths,
+                    analysis=analysis,
                 ),
             )
             for item in ordered
@@ -423,7 +437,7 @@ class ProjectValidationService:
             path for path in changed_paths
             if validator_id != "compileall" or path.endswith(".py")
         ))
-        if validator_id == "workspace_changes":
+        if validator_id in {"workspace_changes", "idempotent_state"}:
             return candidates
         if validator_id in _NODE_VALIDATORS:
             return (

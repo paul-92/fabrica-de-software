@@ -105,6 +105,22 @@ class ProjectValidationStatus(StrEnum):
     SKIPPED = "skipped"
 
 
+class ProjectIdempotentNoOpEvidence(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    prior_execution_id: str
+    workspace_fingerprint: str
+    artifact_paths: tuple[str, ...] = Field(min_length=1)
+
+    @field_validator("prior_execution_id", "workspace_fingerprint")
+    @classmethod
+    def evidence_text_not_blank(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("idempotent evidence fields must not be blank")
+        return normalized
+
+
 class ProjectValidationTarget(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -246,6 +262,8 @@ class ProjectExecution(BaseModel):
     preparation_analysis: dict = Field(default_factory=dict)
     preparation_workspace_fingerprint: str | None = None
     preparation_context_fingerprint: str | None = None
+    completion_workspace_fingerprint: str | None = None
+    idempotent_noop_evidence: ProjectIdempotentNoOpEvidence | None = None
     validation_strategy: ProjectValidationStrategy | None = None
     validations: tuple[ProjectValidationResult, ...] = ()
     failure_analyses: tuple[ProjectValidationFailureAnalysis, ...] = ()

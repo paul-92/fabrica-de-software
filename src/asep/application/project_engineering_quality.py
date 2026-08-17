@@ -101,10 +101,16 @@ class ProjectQualityGateService:
     ) -> list[ArtifactReference]:
         references: list[ArtifactReference] = []
         root = workspace.resolve()
-        for change in execution.changes:
-            if change.change_type is WorkspaceChangeType.DELETED:
-                continue
-            path = (root / change.path).resolve()
+        changes = execution.changes
+        if not changes and execution.idempotent_noop_evidence is not None:
+            paths = execution.idempotent_noop_evidence.artifact_paths
+        else:
+            paths = tuple(
+                change.path for change in changes
+                if change.change_type is not WorkspaceChangeType.DELETED
+            )
+        for relative_path in paths:
+            path = (root / relative_path).resolve()
             try:
                 path.relative_to(root)
             except ValueError:
@@ -112,12 +118,12 @@ class ProjectQualityGateService:
             if not path.is_file():
                 continue
             references.append(ArtifactReference(
-                artifact_id=f"{execution.execution_id}:{change.path}",
+                artifact_id=f"{execution.execution_id}:{relative_path}",
                 run_id=execution.execution_id,
                 project_id=execution.project_id,
                 stage_id=_STAGE_ID,
                 agent_id="project-engineering",
-                path=change.path,
+                path=relative_path,
                 type="workspace-file",
                 created_at=execution.created_at,
                 checksum=hashlib.sha256(path.read_bytes()).hexdigest(),

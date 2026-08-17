@@ -5,6 +5,7 @@ from asep.projects.repository import ProjectRepository
 from asep.projects.sqlite_repository import SQLiteProjectRepository
 from asep.projects.history_models import (
     ProjectExecution,
+    ProjectIdempotentNoOpEvidence,
     ProjectEngineeringStepResult,
     ProjectExecutionStatus,
     ProjectOperationalPlan,
@@ -45,6 +46,7 @@ __all__ = [
     "WorkspaceProject",
     "HostedWorkspaceManager",
     "ProjectExecution",
+    "ProjectIdempotentNoOpEvidence",
     "ProjectEngineeringStepResult",
     "ProjectExecutionStatus",
     "ProjectOperationalPlan",

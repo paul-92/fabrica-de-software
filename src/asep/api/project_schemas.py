@@ -217,6 +217,12 @@ class ProjectEngineeringStepResultResponse(ProjectHttpSchema):
     completed_at: datetime
 
 
+class ProjectIdempotentNoOpEvidenceResponse(ProjectHttpSchema):
+    prior_execution_id: str
+    workspace_fingerprint: str
+    artifact_paths: tuple[str, ...]
+
+
 class ProjectAIRuntimeExecutionResponse(ProjectHttpSchema):
     execution_id: str
     output: str
@@ -243,6 +249,7 @@ class ProjectAIRuntimeExecutionResponse(ProjectHttpSchema):
     error_code: str | None = None
     created_at: datetime | None = None
     completed_at: datetime | None = None
+    idempotent_noop_evidence: ProjectIdempotentNoOpEvidenceResponse | None = None
 
 
 class CreateProjectSessionRequest(ProjectHttpSchema):
@@ -356,6 +363,7 @@ class ProjectExecutionResponse(ProjectHttpSchema):
     repair: RepairResponse | None
     quality_gate: ProjectQualityGateResponse | None
     step_results: tuple[ProjectEngineeringStepResultResponse, ...]
+    idempotent_noop_evidence: ProjectIdempotentNoOpEvidenceResponse | None
 
     @classmethod
     def from_domain(cls, execution: ProjectExecution) -> "ProjectExecutionResponse":
@@ -367,6 +375,7 @@ class ProjectExecutionResponse(ProjectHttpSchema):
                     "failure_analyses", "repair", "quality_gate", "step_results",
                     "preparation_analysis", "preparation_workspace_fingerprint",
                     "preparation_context_fingerprint",
+                    "completion_workspace_fingerprint",
                     "organization_id", "requested_by_user_id",
                 },
             ),

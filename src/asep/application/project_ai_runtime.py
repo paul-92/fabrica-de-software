@@ -377,8 +377,12 @@ class ProjectAIRuntimeExecutionService:
                         identity=AIRuntimeIdentity(runtime_id="developer-agent", model_id="controlled-tools"),
                         metadata={"executor": "developer_agent"},
                     )
-                changes = self._snapshotter.changes(before, self._snapshotter.capture(workspace))
-                return self._persist_success(execution, result, changes).model_copy(
+                after = self._snapshotter.capture(workspace)
+                changes = self._snapshotter.changes(before, after)
+                return self._persist_success(
+                    execution, result, changes,
+                    completion_workspace_fingerprint=self._snapshot_fingerprint(after),
+                ).model_copy(
                     update={"bounded_analysis": analysis}
                 )
             finally:
@@ -550,8 +554,12 @@ class ProjectAIRuntimeExecutionService:
                     error.add_note("Workspace change evidence could not be completed.")
                 self._persist_failure(execution, error, changes)
                 raise
-            changes = self._snapshotter.changes(before, self._snapshotter.capture(project.workspace_path))
-            return self._persist_success(execution, result, changes).model_copy(
+            after = self._snapshotter.capture(project.workspace_path)
+            changes = self._snapshotter.changes(before, after)
+            return self._persist_success(
+                execution, result, changes,
+                completion_workspace_fingerprint=self._snapshot_fingerprint(after),
+            ).model_copy(
                 update={"bounded_analysis": bounded_analysis}
             )
         except Exception as error:
@@ -561,8 +569,11 @@ class ProjectAIRuntimeExecutionService:
         finally:
             lock.release()
 
-    def _persist_success(self, execution: ProjectExecution, result: AIRuntimeResult,
-                         changes: tuple[WorkspaceChange, ...]) -> ProjectAIRuntimeExecutionResult:
+    def _persist_success(
+        self, execution: ProjectExecution, result: AIRuntimeResult,
+        changes: tuple[WorkspaceChange, ...], *,
+        completion_workspace_fingerprint: str | None = None,
+    ) -> ProjectAIRuntimeExecutionResult:
         if self._defer_completion:
             pending_validation = ProjectExecution.model_validate({
                 **execution.model_dump(),
@@ -570,6 +581,7 @@ class ProjectAIRuntimeExecutionService:
                 "model": result.identity.model_id,
                 "usage": result.usage,
                 "changes": changes,
+                "completion_workspace_fingerprint": completion_workspace_fingerprint,
             })
             self._executions.update(pending_validation)
             return ProjectAIRuntimeExecutionResult(
@@ -582,6 +594,7 @@ class ProjectAIRuntimeExecutionService:
             "status": ProjectExecutionStatus.SUCCEEDED, "output": result.output,
             "model": result.identity.model_id, "usage": result.usage,
             "changes": changes, "completed_at": self._clock(),
+            "completion_workspace_fingerprint": completion_workspace_fingerprint,
         }})
         self._executions.update(completed)
         if self._memory is not None:
