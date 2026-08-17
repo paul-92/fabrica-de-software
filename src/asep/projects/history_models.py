@@ -102,6 +102,7 @@ class ProjectOperationalPlan(BaseModel):
 class ProjectValidationStatus(StrEnum):
     PASSED = "passed"
     FAILED = "failed"
+    SKIPPED = "skipped"
 
 
 class ProjectValidationTarget(BaseModel):

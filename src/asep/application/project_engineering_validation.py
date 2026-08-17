@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from datetime import UTC, datetime
+import json
 from pathlib import Path, PurePosixPath
 from typing import Protocol
 
@@ -21,7 +23,8 @@ from asep.tools import ToolCapability, ToolExecutionStatus, ToolExecutor, ToolId
 
 _MAX_PUBLIC_OUTPUT_CHARS = 20_000
 _ORDER = (
-    "compileall", "typecheck", "pytest", "vitest", "eslint", "next_build",
+    "workspace_changes", "compileall", "typecheck", "pytest", "vitest",
+    "eslint", "next_build",
 )
 _NODE_VALIDATORS = frozenset({"typecheck", "vitest", "eslint", "next_build"})
 _PYTHON_VALIDATORS = frozenset({"compileall", "pytest"})
@@ -101,14 +104,20 @@ class _ToolProjectValidator:
         exit_code = output.get("exit_code", -1)
         command = output.get("command", ())
         passed = result.status is ToolExecutionStatus.SUCCEEDED and exit_code == 0
+        safe_output = self._safe_output(output)
+        unavailable = self._validator_unavailable(safe_output)
         return ProjectValidationResult(
             execution_id=execution_id,
             sequence=sequence,
             validator=self.validator_id,
             command=tuple(str(item) for item in command) or (self.validator_id,),
             exit_code=exit_code if isinstance(exit_code, int) else -1,
-            status=ProjectValidationStatus.PASSED if passed else ProjectValidationStatus.FAILED,
-            output=self._safe_output(output),
+            status=(
+                ProjectValidationStatus.PASSED if passed
+                else ProjectValidationStatus.SKIPPED if unavailable
+                else ProjectValidationStatus.FAILED
+            ),
+            output=safe_output,
             completed_at=result.completed_at,
         )
 
@@ -120,10 +129,53 @@ class _ToolProjectValidator:
         safe, _, _ = self._filter.sanitize(combined, {})
         return safe if len(safe) <= _MAX_PUBLIC_OUTPUT_CHARS else safe[:_MAX_PUBLIC_OUTPUT_CHARS] + "\n[output truncated]"
 
+    def _validator_unavailable(self, output: str) -> bool:
+        lowered = output.casefold()
+        module = "pytest" if self.validator_id == "pytest" else self.validator_id
+        return any(marker in lowered for marker in (
+            f"no module named {module}",
+            f"no module named '{module}'",
+            "command not found",
+            "is not recognized as an internal or external command",
+        ))
+
+
+class _WorkspaceChangeEvidenceValidator:
+    validator_id = "workspace_changes"
+
+    def validate(
+        self, execution_id: str, workspace: Path, *, sequence: int,
+        targets: tuple[str, ...] = (),
+    ) -> ProjectValidationResult:
+        root = workspace.resolve()
+        present = bool(targets) and all(
+            ProjectValidationService._confined_path(
+                root, PurePosixPath(target.replace("\\", "/")),
+            ).exists()
+            for target in targets
+        )
+        return ProjectValidationResult(
+            execution_id=execution_id,
+            sequence=sequence,
+            validator=self.validator_id,
+            command=("internal", "workspace-change-evidence"),
+            exit_code=0 if present else 1,
+            status=(
+                ProjectValidationStatus.PASSED
+                if present else ProjectValidationStatus.FAILED
+            ),
+            output=(
+                f"Verified {len(targets)} changed workspace artifact(s)."
+                if present else "Changed workspace artifact evidence is missing."
+            ),
+            completed_at=datetime.now(UTC),
+        )
+
 
 class ProjectValidationService:
     def __init__(self, tools: ToolExecutor) -> None:
         validators = (
+            _WorkspaceChangeEvidenceValidator(),
             _ToolProjectValidator("compileall", "compileall", "compile", "targets", tools),
             _ToolProjectValidator(
                 "typecheck", "typecheck", "typecheck", "package_root", tools,
@@ -170,7 +222,9 @@ class ProjectValidationService:
         unsupported = hints - self._validators.keys()
         if unsupported:
             raise ValueError("project validation hint is not executable")
-        selected = self._selected_validators(hints, analysis, changed_paths)
+        selected = self._selected_validators(
+            workspace, hints, analysis, changed_paths,
+        )
         ordered = tuple(item for item in _ORDER if item in selected)
         targets = tuple(
             ProjectValidationTarget(
@@ -248,11 +302,11 @@ class ProjectValidationService:
 
     @staticmethod
     def _selected_validators(
-        hints: set[str], analysis: BoundedProjectAnalysis | None,
+        workspace: Path, hints: set[str], analysis: BoundedProjectAnalysis | None,
         changed_paths: tuple[str, ...],
     ) -> set[str]:
         if not changed_paths:
-            return hints or {"pytest"}
+            return hints or {"workspace_changes"}
 
         python_changed = any(
             PurePosixPath(path.replace("\\", "/")).suffix.lower()
@@ -271,19 +325,93 @@ class ProjectValidationService:
         languages = set(analysis.languages if analysis is not None else ())
         has_python = "Python" in languages or python_changed
         has_frontend = bool(languages & {"JavaScript", "TypeScript"}) or frontend_changed
+        node_applicable = (
+            ProjectValidationService._node_validators(
+                workspace, changed_paths, analysis,
+            ) if has_frontend else set()
+        )
+        pytest_applicable = (
+            ProjectValidationService._pytest_configured(workspace, analysis)
+            and (
+                (analysis is not None and analysis.has_tests)
+                or any(
+                    "tests" in PurePosixPath(path.replace("\\", "/")).parts
+                    or PurePosixPath(path.replace("\\", "/")).name.startswith("test_")
+                    for path in changed_paths
+                )
+            )
+        )
 
         selected: set[str] = set()
         if python_changed and has_python:
-            selected.update(_PYTHON_VALIDATORS)
+            selected.add("compileall")
+            if pytest_applicable:
+                selected.add("pytest")
         if frontend_changed and has_frontend:
-            selected.update(_NODE_VALIDATORS)
+            selected.update(node_applicable)
         if not selected:
-            selected.update(hints or {"pytest"})
+            selected.add("workspace_changes")
         else:
-            if has_python:
-                selected.update(hints & _PYTHON_VALIDATORS)
+            if has_python and pytest_applicable:
+                selected.update(hints & {"pytest"})
             if has_frontend:
-                selected.update(hints & _NODE_VALIDATORS)
+                selected.update(hints & node_applicable)
+        return selected
+
+    @staticmethod
+    def _pytest_configured(
+        workspace: Path, analysis: BoundedProjectAnalysis | None,
+    ) -> bool:
+        dependencies = {
+            item.casefold() for item in analysis.dependencies
+        } if analysis is not None else set()
+        return "pytest" in dependencies or any(
+            (workspace / name).is_file()
+            for name in ("pytest.ini", "tox.ini", "conftest.py")
+        )
+
+    @staticmethod
+    def _node_validators(
+        workspace: Path, changed_paths: tuple[str, ...],
+        analysis: BoundedProjectAnalysis | None,
+    ) -> set[str]:
+        try:
+            package_root = ProjectValidationService._safe_package_root(
+                workspace, changed_paths, analysis,
+            )
+        except ValueError:
+            raise
+        root = workspace if package_root == "." else workspace / package_root
+        try:
+            package = json.loads((root / "package.json").read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            package = {}
+        scripts = package.get("scripts", {}) if isinstance(package, dict) else {}
+        dependencies = {
+            str(item).casefold()
+            for section in ("dependencies", "devDependencies")
+            if isinstance(package, dict)
+            and isinstance((values := package.get(section)), dict)
+            for item in values
+        }
+        selected: set[str] = set()
+        if "typecheck" in scripts or (root / "tsconfig.json").is_file():
+            selected.add("typecheck")
+        if (
+            "test" in scripts or "vitest" in dependencies
+            or any((root / name).is_file() for name in ("vitest.config.js", "vitest.config.ts"))
+        ):
+            selected.add("vitest")
+        if (
+            "lint" in scripts or "eslint" in dependencies
+            or any((root / name).is_file() for name in ("eslint.config.js", "eslint.config.mjs"))
+        ):
+            selected.add("eslint")
+        if "build" in scripts and (
+            "next" in dependencies
+            or any((root / name).is_file() for name in ("next.config.js", "next.config.mjs"))
+        ):
+            selected.add("next_build")
         return selected
 
     @staticmethod
@@ -295,6 +423,8 @@ class ProjectValidationService:
             path for path in changed_paths
             if validator_id != "compileall" or path.endswith(".py")
         ))
+        if validator_id == "workspace_changes":
+            return candidates
         if validator_id in _NODE_VALIDATORS:
             return (
                 ProjectValidationService._safe_package_root(

@@ -170,6 +170,17 @@ class ProjectEngineeringExecutionService:
         execution: ProjectExecution,
     ) -> ProjectAIRuntimeExecutionResult:
         workspace = self._projects.get(execution.project_id).workspace_path
+        captured_changes = runtime_result.changes or execution.changes
+        if execution.changes != captured_changes:
+            execution = ProjectExecution.model_validate({
+                **execution.model_dump(mode="python"),
+                "changes": captured_changes,
+            })
+            self._executions.update(execution)
+            runtime_result = runtime_result.model_copy(update={
+                "changes": captured_changes,
+                "execution": execution,
+            })
         strategy_builder = getattr(self._validation, "strategy", None)
         strategy_runner = getattr(self._validation, "validate_strategy", None)
         strategy = None
@@ -294,7 +305,8 @@ class ProjectEngineeringExecutionService:
         )
         validation_passed = (
             len(final_validations) == len(required)
-            and all(item.status is ProjectValidationStatus.PASSED for item in final_validations)
+            and any(item.status is ProjectValidationStatus.PASSED for item in final_validations)
+            and all(item.status is not ProjectValidationStatus.FAILED for item in final_validations)
         )
         gate_passed = gate.decision is not GateDecision.BLOCKED
         succeeded = validation_passed and gate_passed

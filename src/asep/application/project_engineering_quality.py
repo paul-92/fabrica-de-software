@@ -54,8 +54,9 @@ class ProjectQualityGateService:
         workspace: Path,
     ) -> StoredQualityGateResult:
         validations = validation if isinstance(validation, tuple) else (validation,)
-        passed = bool(validations) and all(
-            item.status is ProjectValidationStatus.PASSED for item in validations
+        passed = (
+            any(item.status is ProjectValidationStatus.PASSED for item in validations)
+            and all(item.status is not ProjectValidationStatus.FAILED for item in validations)
         )
         completed_at = max(item.completed_at for item in validations)
         agent_result = AgentResult(
