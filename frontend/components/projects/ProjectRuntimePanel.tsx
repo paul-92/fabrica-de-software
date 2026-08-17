@@ -38,7 +38,7 @@ export function ProjectRuntimePanel({ projectId, projectName, workspaceLabel, se
   const [error, setError] = useState<string | null>(null);
   const [historyRefreshError, setHistoryRefreshError] = useState<string | null>(null);
   const [navigationError, setNavigationError] = useState<string | null>(null);
-  const [result, setResult] = useState<ProjectAIRuntimeExecutionDto | null>(null);
+  const [result, setResult] = useState<ProjectAIRuntimeExecutionDto | ProjectExecutionDto | null>(null);
   const [memory, setMemory] = useState<readonly SessionMemoryDto[] | null>(null);
   const [memoryKind, setMemoryKind] = useState<SessionMemoryKind>("fact");
   const [memoryContent, setMemoryContent] = useState("");
@@ -141,13 +141,49 @@ export function ProjectRuntimePanel({ projectId, projectName, workspaceLabel, se
         ? await api.approve(projectId, preparation.execution_id, selectedSession.session_id, preparation.instruction)
         : await api.execute(projectId, selectedSession.session_id, instruction.trim(), mode);
     } catch (executionError) {
-      setError(executionErrorMessage(executionError));
-      const confirmedFailure = isConfirmedExecutionFailure(executionError);
-      if (confirmedFailure) setResult(null);
+      let reconciledFailure = false;
+      if (preparation) {
+        try {
+          const reconciled = await api.getExecution(projectId, preparation.execution_id);
+          if (reconciled.status === "succeeded") {
+            setError(null); setResult(reconciled); setPreparation(null);
+            try {
+              onNavigate?.(selectedSession.session_id, reconciled.execution_id);
+            } catch {
+              setNavigationError("A execução foi concluída, mas a navegação não pôde ser atualizada.");
+            }
+            try {
+              setHistory(await api.listExecutions(projectId, selectedSession.session_id));
+            } catch {
+              setHistoryRefreshError("A execução foi concluída, mas o histórico não pôde ser atualizado.");
+            }
+            try {
+              setMemory(await api.listMemory(projectId, selectedSession.session_id));
+              setMemoryError(null);
+            } catch {
+              setMemoryError("A execução foi concluída, mas a memória da sessão não pôde ser atualizada.");
+            }
+            setSubmitting(false);
+            return;
+          }
+          if (reconciled.status === "failed") {
+            reconciledFailure = true;
+            setResult(null);
+            setError("O Codex não conseguiu concluir a tarefa. A execução com falha permanece no histórico.");
+          } else {
+            setError(uncertainExecutionMessage);
+          }
+        } catch {
+          setError(uncertainExecutionMessage);
+        }
+      } else {
+        setError(executionErrorMessage(executionError));
+        if (isConfirmedExecutionFailure(executionError)) setResult(null);
+      }
       try {
         setHistory(await api.listExecutions(projectId, selectedSession.session_id));
       } catch {
-        setHistoryRefreshError(confirmedFailure
+        setHistoryRefreshError(reconciledFailure
           ? "A execução falhou e o histórico não pôde ser atualizado."
           : "O resultado da execução é incerto e o histórico não pôde ser atualizado.");
       }
@@ -239,7 +275,7 @@ function executionErrorMessage(
   if (error instanceof ApiTimeoutError) {
     return "A execução está demorando mais que o esperado. Ela pode continuar sendo processada no servidor. Consulte o histórico para verificar o resultado.";
   }
-  if (error instanceof ApiHttpError) return httpFallback;
+  if (error instanceof ApiHttpError) return error.status >= 500 ? uncertainExecutionMessage : httpFallback;
   if (error instanceof ApiResponseError) {
     return "O servidor retornou uma resposta inválida. Consulte o histórico para confirmar o resultado da execução.";
   }
@@ -249,8 +285,12 @@ function executionErrorMessage(
   return httpFallback;
 }
 
+const uncertainExecutionMessage = "A comunicação foi interrompida antes de confirmar o resultado. A execução pode ter continuado no servidor. Consulte o histórico.";
+
 function isConfirmedExecutionFailure(error: unknown): boolean {
-  return error instanceof ApiHttpError || !(error instanceof ApiNetworkError || error instanceof ApiResponseError);
+  return error instanceof ApiHttpError
+    ? error.status < 500
+    : !(error instanceof ApiNetworkError || error instanceof ApiResponseError);
 }
 
 function ExecutionAIUsage({ projectId, executionId, service }: { projectId: string; executionId: string; service: ProjectRuntimeWorkspaceService }) {

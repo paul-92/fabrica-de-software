@@ -71,7 +71,7 @@ export type ProjectValidationDto = Readonly<{
   validator: string;
   command: readonly string[];
   exit_code: number;
-  status: "passed" | "failed";
+  status: "passed" | "failed" | "skipped";
   output: string;
   completed_at: string;
 }>;
@@ -107,6 +107,11 @@ export type ProjectEngineeringEvidenceDto = Readonly<{
   repair?: ProjectRepairDto | null;
   quality_gate?: ProjectQualityGateDto | null;
   step_results?: readonly ProjectEngineeringStepResultDto[];
+  idempotent_noop_evidence?: Readonly<{
+    prior_execution_id: string;
+    workspace_fingerprint: string;
+    artifact_paths: readonly string[];
+  }> | null;
   error_code?: string | null;
   created_at?: string;
   completed_at?: string | null;

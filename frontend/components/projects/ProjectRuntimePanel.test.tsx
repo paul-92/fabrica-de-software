@@ -203,7 +203,7 @@ describe("ProjectRuntimePanel", () => {
   });
 
   it("reports a real execute failure without inventing a successful result", async () => {
-    const execute = vi.fn().mockRejectedValue(new ApiHttpError(500, "RUNTIME_FAILED", "runtime failed"));
+    const execute = vi.fn().mockRejectedValue(new ApiHttpError(400, "RUNTIME_FAILED", "runtime failed"));
     render(<ProjectRuntimePanel {...props} service={service({ execute })} />);
     await screen.findByText("● Pronto");
     fireEvent.change(screen.getByLabelText("Tarefa"), { target: { value: "Inspect" } });
@@ -270,8 +270,86 @@ describe("ProjectRuntimePanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Preparar plano" }));
     fireEvent.click(await screen.findByRole("button", { name: "Aprovar e executar" }));
 
-    expect(await screen.findByText(/pode continuar sendo processada no servidor/i)).toBeTruthy();
+    expect(await screen.findByText(/interrompida antes de confirmar o resultado/i)).toBeTruthy();
     expect(screen.queryByText(/execução com falha permanece/i)).toBeNull();
+  });
+
+  it("reconciles a succeeded approve after an HTTP 5xx response", async () => {
+    const persisted = { ...failedExecution, execution_id: "e-1", status: "succeeded" as const, output: "Persisted success", error_code: null };
+    const api = service({
+      approve: vi.fn().mockRejectedValue(new ApiHttpError(504, "GATEWAY_TIMEOUT", "timeout")),
+      getExecution: vi.fn().mockResolvedValue(persisted),
+      listExecutions: vi.fn().mockResolvedValue([persisted]),
+    });
+    render(<ProjectRuntimePanel {...props} service={api} />);
+    await screen.findByText("● Pronto");
+    fireEvent.click(screen.getByLabelText("Permitir alterações no projeto"));
+    fireEvent.change(screen.getByLabelText("Tarefa"), { target: { value: "Write safely" } });
+    fireEvent.click(screen.getByRole("button", { name: "Preparar plano" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Aprovar e executar" }));
+
+    expect(await screen.findByText("Persisted success")).toBeTruthy();
+    expect(api.getExecution).toHaveBeenCalledWith("p-1", "e-1");
+    expect(screen.queryByText(/execução com falha permanece/i)).toBeNull();
+  });
+
+  it("reports a confirmed failed approve after reconciliation", async () => {
+    const approve = vi.fn().mockRejectedValue(new ApiHttpError(500, "UPSTREAM", "failed"));
+    render(<ProjectRuntimePanel {...props} service={service({ approve, getExecution: vi.fn().mockResolvedValue({ ...failedExecution, execution_id: "e-1" }) })} />);
+    await screen.findByText("● Pronto");
+    fireEvent.click(screen.getByLabelText("Permitir alterações no projeto"));
+    fireEvent.change(screen.getByLabelText("Tarefa"), { target: { value: "Write safely" } });
+    fireEvent.click(screen.getByRole("button", { name: "Preparar plano" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Aprovar e executar" }));
+    expect(await screen.findByText(/execução com falha permanece/i)).toBeTruthy();
+  });
+
+  it.each([
+    ["not found", vi.fn().mockRejectedValue(new ApiHttpError(404, "NOT_FOUND", "missing"))],
+    ["lookup unavailable", vi.fn().mockRejectedValue(new Error("offline"))],
+  ])("keeps approve uncertain when reconciliation is %s", async (_case, getExecution) => {
+    render(<ProjectRuntimePanel {...props} service={service({ approve: vi.fn().mockRejectedValue(new ApiHttpError(503, "UPSTREAM", "failed")), getExecution })} />);
+    await screen.findByText("● Pronto");
+    fireEvent.click(screen.getByLabelText("Permitir alterações no projeto"));
+    fireEvent.change(screen.getByLabelText("Tarefa"), { target: { value: "Write safely" } });
+    fireEvent.click(screen.getByRole("button", { name: "Preparar plano" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Aprovar e executar" }));
+    expect(await screen.findByText(/interrompida antes de confirmar o resultado/i)).toBeTruthy();
+    expect(screen.queryByText(/execução com falha permanece/i)).toBeNull();
+  });
+
+  it("preserves reconciled success when secondary refreshes and navigation fail", async () => {
+    const persisted = { ...failedExecution, execution_id: "e-1", status: "succeeded" as const, output: "Recovered result", error_code: null };
+    const listExecutions = vi.fn().mockResolvedValueOnce([]).mockRejectedValueOnce(new Error("history"));
+    const listMemory = vi.fn().mockResolvedValueOnce([]).mockRejectedValueOnce(new Error("memory"));
+    render(<ProjectRuntimePanel {...props} service={service({ approve: vi.fn().mockRejectedValue(new ApiHttpError(502, "UPSTREAM", "failed")), getExecution: vi.fn().mockResolvedValue(persisted), listExecutions, listMemory })} onNavigate={() => { throw new Error("navigation"); }} />);
+    await screen.findByText("● Pronto");
+    fireEvent.click(screen.getByLabelText("Permitir alterações no projeto"));
+    fireEvent.change(screen.getByLabelText("Tarefa"), { target: { value: "Write safely" } });
+    fireEvent.click(screen.getByRole("button", { name: "Preparar plano" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Aprovar e executar" }));
+    expect(await screen.findByText("Recovered result")).toBeTruthy();
+    expect(await screen.findByText(/histórico não pôde ser atualizado/i)).toBeTruthy();
+    expect(await screen.findByText(/memória da sessão não pôde ser atualizada/i)).toBeTruthy();
+    expect(await screen.findByText(/navegação não pôde ser atualizada/i)).toBeTruthy();
+  });
+
+  it("treats execute HTTP 5xx as uncertain without unsafe history correlation", async () => {
+    render(<ProjectRuntimePanel {...props} service={service({ execute: vi.fn().mockRejectedValue(new ApiHttpError(504, "GATEWAY_TIMEOUT", "timeout")) })} />);
+    await screen.findByText("● Pronto");
+    fireEvent.change(screen.getByLabelText("Tarefa"), { target: { value: "Inspect" } });
+    fireEvent.click(screen.getByRole("button", { name: "Executar com Codex" }));
+    expect(await screen.findByText(/interrompida antes de confirmar o resultado/i)).toBeTruthy();
+    expect(screen.queryByText(/execução com falha permanece/i)).toBeNull();
+  });
+
+  it("renders a large valid output without imposing an arbitrary limit", async () => {
+    const output = `Large plan ${"x".repeat(250_000)}`;
+    render(<ProjectRuntimePanel {...props} service={service({ execute: vi.fn().mockResolvedValue({ ...result, output }) })} />);
+    await screen.findByText("● Pronto");
+    fireEvent.change(screen.getByLabelText("Tarefa"), { target: { value: "Inspect" } });
+    fireEvent.click(screen.getByRole("button", { name: "Executar com Codex" }));
+    expect(await screen.findByText(output)).toBeTruthy();
   });
 
   it("keeps an approved workspace-write result when refresh fails", async () => {
