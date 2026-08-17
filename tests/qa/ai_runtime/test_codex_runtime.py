@@ -245,6 +245,9 @@ def test_reused_process_runner_never_enables_shell(
         return Completed()
 
     monkeypatch.setattr("asep.providers.process.subprocess.run", fake_run)
+    monkeypatch.setattr(
+        "asep.providers.process.shutil.which", lambda _: "resolved-codex"
+    )
 
     ProcessRunner().run(
         ("codex", "exec", "-"),

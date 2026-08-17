@@ -63,6 +63,44 @@ def test_not_authenticated_returns_only_official_instruction(tmp_path: Path) -> 
     assert status.authentication_command == "codex login"
 
 
+def test_resolved_windows_wrapper_is_installed_and_ready(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    resolved = str(tmp_path / "codex.CMD")
+    commands: list[tuple[str, ...]] = []
+    monkeypatch.setattr("asep.providers.process.shutil.which", lambda _: resolved)
+
+    class Completed:
+        returncode = 0
+        stderr = ""
+
+        def __init__(self, stdout: str) -> None:
+            self.stdout = stdout
+
+    def fake_run(command: tuple[str, ...], **kwargs: object) -> Completed:
+        commands.append(command)
+        return Completed(
+            "codex-cli 0.147.0"
+            if command[-1] == "--version"
+            else "Logged in using ChatGPT"
+        )
+
+    monkeypatch.setattr("asep.providers.process.subprocess.run", fake_run)
+
+    status = CodexAIRuntimeDiagnostics(
+        CodexDiagnosticsConfig(working_directory=tmp_path)
+    ).status()
+
+    assert status.state is AIRuntimeConnectionState.READY
+    assert status.installed and status.authenticated and status.ready
+    assert status.version == "0.147.0"
+    assert commands == [
+        (resolved, "--version"),
+        (resolved, "login", "status"),
+    ]
+
+
 @pytest.mark.parametrize("error", [ProcessTimeoutError(10)])
 def test_failure_is_sanitized(tmp_path: Path, error: Exception) -> None:
     status = diagnostics(tmp_path, Runner(error=error)).status()

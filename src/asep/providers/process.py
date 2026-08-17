@@ -65,8 +65,12 @@ class ProcessRunner:
     })
     """Adaptador mínimo sobre subprocess, sem regras de provider."""
 
+    @staticmethod
+    def _resolve_executable(executable: str) -> str | None:
+        return shutil.which(executable)
+
     def is_available(self, executable: str) -> bool:
-        return shutil.which(executable) is not None
+        return self._resolve_executable(executable) is not None
 
     def run(
         self,
@@ -78,6 +82,10 @@ class ProcessRunner:
         environment: Mapping[str, str],
         encoding: str,
     ) -> ProcessResult:
+        resolved_executable = self._resolve_executable(command[0])
+        if resolved_executable is None:
+            raise ProcessExecutableNotFoundError
+        effective_command = (resolved_executable, *command[1:])
         process_environment = {
             key: value
             for key, value in os.environ.items()
@@ -86,7 +94,7 @@ class ProcessRunner:
         process_environment.update(environment)
         try:
             completed = subprocess.run(
-                command,
+                effective_command,
                 input=input_text,
                 capture_output=True,
                 check=False,
