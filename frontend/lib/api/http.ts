@@ -6,6 +6,7 @@ export type HttpRequest = Readonly<{
   headers?: Readonly<Record<string, string>>;
   body?: unknown;
   signal?: AbortSignal;
+  timeoutMs?: number;
 }>;
 
 export type HttpResponse = Readonly<{
@@ -36,6 +37,10 @@ export class FetchHttpTransport implements HttpTransport {
   }
 
   async send(request: HttpRequest): Promise<HttpResponse> {
+    const timeoutMs = request.timeoutMs ?? this.timeoutMs;
+    if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+      throw new RangeError("HTTP timeout must be a positive finite number.");
+    }
     const controller = new AbortController();
     let timedOut = false;
     const forwardAbort = () => controller.abort(request.signal?.reason);
@@ -44,7 +49,7 @@ export class FetchHttpTransport implements HttpTransport {
     const timeout = setTimeout(() => {
       timedOut = true;
       controller.abort();
-    }, this.timeoutMs);
+    }, timeoutMs);
 
     try {
       const response = await fetch(request.url, {
@@ -68,7 +73,7 @@ export class FetchHttpTransport implements HttpTransport {
 
       return { status: response.status, ok: response.ok, body };
     } catch (error) {
-      if (timedOut) throw new HttpTimeoutError(this.timeoutMs, error);
+      if (timedOut) throw new HttpTimeoutError(timeoutMs, error);
       throw error;
     } finally {
       clearTimeout(timeout);

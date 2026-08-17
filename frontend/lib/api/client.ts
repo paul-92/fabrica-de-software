@@ -7,6 +7,7 @@ type ApiRequest = Readonly<{
   method?: HttpMethod;
   body?: unknown;
   signal?: AbortSignal;
+  timeoutMs?: number;
 }>;
 
 type ErrorEnvelope = {
@@ -24,6 +25,7 @@ export class ApiClient {
     method = "GET",
     body,
     signal,
+    timeoutMs,
   }: ApiRequest): Promise<T> {
     try {
       const response = await this.transport.send({
@@ -31,6 +33,7 @@ export class ApiClient {
         method,
         body,
         signal,
+        ...(timeoutMs === undefined ? {} : { timeoutMs }),
       });
       if (!response.ok) {
         if (response.status === 401 && typeof window !== "undefined") window.dispatchEvent(new Event("asep:unauthorized"));

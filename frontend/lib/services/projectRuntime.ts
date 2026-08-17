@@ -2,6 +2,8 @@ import { ApiClient } from "../api/client";
 import type { AIUsageResponseDto } from "../api/dtos";
 import type { AIRuntimeExecutionMode, JsonValue, ProjectAIRuntimeExecutionDto, ProjectEngineeringPreparationDto, ProjectExecutionDto, ProjectSessionDto, SessionMemoryDto, SessionMemoryKind, SessionMemorySearchPageDto, SessionMemorySearchParams } from "../api/dtos";
 
+export const AI_OPERATION_TIMEOUT_MS = 600_000;
+
 export class ProjectRuntimeClient {
   constructor(private readonly api: ApiClient) {}
   execute(projectId: string, request: Readonly<{
@@ -15,13 +17,14 @@ export class ProjectRuntimeClient {
       path: `/api/v1/projects/${encodeURIComponent(projectId)}/ai-runtime/execute`,
       method: "POST",
       body: request,
+      timeoutMs: AI_OPERATION_TIMEOUT_MS,
     });
   }
   prepare(projectId: string, request: Readonly<{ session_id: string; runtime_id: string; instruction: string; execution_mode: "workspace_write" }>): Promise<ProjectEngineeringPreparationDto> {
-    return this.api.request({ path: `/api/v1/projects/${encodeURIComponent(projectId)}/engineering/prepare`, method: "POST", body: request });
+    return this.api.request({ path: `/api/v1/projects/${encodeURIComponent(projectId)}/engineering/prepare`, method: "POST", body: request, timeoutMs: AI_OPERATION_TIMEOUT_MS });
   }
   approve(projectId: string, preparationId: string, request: Readonly<{ session_id: string; runtime_id: string; instruction: string; execution_mode: "workspace_write" }>): Promise<ProjectAIRuntimeExecutionDto> {
-    return this.api.request({ path: `/api/v1/projects/${encodeURIComponent(projectId)}/engineering/${encodeURIComponent(preparationId)}/approve`, method: "POST", body: request });
+    return this.api.request({ path: `/api/v1/projects/${encodeURIComponent(projectId)}/engineering/${encodeURIComponent(preparationId)}/approve`, method: "POST", body: request, timeoutMs: AI_OPERATION_TIMEOUT_MS });
   }
   cancel(projectId: string, preparationId: string, request: Readonly<{ session_id: string; runtime_id: string; instruction: string; execution_mode: "workspace_write" }>): Promise<ProjectExecutionDto> {
     return this.api.request({ path: `/api/v1/projects/${encodeURIComponent(projectId)}/engineering/${encodeURIComponent(preparationId)}/cancel`, method: "POST", body: request });

@@ -75,4 +75,85 @@ describe("FetchHttpTransport", () => {
 
     await rejection;
   });
+
+  it("uses the 10 second default when the request has no override", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("fetch", stalledFetch());
+    const request = new FetchHttpTransport().send({
+      url: "https://platform.example/api/v1/runs",
+      method: "GET",
+    });
+    const rejection = expect(request).rejects.toMatchObject({ timeoutMs: 10_000 });
+
+    await vi.advanceTimersByTimeAsync(9_999);
+    expect(vi.getTimerCount()).toBe(1);
+    await vi.advanceTimersByTimeAsync(1);
+
+    await rejection;
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("uses a per-request timeout override and reports its value", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("fetch", stalledFetch());
+    const request = new FetchHttpTransport(10_000).send({
+      url: "https://platform.example/api/v1/ai-runtime/execute",
+      method: "POST",
+      timeoutMs: 75,
+    });
+    const rejection = expect(request).rejects.toMatchObject({ timeoutMs: 75 });
+
+    await vi.advanceTimersByTimeAsync(75);
+
+    await rejection;
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("preserves external abort semantics and removes its timer", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("fetch", stalledFetch());
+    const controller = new AbortController();
+    const request = new FetchHttpTransport().send({
+      url: "https://platform.example/api/v1/runs",
+      method: "GET",
+      signal: controller.signal,
+    });
+
+    controller.abort(new DOMException("Cancelled", "AbortError"));
+
+    await expect(request).rejects.not.toBeInstanceOf(HttpTimeoutError);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("cleans the timeout after a fast response", async () => {
+    vi.useFakeTimers();
+    const controller = new AbortController();
+    const removeEventListener = vi.spyOn(controller.signal, "removeEventListener");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    ));
+
+    await new FetchHttpTransport().send({
+      url: "https://platform.example/api/v1/runs",
+      method: "GET",
+      timeoutMs: 600_000,
+      signal: controller.signal,
+    });
+
+    expect(vi.getTimerCount()).toBe(0);
+    expect(removeEventListener).toHaveBeenCalledWith("abort", expect.any(Function));
+  });
 });
+
+function stalledFetch() {
+  return vi.fn((_url: string | URL | Request, init?: RequestInit) =>
+    new Promise<Response>((_resolve, reject) => {
+      init?.signal?.addEventListener("abort", () => {
+        reject(new DOMException("Aborted", "AbortError"));
+      });
+    }),
+  );
+}

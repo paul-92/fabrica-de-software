@@ -7,7 +7,7 @@ import { IntelligentEngineeringClient } from "./intelligentEngineering";
 import { MetricsClient } from "./metrics";
 import { RunsClient } from "./runs";
 import { ProjectsClient } from "./projects";
-import { ProjectHistoryClient, ProjectRuntimeClient } from "./projectRuntime";
+import { AI_OPERATION_TIMEOUT_MS, ProjectHistoryClient, ProjectRuntimeClient } from "./projectRuntime";
 import { ProjectWorkspaceClient } from "./projectWorkspace";
 import { AgentsClient } from "./agents";
 
@@ -184,11 +184,12 @@ describe("specialized API clients", () => {
       { url: "https://example.test/api/v1/projects/p%2F1/sessions/s%2F1/memory", method: "GET" },
       { url: "https://example.test/api/v1/projects/p%2F1/sessions/s%2F1/memory/search?text=safe+%25+text&kind=fact&order=oldest&page_size=1&cursor=opaque%2F%2B", method: "GET" },
       { url: "https://example.test/api/v1/projects/p%2F1/sessions/s%2F1/memory", method: "POST", body: { kind: "constraint", content: "Use PostgreSQL for persistence." } },
-      { url: "https://example.test/api/v1/projects/p%2F1/ai-runtime/execute", body: { session_id: "s/1", runtime_id: "codex", instruction: "Inspect" } },
-      { url: "https://example.test/api/v1/projects/p%2F1/engineering/prepare", method: "POST", body: preparedRequest },
-      { url: "https://example.test/api/v1/projects/p%2F1/engineering/prep%2F1/approve", method: "POST", body: preparedRequest },
+      { url: "https://example.test/api/v1/projects/p%2F1/ai-runtime/execute", body: { session_id: "s/1", runtime_id: "codex", instruction: "Inspect" }, timeoutMs: AI_OPERATION_TIMEOUT_MS },
+      { url: "https://example.test/api/v1/projects/p%2F1/engineering/prepare", method: "POST", body: preparedRequest, timeoutMs: AI_OPERATION_TIMEOUT_MS },
+      { url: "https://example.test/api/v1/projects/p%2F1/engineering/prep%2F1/approve", method: "POST", body: preparedRequest, timeoutMs: AI_OPERATION_TIMEOUT_MS },
       { url: "https://example.test/api/v1/projects/p%2F1/engineering/prep%2F1/cancel", method: "POST", body: preparedRequest },
     ]);
+    expect(transport.requests[10]).not.toHaveProperty("timeoutMs");
   });
 
   it("searches session memory without optional parameters and propagates HTTP errors", async () => {

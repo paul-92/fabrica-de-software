@@ -34,6 +34,19 @@ describe("ApiClient", () => {
     expect(transport.requests[0]?.url).toBe(
       "https://platform.example/api/v1/runs",
     );
+    expect(transport.requests[0]).not.toHaveProperty("timeoutMs");
+  });
+
+  it("propagates an explicit per-request timeout to the transport", async () => {
+    const transport = new TransportFake({ status: 200, ok: true, body: { id: 1 } });
+    const client = new ApiClient(
+      { baseUrl: "https://platform.example/api/v1" },
+      transport,
+    );
+
+    await client.request({ path: "/runs", timeoutMs: 600_000 });
+
+    expect(transport.requests[0]).toMatchObject({ timeoutMs: 600_000 });
   });
 
   it("maps the API error envelope to a typed HTTP error", async () => {

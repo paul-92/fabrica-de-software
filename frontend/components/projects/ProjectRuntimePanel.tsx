@@ -10,6 +10,7 @@ import { StatusBadge } from "../StatusBadge";
 import { formatExecutionMode, formatExecutionStatus, formatMemoryKind } from "../../lib/presentation";
 import { ProjectExecutionEvidence } from "./ProjectExecutionEvidence";
 import type { AIUsageResponseDto } from "../../lib/api/dtos";
+import { ApiHttpError, ApiNetworkError, ApiResponseError, ApiTimeoutError } from "../../lib/api/errors";
 
 type Props = { projectId: string; projectName: string; workspaceLabel: string; service?: ProjectRuntimeWorkspaceService; initialSessionId?: string; initialExecutionId?: string; onNavigate?: (sessionId: string, executionId?: string) => void };
 
@@ -118,18 +119,22 @@ export function ProjectRuntimePanel({ projectId, projectName, workspaceLabel, se
 
   async function run() {
     if (submitting || !selectedSession) return;
-    setSubmitting(true); setError(null); setResult(null); setConfirmingWrite(false); setHistoryRefreshError(null); setNavigationError(null);
+    setSubmitting(true); setError(null); setConfirmingWrite(false); setHistoryRefreshError(null); setNavigationError(null);
     let completed: ProjectAIRuntimeExecutionDto;
     try {
       completed = preparation
         ? await api.approve(projectId, preparation.execution_id, selectedSession.session_id, preparation.instruction)
         : await api.execute(projectId, selectedSession.session_id, instruction.trim(), mode);
-    } catch {
-      setError("O Codex não conseguiu concluir a tarefa. A execução com falha permanece no histórico.");
+    } catch (executionError) {
+      setError(executionErrorMessage(executionError));
+      const confirmedFailure = isConfirmedExecutionFailure(executionError);
+      if (confirmedFailure) setResult(null);
       try {
         setHistory(await api.listExecutions(projectId, selectedSession.session_id));
       } catch {
-        setHistoryRefreshError("A execução falhou e o histórico não pôde ser atualizado.");
+        setHistoryRefreshError(confirmedFailure
+          ? "A execução falhou e o histórico não pôde ser atualizado."
+          : "O resultado da execução é incerto e o histórico não pôde ser atualizado.");
       }
       setSubmitting(false);
       return;
@@ -160,11 +165,17 @@ export function ProjectRuntimePanel({ projectId, projectName, workspaceLabel, se
     event.preventDefault(); if (submitting) return;
     if (!instruction.trim()) { setError("Descreva a tarefa antes de executar."); return; }
     if (mode === "workspace_write") {
-      setSubmitting(true); setError(null); setResult(null);
+      setSubmitting(true); setError(null);
       try {
         setPreparation(await api.prepare(projectId, selectedSession!.session_id, instruction.trim()));
         setConfirmingWrite(true);
-      } catch { setError("Não foi possível preparar o plano de engenharia."); }
+      } catch (preparationError) {
+        setError(executionErrorMessage(
+          preparationError,
+          "Não foi possível preparar o plano de engenharia.",
+        ));
+        if (isConfirmedExecutionFailure(preparationError)) setResult(null);
+      }
       finally { setSubmitting(false); }
       return;
     }
@@ -201,6 +212,27 @@ export function ProjectRuntimePanel({ projectId, projectName, workspaceLabel, se
     {selectedExecution ? <Card title="Detalhes da execução" eyebrow={formatExecutionStatus(selectedExecution.status)}><p><strong>Tarefa</strong><br />{selectedExecution.instruction}</p><ProjectExecutionEvidence evidence={selectedExecution} changes={selectedExecution.changes} output={selectedExecution.output} /><ContextUsage count={selectedExecution.context_entry_count} truncated={selectedExecution.context_truncated} charCount={selectedExecution.context_char_count} omittedCount={selectedExecution.context_omitted_execution_count} /><MemoryUsage count={selectedExecution.memory_entry_count} charCount={selectedExecution.memory_char_count} truncated={selectedExecution.memory_truncated} /><dl className="execution-facts"><div><dt>Assistente</dt><dd>{selectedExecution.runtime_id}</dd></div><div><dt>Modelo</dt><dd>{selectedExecution.model ?? "Desconhecido"}</dd></div><div><dt>Modo</dt><dd>{formatExecutionMode(selectedExecution.execution_mode)}</dd></div></dl></Card> : null}
     {selectedExecution ? <ExecutionAIUsage projectId={projectId} executionId={selectedExecution.execution_id} service={api} /> : null}
   </div>;
+}
+
+function executionErrorMessage(
+  error: unknown,
+  httpFallback = "O Codex não conseguiu concluir a tarefa. A execução com falha permanece no histórico.",
+): string {
+  if (error instanceof ApiTimeoutError) {
+    return "A execução está demorando mais que o esperado. Ela pode continuar sendo processada no servidor. Consulte o histórico para verificar o resultado.";
+  }
+  if (error instanceof ApiHttpError) return httpFallback;
+  if (error instanceof ApiResponseError) {
+    return "O servidor retornou uma resposta inválida. Consulte o histórico para confirmar o resultado da execução.";
+  }
+  if (error instanceof ApiNetworkError) {
+    return "A comunicação com o servidor foi interrompida. A execução pode continuar sendo processada. Consulte o histórico para verificar o resultado.";
+  }
+  return httpFallback;
+}
+
+function isConfirmedExecutionFailure(error: unknown): boolean {
+  return error instanceof ApiHttpError || !(error instanceof ApiNetworkError || error instanceof ApiResponseError);
 }
 
 function ExecutionAIUsage({ projectId, executionId, service }: { projectId: string; executionId: string; service: ProjectRuntimeWorkspaceService }) {

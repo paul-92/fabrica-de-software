@@ -3,6 +3,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ProjectAIRuntimeExecutionDto, ProjectExecutionDto, SessionMemoryKind } from "../../lib/api/dtos";
 import type { ProjectRuntimeWorkspaceService } from "../../lib/services/projectRuntimeWorkspace";
+import { ApiHttpError, ApiNetworkError, ApiTimeoutError } from "../../lib/api/errors";
 import { ProjectRuntimePanel } from "./ProjectRuntimePanel";
 
 afterEach(cleanup);
@@ -148,7 +149,7 @@ describe("ProjectRuntimePanel", () => {
   });
 
   it("reports a real execute failure without inventing a successful result", async () => {
-    const execute = vi.fn().mockRejectedValue(new Error("runtime failed"));
+    const execute = vi.fn().mockRejectedValue(new ApiHttpError(500, "RUNTIME_FAILED", "runtime failed"));
     render(<ProjectRuntimePanel {...props} service={service({ execute })} />);
     await screen.findByText("● Pronto");
     fireEvent.change(screen.getByLabelText("Tarefa"), { target: { value: "Inspect" } });
@@ -156,6 +157,67 @@ describe("ProjectRuntimePanel", () => {
 
     expect(await screen.findByText(/O Codex não conseguiu concluir/)).toBeTruthy();
     expect(screen.queryByText("Project structure")).toBeNull();
+  });
+
+  it("reports an uncertain state on execute timeout and preserves a known result", async () => {
+    const execute = vi.fn()
+      .mockResolvedValueOnce(result)
+      .mockRejectedValueOnce(new ApiTimeoutError(600_000, new Error("abort")));
+    const listExecutions = vi.fn().mockResolvedValue([]);
+    render(<ProjectRuntimePanel {...props} service={service({ execute, listExecutions })} />);
+    await screen.findByText("● Pronto");
+    fireEvent.change(screen.getByLabelText("Tarefa"), { target: { value: "Inspect" } });
+    fireEvent.click(screen.getByRole("button", { name: "Executar com Codex" }));
+    expect(await screen.findByText("Project structure")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Executar com Codex" }));
+
+    expect(await screen.findByText(/pode continuar sendo processada no servidor/i)).toBeTruthy();
+    expect(screen.getByText("Project structure")).toBeTruthy();
+    expect(screen.queryByText(/execução com falha permanece/i)).toBeNull();
+    expect(listExecutions).toHaveBeenCalledTimes(3);
+  });
+
+  it("reports an uncertain state when the network is interrupted", async () => {
+    const execute = vi.fn().mockRejectedValue(
+      new ApiNetworkError("offline", new TypeError("network")),
+    );
+    render(<ProjectRuntimePanel {...props} service={service({ execute })} />);
+    await screen.findByText("● Pronto");
+    fireEvent.change(screen.getByLabelText("Tarefa"), { target: { value: "Inspect" } });
+    fireEvent.click(screen.getByRole("button", { name: "Executar com Codex" }));
+
+    expect(await screen.findByText(/comunicação com o servidor foi interrompida/i)).toBeTruthy();
+    expect(screen.queryByText(/execução com falha permanece/i)).toBeNull();
+  });
+
+  it("uses uncertain timeout semantics while preparing workspace-write", async () => {
+    const prepare = vi.fn().mockRejectedValue(
+      new ApiTimeoutError(600_000, new Error("abort")),
+    );
+    render(<ProjectRuntimePanel {...props} service={service({ prepare })} />);
+    await screen.findByText("● Pronto");
+    fireEvent.click(screen.getByLabelText("Permitir alterações no projeto"));
+    fireEvent.change(screen.getByLabelText("Tarefa"), { target: { value: "Write safely" } });
+    fireEvent.click(screen.getByRole("button", { name: "Preparar plano" }));
+
+    expect(await screen.findByText(/pode continuar sendo processada no servidor/i)).toBeTruthy();
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+  });
+
+  it("uses uncertain timeout semantics after workspace-write approval", async () => {
+    const approve = vi.fn().mockRejectedValue(
+      new ApiTimeoutError(600_000, new Error("abort")),
+    );
+    render(<ProjectRuntimePanel {...props} service={service({ approve })} />);
+    await screen.findByText("● Pronto");
+    fireEvent.click(screen.getByLabelText("Permitir alterações no projeto"));
+    fireEvent.change(screen.getByLabelText("Tarefa"), { target: { value: "Write safely" } });
+    fireEvent.click(screen.getByRole("button", { name: "Preparar plano" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Aprovar e executar" }));
+
+    expect(await screen.findByText(/pode continuar sendo processada no servidor/i)).toBeTruthy();
+    expect(screen.queryByText(/execução com falha permanece/i)).toBeNull();
   });
 
   it("keeps an approved workspace-write result when refresh fails", async () => {
