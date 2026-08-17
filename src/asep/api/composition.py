@@ -320,6 +320,7 @@ def _create_configured_app(
     sequential_quality_gate_service: SequentialQualityGateQueryService | None = None,
     repositories: RepositoryBundle | None = None,
     project_services: _ProjectApplicationServices | None = None,
+    include_project_engineering_execution: bool = False,
 ) -> FastAPI:
     repositories = repositories or RepositoryFactory(settings).create()
     query_service = RunQueryService(
@@ -331,7 +332,9 @@ def _create_configured_app(
         DeclarativeAgentCatalogSource(settings.agent_catalog_directory)
     )
     project_services = project_services or _create_project_application_services(
-        repositories, settings=settings
+        repositories,
+        settings=settings,
+        include_engineering_execution=include_project_engineering_execution,
     )
     intelligent_engineering_service = _create_intelligent_engineering_service(
         settings,
@@ -408,7 +411,10 @@ def create_default_app(
     repository_settings: ApplicationSettings | None = None,
 ) -> FastAPI:
     settings = repository_settings or Configuration.load()
-    return _create_configured_app(settings)
+    return _create_configured_app(
+        settings,
+        include_project_engineering_execution=True,
+    )
 
 
 def create_trusted_branding_administration_composition(

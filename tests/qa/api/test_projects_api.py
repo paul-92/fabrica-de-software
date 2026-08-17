@@ -6,6 +6,50 @@ from asep.api import create_default_app
 from asep.configuration import ApplicationSettings
 
 
+def test_default_app_publishes_project_engineering_routes(tmp_path: Path) -> None:
+    app = create_default_app(ApplicationSettings(hosted_root=tmp_path / "hosted"))
+    paths = app.openapi()["paths"]
+
+    expected_operations = {
+        "/api/v1/projects/{project_id}/engineering/prepare": "post",
+        "/api/v1/projects/{project_id}/engineering/{preparation_id}/approve": "post",
+        "/api/v1/projects/{project_id}/engineering/{preparation_id}/cancel": "post",
+    }
+    for path, method in expected_operations.items():
+        assert method in paths[path]
+
+
+def test_default_app_prepares_engineering_for_empty_workspace(
+    tmp_path: Path,
+) -> None:
+    client = TestClient(
+        create_default_app(ApplicationSettings(hosted_root=tmp_path / "hosted"))
+    )
+    project = client.post("/api/v1/projects", json={"name": "Empty"}).json()
+    project_id = project["project_id"]
+    session = client.post(
+        f"/api/v1/projects/{project_id}/sessions",
+        json={"title": "Plan"},
+    ).json()
+
+    response = client.post(
+        f"/api/v1/projects/{project_id}/engineering/prepare",
+        json={
+            "session_id": session["session_id"],
+            "runtime_id": "codex",
+            "instruction": "Create the initial project structure.",
+            "execution_mode": "workspace_write",
+        },
+    )
+
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["project_id"] == project_id
+    assert body["session_id"] == session["session_id"]
+    assert body["status"] == "pending"
+    assert body["operational_plan"]["steps"]
+
+
 def test_project_http_round_trip(tmp_path: Path) -> None:
     hosted_root = tmp_path / "hosted"
     client = TestClient(create_default_app(ApplicationSettings(hosted_root=hosted_root)))

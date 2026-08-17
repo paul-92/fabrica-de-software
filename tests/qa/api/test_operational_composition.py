@@ -109,6 +109,10 @@ def test_operational_compositions_are_isolated(tmp_path: Path) -> None:
 
     assert runtime_count(first_client) == 4
     assert runtime_count(second_client) == 0
+    assert (
+        "/api/v1/projects/{project_id}/engineering/prepare"
+        not in first.app.openapi()["paths"]
+    )
 
 
 def test_default_app_remains_non_operational_and_source_compatible() -> None:
