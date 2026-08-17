@@ -107,6 +107,85 @@ describe("ProjectRuntimePanel", () => {
     expect(screen.queryByText(/Usando contexto de/)).toBeNull();
   });
 
+  it("keeps a successful execution when history refresh succeeds", async () => {
+    const listExecutions = vi.fn().mockResolvedValue([]);
+    render(<ProjectRuntimePanel {...props} service={service({ listExecutions })} />);
+    await screen.findByText("● Pronto");
+    fireEvent.change(screen.getByLabelText("Tarefa"), { target: { value: "Inspect" } });
+    fireEvent.click(screen.getByRole("button", { name: "Executar com Codex" }));
+
+    expect(await screen.findByText("Project structure")).toBeTruthy();
+    expect(listExecutions).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText(/O Codex não conseguiu concluir/)).toBeNull();
+  });
+
+  it("keeps a successful execution visible when history refresh fails", async () => {
+    const listExecutions = vi.fn()
+      .mockResolvedValueOnce([])
+      .mockRejectedValueOnce(new Error("history offline"));
+    render(<ProjectRuntimePanel {...props} service={service({ listExecutions })} />);
+    await screen.findByText("● Pronto");
+    fireEvent.change(screen.getByLabelText("Tarefa"), { target: { value: "Inspect" } });
+    fireEvent.click(screen.getByRole("button", { name: "Executar com Codex" }));
+
+    expect(await screen.findByText("Project structure")).toBeTruthy();
+    expect(await screen.findByText(/execução foi concluída, mas o histórico/i)).toBeTruthy();
+    expect(screen.queryByText(/O Codex não conseguiu concluir/)).toBeNull();
+  });
+
+  it("keeps a successful execution visible when memory refresh fails", async () => {
+    const listMemory = vi.fn()
+      .mockResolvedValueOnce([])
+      .mockRejectedValueOnce(new Error("memory offline"));
+    render(<ProjectRuntimePanel {...props} service={service({ listMemory })} />);
+    await screen.findByText("● Pronto");
+    fireEvent.change(screen.getByLabelText("Tarefa"), { target: { value: "Inspect" } });
+    fireEvent.click(screen.getByRole("button", { name: "Executar com Codex" }));
+
+    expect(await screen.findByText("Project structure")).toBeTruthy();
+    expect(await screen.findByText(/execução foi concluída, mas a memória/i)).toBeTruthy();
+    expect(screen.queryByText(/O Codex não conseguiu concluir/)).toBeNull();
+  });
+
+  it("reports a real execute failure without inventing a successful result", async () => {
+    const execute = vi.fn().mockRejectedValue(new Error("runtime failed"));
+    render(<ProjectRuntimePanel {...props} service={service({ execute })} />);
+    await screen.findByText("● Pronto");
+    fireEvent.change(screen.getByLabelText("Tarefa"), { target: { value: "Inspect" } });
+    fireEvent.click(screen.getByRole("button", { name: "Executar com Codex" }));
+
+    expect(await screen.findByText(/O Codex não conseguiu concluir/)).toBeTruthy();
+    expect(screen.queryByText("Project structure")).toBeNull();
+  });
+
+  it("keeps an approved workspace-write result when refresh fails", async () => {
+    const listExecutions = vi.fn()
+      .mockResolvedValueOnce([])
+      .mockRejectedValueOnce(new Error("history offline"));
+    render(<ProjectRuntimePanel {...props} service={service({ listExecutions })} />);
+    await screen.findByText("● Pronto");
+    fireEvent.click(screen.getByLabelText("Permitir alterações no projeto"));
+    fireEvent.change(screen.getByLabelText("Tarefa"), { target: { value: "Write safely" } });
+    fireEvent.click(screen.getByRole("button", { name: "Preparar plano" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Aprovar e executar" }));
+
+    expect(await screen.findByText("Project structure")).toBeTruthy();
+    expect(await screen.findByText(/execução foi concluída, mas o histórico/i)).toBeTruthy();
+    expect(screen.queryByText(/O Codex não conseguiu concluir/)).toBeNull();
+  });
+
+  it("keeps a successful result when navigation fails", async () => {
+    const onNavigate = vi.fn(() => { throw new Error("navigation failed"); });
+    render(<ProjectRuntimePanel {...props} service={service()} onNavigate={onNavigate} />);
+    await screen.findByText("● Pronto");
+    fireEvent.change(screen.getByLabelText("Tarefa"), { target: { value: "Inspect" } });
+    fireEvent.click(screen.getByRole("button", { name: "Executar com Codex" }));
+
+    expect(await screen.findByText("Project structure")).toBeTruthy();
+    expect(await screen.findByText(/execução foi concluída, mas a navegação/i)).toBeTruthy();
+    expect(screen.queryByText(/O Codex não conseguiu concluir/)).toBeNull();
+  });
+
   it("preserves input after failure and allows retry", async () => {
     const execute = vi.fn().mockRejectedValueOnce(new Error()).mockResolvedValueOnce(result);
     render(<ProjectRuntimePanel {...props} service={service({ execute })} />);
