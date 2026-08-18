@@ -276,6 +276,7 @@ class ProjectExecution(BaseModel):
     changes: tuple[WorkspaceChange, ...] = ()
     error_code: str | None = None
     dependency_requests: tuple[dict, ...] = ()
+    dependency_plan: dict | None = None
     sprint_id: str | None = None
     sprint_name: str | None = None
     engineering_phase: str | None = None

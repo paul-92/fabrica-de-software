@@ -38,7 +38,7 @@ from asep.application.session_memory import (
     serialize_session_memory_context,
 )
 from asep.application.workspace_changes import WorkspaceChange, WorkspaceSnapshotter
-from asep.dependency_provisioning import ControlledDependencyBrokerRunner, ProjectDependencyProvisioningService, SQLiteDependencyRequestRepository, DependencyRequestDecision, SQLiteProvisioningEvidenceRepository, ProvisioningEvidence, DependencyProvisioningStatus
+from asep.dependency_provisioning import ControlledDependencyBrokerRunner, ProjectDependencyProvisioningService, SQLiteDependencyRequestRepository, DependencyRequestDecision, SQLiteProvisioningEvidenceRepository, ProvisioningEvidence, DependencyProvisioningStatus, DependencyPlan, DependencyPlanItem
 from asep.application.project_engineering_planning import BoundedProjectAnalysis
 from asep.projects import (
     ProjectExecution,
@@ -301,6 +301,75 @@ class ProjectAIRuntimeExecutionService:
         if admission is not None: self._quotas.reconcile(admission)
         return plan
 
+    def _dependency_plan(self, execution: ProjectExecution, workspace: Path) -> DependencyPlan:
+        candidates: list[DependencyPlanItem] = []
+        structured_sources=(
+            (workspace/".asep"/"dependency-baseline.json","baseline"),
+            (workspace/".asep"/"approved-adrs.json","adr"),
+            (workspace/".asep"/"sprint-preparation.json","sprint_preparation"),
+        )
+        for source_path, source in structured_sources:
+            if not source_path.is_file():
+                continue
+            try:
+                document=json.loads(source_path.read_text(encoding="utf-8"))
+                if document.get("status")!="approved" or not isinstance(document.get("dependencies"),list):
+                    continue
+                for item in document["dependencies"]:
+                    candidates.append(DependencyPlanItem(
+                        ecosystem=item.get("ecosystem","node"),package=item["package"],
+                        requested_version=item.get("requested_version"),reason=item["reason"],
+                        source=source,source_reference=item.get("source_reference") or source_path.name,
+                    ))
+            except (OSError,json.JSONDecodeError,KeyError,TypeError,ValueError) as exc:
+                raise RuntimeError("dependency_plan_invalid_structured_source") from exc
+        for item in execution.dependency_requests:
+            candidates.append(DependencyPlanItem(
+                ecosystem=item.get("ecosystem", "node"), package=item["package"],
+                requested_version=item["requested_version"], reason=item["reason"],
+                source="sprint_preparation", source_reference=execution.sprint_id,
+            ))
+        manifest = workspace / "package.json"
+        if manifest.is_file():
+            try:
+                payload = json.loads(manifest.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                raise RuntimeError("dependency_plan_invalid_workspace_source") from exc
+            for field in ("dependencies", "devDependencies", "optionalDependencies"):
+                values = payload.get(field, {})
+                if not isinstance(values, dict):
+                    raise RuntimeError("dependency_plan_invalid_workspace_source")
+                for package, version in values.items():
+                    candidates.append(DependencyPlanItem(
+                        package=package, requested_version=version,
+                        reason=f"Declared in package.json {field}",
+                        source="workspace_analysis", source_reference=f"package.json#{field}",
+                    ))
+        unique: dict[tuple[str, str, str | None, str], DependencyPlanItem] = {}
+        for item in candidates:
+            key=(item.ecosystem,item.package,item.requested_version,"https://registry.npmjs.org/")
+            unique[key]=item
+        planned=[]
+        for item in unique.values():
+            if not item.requested_version:
+                planned.append(item.model_copy(update={"status":"version_selection_required"}))
+                continue
+            request_id=None; status="pending"
+            if self._dependency_requests is not None:
+                matches=[stored for stored in self._dependency_requests.list(execution.project_id)
+                         if stored.ecosystem==item.ecosystem and stored.package==item.package
+                         and stored.requested_version==item.requested_version]
+                stored=(matches[-1] if matches else self._dependency_requests.create(
+                    project_id=execution.project_id,session_id=execution.session_id,
+                    execution_id=execution.execution_id,package=item.package,
+                    requested_version=item.requested_version,reason=item.reason,
+                    registry="https://registry.npmjs.org/"))
+                request_id=stored.request_id; status=stored.status.value
+            planned.append(item.model_copy(update={"dependency_request_id":request_id,"status":status}))
+        return DependencyPlan(project_id=execution.project_id,preparation_id=execution.execution_id,
+                              sprint_id=execution.sprint_id,engineering_phase=execution.engineering_phase,
+                              items=tuple(planned),created_at=self._clock())
+
     def prepare(
         self, request: ProjectAIRuntimeExecutionRequest,
     ) -> ProjectExecution:
@@ -338,12 +407,21 @@ class ProjectAIRuntimeExecutionService:
         )
         analysis = self._engineering_planning.analyze(project.workspace_path)
         plan = self._plan(execution, analysis, session_context, memory_context, request.principal)
+        dependency_plan = self._dependency_plan(execution, project.workspace_path)
+        if request.engineering_phase is EngineeringPhase.DEVELOPMENT and not dependency_plan.items and not (project.workspace_path / "package.json").is_file():
+            raise RuntimeError("dependency_plan_missing_source")
         after = self._snapshotter.capture(project.workspace_path)
         if self._snapshotter.changes(before, after):
             raise RuntimeError("planning mutated the workspace")
         prepared = ProjectExecution.model_validate({
             **execution.model_dump(mode="python"),
             "operational_plan": plan,
+            "dependency_plan": dependency_plan.model_dump(mode="json"),
+            "dependency_requests": tuple({
+                "ecosystem": item.ecosystem, "package": item.package,
+                "requested_version": item.requested_version, "reason": item.reason,
+                "registry": "https://registry.npmjs.org/",
+            } for item in dependency_plan.items if item.requested_version is not None),
             "preparation_analysis": analysis.model_dump(mode="json"),
             "preparation_workspace_fingerprint": self._snapshot_fingerprint(after),
             "preparation_context_fingerprint": self._context_fingerprint(

@@ -118,6 +118,7 @@ class ProjectEngineeringPreparationResponse(ProjectHttpSchema):
     status: str
     analysis: dict[str, Any]
     operational_plan: "OperationalPlanResponse"
+    dependency_plan: dict[str, Any]
     created_at: datetime
 
 
@@ -369,6 +370,7 @@ class ProjectExecutionResponse(ProjectHttpSchema):
     step_results: tuple[ProjectEngineeringStepResultResponse, ...]
     idempotent_noop_evidence: ProjectIdempotentNoOpEvidenceResponse | None
     dependency_requests: tuple[dict[str, Any], ...] = ()
+    dependency_plan: dict[str, Any] | None = None
     sprint_id: str | None = None
     sprint_name: str | None = None
     engineering_phase: str | None = None

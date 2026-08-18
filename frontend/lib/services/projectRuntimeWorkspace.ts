@@ -8,6 +8,8 @@ export interface ProjectRuntimeWorkspaceService {
   prepare(projectId: string, sessionId: string, instruction: string, context?:StructuredEngineeringContextDto): Promise<ProjectEngineeringPreparationDto>;
   approve(projectId: string, preparationId: string, sessionId: string, instruction: string, context?:StructuredEngineeringContextDto): Promise<ProjectAIRuntimeExecutionDto>;
   cancel(projectId: string, preparationId: string, sessionId: string, instruction: string): Promise<ProjectExecutionDto>;
+  approveDependency(projectId:string,requestId:string):Promise<unknown>;
+  rejectDependency(projectId:string,requestId:string):Promise<unknown>;
   listSessions(projectId: string): Promise<readonly ProjectSessionDto[]>;
   createSession(projectId: string, title: string): Promise<ProjectSessionDto>;
   listExecutions(projectId: string, sessionId: string): Promise<readonly ProjectExecutionDto[]>;
@@ -31,6 +33,8 @@ export function createProjectRuntimeWorkspaceService(
     prepare: (projectId, sessionId, instruction, context={}) => get().projectRuntime.prepare(projectId, { session_id: sessionId, runtime_id: "codex", instruction, execution_mode: "workspace_write", ...context }),
     approve: (projectId, preparationId, sessionId, instruction, context={}) => get().projectRuntime.approve(projectId, preparationId, { session_id: sessionId, runtime_id: "codex", instruction, execution_mode: "workspace_write", ...context }),
     cancel: (projectId, preparationId, sessionId, instruction) => get().projectRuntime.cancel(projectId, preparationId, { session_id: sessionId, runtime_id: "codex", instruction, execution_mode: "workspace_write" }),
+    approveDependency: (projectId,requestId) => get().projectRuntime.approveDependency(projectId,requestId),
+    rejectDependency: (projectId,requestId) => get().projectRuntime.rejectDependency(projectId,requestId),
     listSessions: (projectId) => get().projectHistory.listSessions(projectId),
     createSession: (projectId, title) => get().projectHistory.createSession(projectId, title),
     listExecutions: (projectId, sessionId) => get().projectHistory.listSessionExecutions(projectId, sessionId),

@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from uuid import uuid4
 from enum import StrEnum
 from pathlib import Path
-from typing import Mapping, Protocol
+from typing import Literal, Mapping, Protocol
 from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict
@@ -27,6 +27,20 @@ class StructuredDependencyRequest(BaseModel):
     model_config=ConfigDict(extra="forbid", frozen=True)
     package:str; version:str; reason:str; ecosystem:str="node"
     status:DependencyProvisioningStatus=DependencyProvisioningStatus.APPROVAL_REQUIRED
+
+class DependencyPlanItem(BaseModel):
+    model_config=ConfigDict(extra="forbid", frozen=True)
+    ecosystem:str="node"; package:str; requested_version:str|None; reason:str
+    source:Literal["baseline","adr","sprint_preparation","workspace_analysis"]
+    source_reference:str|None=None; required:bool=True
+    status:Literal["pending","approved","rejected","version_selection_required"]="pending"
+    dependency_request_id:str|None=None
+
+class DependencyPlan(BaseModel):
+    model_config=ConfigDict(extra="forbid", frozen=True)
+    project_id:str; preparation_id:str; sprint_id:str|None=None
+    engineering_phase:str|None=None; items:tuple[DependencyPlanItem,...]=()
+    created_at:datetime; version:int=1
 
 class DependencyRequestDecision(StrEnum): PENDING="pending"; APPROVED="approved"; REJECTED="rejected"
 class StoredDependencyRequest(BaseModel):
@@ -254,5 +268,6 @@ class ProjectDependencyProvisioningService:
 __all__ = [
     "DependencyProvisioningBlockedError", "DependencyProvisioningEvidence",
     "DependencyProvisioningMode", "DependencyProvisioningPreparation",
+    "DependencyPlan", "DependencyPlanItem",
     "ProjectDependencyProvisioningService", "DependencyProvisioningStatus", "StructuredDependencyRequest", "DependencyBrokerRunner", "ControlledDependencyBrokerRunner",
 ]

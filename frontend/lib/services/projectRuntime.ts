@@ -29,6 +29,12 @@ export class ProjectRuntimeClient {
   cancel(projectId: string, preparationId: string, request: Readonly<{ session_id: string; runtime_id: string; instruction: string; execution_mode: "workspace_write" }>): Promise<ProjectExecutionDto> {
     return this.api.request({ path: `/api/v1/projects/${encodeURIComponent(projectId)}/engineering/${encodeURIComponent(preparationId)}/cancel`, method: "POST", body: request });
   }
+  approveDependency(projectId: string, requestId: string, expectedVersion = 1): Promise<unknown> {
+    return this.api.request({ path: `/api/v1/projects/${encodeURIComponent(projectId)}/dependency-requests/${encodeURIComponent(requestId)}/approve`, method: "POST", body: { expected_version: expectedVersion } });
+  }
+  rejectDependency(projectId: string, requestId: string, expectedVersion = 1): Promise<unknown> {
+    return this.api.request({ path: `/api/v1/projects/${encodeURIComponent(projectId)}/dependency-requests/${encodeURIComponent(requestId)}/reject`, method: "POST", body: { expected_version: expectedVersion } });
+  }
 }
 
 type SessionsResponse = Readonly<{ items: readonly ProjectSessionDto[] }>;

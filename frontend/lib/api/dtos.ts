@@ -141,7 +141,20 @@ export type ProjectEngineeringPreparationDto = Readonly<{
     test_file_count: number;
   }>;
   operational_plan: ProjectOperationalPlanDto;
+  dependency_plan: DependencyPlanDto;
   created_at: string;
+}>;
+export type DependencyPlanItemDto = Readonly<{
+  ecosystem: "node"; package: string; requested_version?: string | null; reason: string;
+  source: "baseline" | "adr" | "sprint_preparation" | "workspace_analysis";
+  source_reference?: string | null; required: boolean;
+  status: "pending" | "approved" | "rejected" | "version_selection_required";
+  dependency_request_id?: string | null;
+}>;
+export type DependencyPlanDto = Readonly<{
+  project_id: string; preparation_id: string; sprint_id?: string | null;
+  engineering_phase?: EngineeringPhaseDto | null; items: readonly DependencyPlanItemDto[];
+  created_at: string; version: number;
 }>;
 export type AIRuntimeStatusDto = Readonly<{
   runtime_id: string;
@@ -221,6 +234,7 @@ export type ProjectExecutionDto = Readonly<{
   usage: ProjectAIRuntimeExecutionDto["usage"];
   changes: readonly WorkspaceChangeDto[];
   error_code: string | null;
+  dependency_plan?: DependencyPlanDto | null;
   context_entry_count: number;
   context_truncated: boolean;
   context_char_count: number;

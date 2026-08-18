@@ -148,7 +148,19 @@ class ProjectEngineeringExecutionService:
     def prepare(self, request: ProjectAIRuntimeExecutionRequest) -> ProjectExecution:
         if request.execution_mode is not AIRuntimeExecutionMode.WORKSPACE_WRITE:
             raise ValueError("project engineering preparation requires workspace_write mode")
-        prepared=self._runtime_execution.prepare(request)
+        try:
+            prepared=self._runtime_execution.prepare(request)
+        except RuntimeError as error:
+            if str(error)=="dependency_plan_missing_source" and self._lifecycle is not None:
+                state=self._lifecycle.get(request.project_id)
+                self._lifecycle.transition(
+                    request.project_id,to_phase=ProjectPhase.DEVELOPMENT,
+                    status=ProjectPhaseStatus.BLOCKED,reason_code="dependency_plan_missing_source",
+                    expected_version=state.version,current_sprint=request.sprint_name,
+                    blocker="Dependências aguardando revisão",
+                    next_action="Defina ou aprove a stack técnica na preparação da sprint.",
+                )
+            raise
         if self._lifecycle is not None:
             state=self._lifecycle.get(request.project_id); sprint=f"{request.sprint_id} — {request.sprint_name}" if request.sprint_id and request.sprint_name else request.sprint_name
             self._lifecycle.transition(request.project_id,to_phase=ProjectPhase.DEVELOPMENT,status=ProjectPhaseStatus.PENDING,reason_code="preparation_created",expected_version=state.version,current_sprint=sprint,source_execution_id=prepared.execution_id)

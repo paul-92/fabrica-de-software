@@ -18,6 +18,8 @@ function runtimeService(): ProjectRuntimeWorkspaceService {
     prepare: vi.fn(),
     approve: vi.fn(),
     cancel: vi.fn(),
+    approveDependency: vi.fn(),
+    rejectDependency: vi.fn(),
     listSessions: vi.fn().mockResolvedValue([]),
     createSession: vi.fn(),
     listExecutions: vi.fn().mockResolvedValue([]),

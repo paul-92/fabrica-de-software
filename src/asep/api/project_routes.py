@@ -244,6 +244,7 @@ def create_projects_router(
                     operational_plan=OperationalPlanResponse.from_domain(
                         prepared.operational_plan
                     ),
+                    dependency_plan=prepared.dependency_plan or {},
                     created_at=prepared.created_at,
                 )
 
