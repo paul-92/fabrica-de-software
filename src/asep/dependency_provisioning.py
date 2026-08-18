@@ -184,6 +184,47 @@ class ProjectDependencyProvisioningService:
         except Exception as exc: raise DependencyProvisioningBlockedError(DependencyProvisioningStatus.FAILED.value) from exc
         return prepared.model_copy(update={"evidence":prepared.evidence.model_copy(update={"mode":DependencyProvisioningMode.ONLINE_CONTROLLED,"status":DependencyProvisioningStatus.PROVISIONED})})
 
+    def provision_requests(self, workspace: Path, runner: DependencyBrokerRunner, *,
+                           requests: tuple[Mapping[str, str], ...], timeout: float = 300.0
+                           ) -> DependencyProvisioningPreparation:
+        """Populate the confined npm cache from already-approved structured requests."""
+        root = workspace.expanduser().resolve()
+        registry = self._validate_registry(requests[0].get("registry") or self._registries[0])
+        if registry not in self._registries:
+            raise DependencyProvisioningBlockedError("dependency_policy_blocked")
+        runtime = (root / ".asep" / "runtime").resolve()
+        runtime.relative_to(root)
+        npm_cache = runtime / "npm-cache"
+        npm_cache.mkdir(parents=True, exist_ok=True)
+        environment = {
+            "NPM_CONFIG_CACHE": str(npm_cache),
+            "NPM_CONFIG_REGISTRY": registry,
+            "NPM_CONFIG_IGNORE_SCRIPTS": "true",
+        }
+        specs = tuple(f'{item["package"]}@{item["requested_version"]}' for item in requests)
+        try:
+            for spec in specs:
+                result = runner.run(("npm", "cache", "add", spec, "--ignore-scripts"),
+                                    working_directory=root, environment=environment, timeout=timeout)
+                if result.exit_code != 0:
+                    status = (DependencyProvisioningStatus.REGISTRY_UNAVAILABLE
+                              if any(token in result.stderr.casefold() for token in ("enotfound", "econn", "timeout"))
+                              else DependencyProvisioningStatus.FAILED)
+                    raise DependencyProvisioningBlockedError(status.value)
+        except DependencyProvisioningBlockedError:
+            raise
+        except Exception as exc:
+            raise DependencyProvisioningBlockedError(DependencyProvisioningStatus.FAILED.value) from exc
+        return DependencyProvisioningPreparation(
+            environment=environment,
+            evidence=DependencyProvisioningEvidence(
+                ecosystem="node", package_manager="npm", registry=registry,
+                mode=DependencyProvisioningMode.ONLINE_CONTROLLED,
+                dependencies_resolved=tuple(item["package"] for item in requests),
+                succeeded=True, status=DependencyProvisioningStatus.PROVISIONED,
+            ),
+        )
+
     @classmethod
     def _declared_dependencies(cls, manifest: object) -> tuple[str, ...]:
         if not isinstance(manifest, dict):

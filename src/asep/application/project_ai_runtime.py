@@ -206,19 +206,47 @@ class ProjectAIRuntimeExecutionService:
         trusted_org = principal.organization_id if principal else LEGACY_ORGANIZATION_ID
         admission = self._quotas.admit(trusted_org, trusted_user) if self._quotas else None
         try:
-            if runtime_request.execution_mode is AIRuntimeExecutionMode.WORKSPACE_WRITE and runtime_request.workspace is not None and (runtime_request.workspace / "package.json").is_file():
+            is_workspace_write = runtime_request.execution_mode is AIRuntimeExecutionMode.WORKSPACE_WRITE
+            has_manifest = runtime_request.workspace is not None and (runtime_request.workspace / "package.json").is_file()
+            if is_workspace_write and execution.engineering_phase == "development" and not execution.dependency_requests and runtime_request.workspace is not None and not has_manifest:
+                raise RuntimeError("dependency_missing_structured_declaration")
+            if is_workspace_write and runtime_request.workspace is not None and execution.dependency_requests:
                 for requested in execution.dependency_requests:
-                    if self._dependency_requests is None: raise RuntimeError("dependency_approval_required")
-                    matches=[item for item in self._dependency_requests.list(execution.project_id) if item.package==requested["package"] and item.requested_version==requested["requested_version"]]
+                    if self._dependency_requests is None:
+                        raise RuntimeError("dependency_approval_required")
+                    matches = [item for item in self._dependency_requests.list(execution.project_id)
+                               if item.ecosystem == requested.get("ecosystem", "node")
+                               and item.package == requested["package"]
+                               and item.requested_version == requested["requested_version"]
+                               and item.registry == (requested.get("registry") or "https://registry.npmjs.org/")]
                     if not matches:
                         self._dependency_requests.create(project_id=execution.project_id,session_id=execution.session_id,execution_id=execution.execution_id,package=requested["package"],requested_version=requested["requested_version"],reason=requested["reason"],registry=requested.get("registry") or "https://registry.npmjs.org/")
                         raise RuntimeError("dependency_approval_required")
-                    if matches[-1].status is not DependencyRequestDecision.APPROVED: raise RuntimeError("dependency_approval_required" if matches[-1].status is DependencyRequestDecision.PENDING else "dependency_policy_blocked")
+                    if matches[-1].status is not DependencyRequestDecision.APPROVED:
+                        raise RuntimeError("dependency_approval_required" if matches[-1].status is DependencyRequestDecision.PENDING else "dependency_policy_blocked")
                 if self._dependency_provisioning is None or self._dependency_broker is None:
                     raise RuntimeError("dependency_provisioning_failed")
-                self._dependency_provisioning.provision_node(runtime_request.workspace, self._dependency_broker)
+                if has_manifest:
+                    self._dependency_provisioning.provision_node(runtime_request.workspace, self._dependency_broker)
+                else:
+                    self._dependency_provisioning.provision_requests(
+                        runtime_request.workspace, self._dependency_broker,
+                        requests=execution.dependency_requests,
+                    )
                 if self._provisioning_evidence is not None:
                     self._provisioning_evidence.save(ProvisioningEvidence(evidence_id=str(uuid4()),execution_id=execution.execution_id,project_id=execution.project_id,package_manager="node",registry="https://registry.npmjs.org/",status=DependencyProvisioningStatus.PROVISIONED,created_at=started,completed_at=self._clock()))
+            evidence = (() if self._provisioning_evidence is None else
+                        self._provisioning_evidence.for_execution(execution.project_id, execution.execution_id))
+            runtime_request = runtime_request.model_copy(update={"metadata": {
+                **dict(runtime_request.metadata), "project_id": execution.project_id,
+                "execution_id": execution.execution_id,
+                "preparation_id": execution.execution_id if execution.operational_plan is not None else None,
+                "sprint_id": execution.sprint_id, "sprint_name": execution.sprint_name,
+                "engineering_phase": execution.engineering_phase,
+                "dependency_requests": execution.dependency_requests,
+                "dependency_provisioning": tuple(item.model_dump(mode="json") for item in evidence),
+                "execution_mode": execution.execution_mode.value,
+            }})
             result = runtime.execute(runtime_request)
         except Exception as error:
             if self._provisioning_evidence is not None and str(error).startswith("dependency_"):
@@ -402,7 +430,7 @@ class ProjectAIRuntimeExecutionService:
             self._executions.update(execution)
             runtime_request = AIRuntimeRequest(
                 instruction=request.instruction,
-                metadata=request.metadata,
+                metadata={**dict(request.metadata),"project_id":request.project_id,"execution_id":execution.execution_id,"preparation_id":execution.execution_id,"sprint_id":execution.sprint_id,"sprint_name":execution.sprint_name,"engineering_phase":execution.engineering_phase,"dependency_requests":execution.dependency_requests,"execution_mode":execution.execution_mode.value},
                 context={
                     "project_session": session_context.model_dump(mode="json"),
                     "session_memory": memory_context.model_dump(mode="json"),
@@ -567,7 +595,7 @@ class ProjectAIRuntimeExecutionService:
                 ),
             }
         runtime_request = AIRuntimeRequest(
-            instruction=request.instruction, metadata=request.metadata,
+            instruction=request.instruction, metadata={**dict(request.metadata),"project_id":request.project_id,"execution_id":execution.execution_id,"sprint_id":execution.sprint_id,"sprint_name":execution.sprint_name,"engineering_phase":execution.engineering_phase,"dependency_requests":execution.dependency_requests,"execution_mode":execution.execution_mode.value},
             context=runtime_context,
             workspace=project.workspace_path, execution_mode=request.execution_mode,
         )
