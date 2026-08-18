@@ -23,9 +23,9 @@ Business Engineering e execução avançou por implementação e testes:
 - Fase 21 — Application/API Layer: blocos 21.1–21.4 concluídos.
 - Fase 22 — White-label Presentation Layer: concluída; gate frontend
   consolidado aprovado em 2026-08-11.
-- Fase 23 — Projeções operacionais públicas: em andamento; Sprints 23.1–23.6
-  concluídas, incluindo Advanced Knowledge Queries e Runtime Branding ponta a
-  ponta.
+- Fase 23 — Projeções operacionais públicas: concluída em 2026-08-12; Sprints
+  23.1–23.8 encerradas, incluindo o primeiro vertical Project Engineering
+  operacional.
   Em 2026-08-11, 11 testes focados do contrato Application/API de Agents
 passaram. A inspeção estática do frontend não encontrou imports para módulos
 Python internos.
@@ -69,6 +69,13 @@ as fronteiras documentadas nos ADRs existentes.
 
 A camada Presentation em Next.js consome somente contratos HTTP públicos
 versionados sob `/api/v1` e não importa módulos Python internos.
+
+Project Engineering é o primeiro vertical operacional comprovado: recebe uma
+tarefa, cria plano bounded, altera workspace autorizado, captura diff, executa
+pytest independente, faz no máximo um repair, valida novamente, avalia Quality
+Gate, registra memória/histórico e projeta o resultado por API e `/projects`.
+Uma única `ProjectExecution` e seu `execution_id` são canônicos nesse fluxo;
+`Run` e `SequentialExecution` permanecem conceitos distintos.
 
 Runtime Branding possui modelo canônico, defaults e repository compartilhado
 com backends Memory/File/SQLite. `BrandingQueryService` alimenta
@@ -123,7 +130,7 @@ Memory, autorização Application, endpoint público aditivo e busca paginada em
 `/knowledge`. Command/query compartilham o mesmo repository; InMemory e SQLite
 possuem paridade, enquanto `file` continua InMemory para esta família. Os gates
 finais e eventuais limitações ambientais estão registrados na documentação da
-Fase 23. A Fase 23 permanece em andamento.
+Fase 23. A Fase 23 está concluída.
 O run sem desmarcação teve somente o `WinError 5` já documentado.
 
 Em 2026-08-12, a vertical 23.6 foi concluída: 23.6A–23.6E estão encerradas. O
@@ -131,6 +138,13 @@ gate focado final validou modelos/repositories, Application query/admin, GET,
 composição compartilhada e frontend runtime; typecheck, lint, build estático,
 compileall e diff check foram aprovados. Auth/Authz, mutação HTTP e UI
 administrativa foram explicitamente adiados e não bloqueiam esse fechamento.
+
+Em 2026-08-12, o fechamento 23.8 auditou o vertical Project Engineering e suas
+fronteiras. Após os 164 testes backend da entrega 23.7D, a regressão focada
+ampliada do fechamento aprovou 290 testes. A evidência frontend final aprovou
+28 arquivos/164 testes, typecheck, lint, build e geração de `/projects`.
+`compileall`, referências documentais e diff check foram aprovados. A fase foi
+encerrada sem afirmar autonomia geral ou operação E2E de todos os agentes.
 
 ## Limitações e pendências
 
@@ -149,6 +163,11 @@ administrativa foram explicitamente adiados e não bloqueiam esse fechamento.
 - revisão humana desta atualização documental está pendente.
 - mutação HTTP e UI administrativa de branding dependem de uma futura fronteira
   real de autenticação/autorização; nenhum usuário ou RBAC foi presumido.
+- planejamento Project Engineering ainda é determinístico e bounded; não há
+  multi-agent operacional completo, rollback automático, execução distribuída,
+  produção/cloud ou observabilidade externa;
+- repair Project Engineering é limitado a uma tentativa e o Acceptance usa fake
+  apenas no boundary externo do Codex.
 
 ## Decisões essenciais
 

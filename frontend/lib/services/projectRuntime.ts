@@ -1,6 +1,6 @@
 import { ApiClient } from "../api/client";
 import type { AIUsageResponseDto } from "../api/dtos";
-import type { AIRuntimeExecutionMode, JsonValue, ProjectAIRuntimeExecutionDto, ProjectEngineeringPreparationDto, ProjectExecutionDto, ProjectSessionDto, SessionMemoryDto, SessionMemoryKind, SessionMemorySearchPageDto, SessionMemorySearchParams } from "../api/dtos";
+import type { AIRuntimeExecutionMode, JsonValue, ProjectAIRuntimeExecutionDto, ProjectEngineeringPreparationDto, ProjectExecutionDto, ProjectLifecycleDto, ProjectSessionDto, SessionMemoryDto, SessionMemoryKind, SessionMemorySearchPageDto, SessionMemorySearchParams } from "../api/dtos";
 
 export const AI_OPERATION_TIMEOUT_MS = 600_000;
 
@@ -37,6 +37,7 @@ type MemoryResponse = Readonly<{ items: readonly SessionMemoryDto[] }>;
 
 export class ProjectHistoryClient {
   constructor(private readonly api: ApiClient) {}
+  getLifecycle(projectId:string):Promise<ProjectLifecycleDto> { return this.api.request({path:`/api/v1/projects/${encodeURIComponent(projectId)}/lifecycle`}); }
   async listSessions(projectId: string): Promise<readonly ProjectSessionDto[]> {
     return (await this.api.request<SessionsResponse>({ path: `/api/v1/projects/${encodeURIComponent(projectId)}/sessions` })).items;
   }

@@ -15,6 +15,7 @@ from asep.application.project_ai_runtime import (
 from asep.application.project_engineering_quality import (
     ProjectQualityGateCapability,
 )
+from asep.project_lifecycle import SQLiteProjectLifecycleRepository, ProjectPhase, ProjectPhaseStatus
 from asep.application.project_engineering_repair import ProjectRepairCapability
 from asep.application.project_engineering_validation import (
     ProjectValidationCapability,
@@ -108,6 +109,7 @@ class ProjectEngineeringExecutionService:
         quality: ProjectQualityGateCapability,
         *,
         clock: Callable[[], datetime] | None = None,
+        lifecycle: SQLiteProjectLifecycleRepository | None = None,
     ) -> None:
         self._runtime_execution = runtime_execution
         self._projects = projects
@@ -117,6 +119,7 @@ class ProjectEngineeringExecutionService:
         self._repair = repair
         self._quality = quality
         self._clock = clock or (lambda: datetime.now(UTC))
+        self._lifecycle = lifecycle
 
     def execute(
         self,
@@ -128,6 +131,10 @@ class ProjectEngineeringExecutionService:
             )
         runtime_result = self._runtime_execution.execute(request)
         execution = runtime_result.execution
+        if self._lifecycle is not None:
+            state=self._lifecycle.get(execution.project_id)
+            if state.phase in {ProjectPhase.PLANNING, ProjectPhase.ARCHITECTURE}:
+                self._lifecycle.transition(execution.project_id,to_phase=ProjectPhase.DEVELOPMENT,status=ProjectPhaseStatus.ACTIVE,reason_code="preparation_created",expected_version=state.version,current_sprint=request.sprint_name,source_execution_id=execution.execution_id)
         if execution.status is not ProjectExecutionStatus.RUNNING:
             raise RuntimeError(
                 "project engineering runtime completed before validation"
@@ -141,7 +148,11 @@ class ProjectEngineeringExecutionService:
     def prepare(self, request: ProjectAIRuntimeExecutionRequest) -> ProjectExecution:
         if request.execution_mode is not AIRuntimeExecutionMode.WORKSPACE_WRITE:
             raise ValueError("project engineering preparation requires workspace_write mode")
-        return self._runtime_execution.prepare(request)
+        prepared=self._runtime_execution.prepare(request)
+        if self._lifecycle is not None:
+            state=self._lifecycle.get(request.project_id); sprint=f"{request.sprint_id} — {request.sprint_name}" if request.sprint_id and request.sprint_name else request.sprint_name
+            self._lifecycle.transition(request.project_id,to_phase=ProjectPhase.DEVELOPMENT,status=ProjectPhaseStatus.PENDING,reason_code="preparation_created",expected_version=state.version,current_sprint=sprint,source_execution_id=prepared.execution_id)
+        return prepared
 
     def approve(
         self, preparation_id: str, request: ProjectAIRuntimeExecutionRequest,
@@ -150,6 +161,8 @@ class ProjectEngineeringExecutionService:
             preparation_id, request,
         )
         execution = runtime_result.execution
+        if self._lifecycle is not None:
+            state=self._lifecycle.get(execution.project_id); self._lifecycle.transition(execution.project_id,to_phase=ProjectPhase.DEVELOPMENT,status=ProjectPhaseStatus.ACTIVE,reason_code="preparation_approved",expected_version=state.version,current_sprint=state.current_sprint,source_execution_id=execution.execution_id)
         if execution.execution_id != preparation_id:
             raise RuntimeError("prepared execution identity changed")
         if execution.status is not ProjectExecutionStatus.RUNNING:
@@ -171,6 +184,8 @@ class ProjectEngineeringExecutionService:
         execution: ProjectExecution,
     ) -> ProjectAIRuntimeExecutionResult:
         workspace = self._projects.get(execution.project_id).workspace_path
+        if self._lifecycle is not None:
+            state=self._lifecycle.get(execution.project_id); self._lifecycle.transition(execution.project_id,to_phase=ProjectPhase.TESTING,status=ProjectPhaseStatus.ACTIVE,reason_code="validation_started",expected_version=state.version,current_sprint=state.current_sprint,source_execution_id=execution.execution_id)
         captured_changes = runtime_result.changes or execution.changes
         if execution.changes != captured_changes:
             execution = ProjectExecution.model_validate({
@@ -309,6 +324,9 @@ class ProjectEngineeringExecutionService:
             final_validations,
             workspace,
         )
+        if self._lifecycle is not None:
+            state=self._lifecycle.get(execution.project_id); blocked=gate.decision is GateDecision.BLOCKED
+            self._lifecycle.transition(execution.project_id,to_phase=ProjectPhase.TESTING,status=ProjectPhaseStatus.BLOCKED if blocked else ProjectPhaseStatus.COMPLETED,reason_code="quality_gate_blocked" if blocked else "quality_gate_approved",expected_version=state.version,current_sprint=state.current_sprint,blocker="Quality Gate bloqueado" if blocked else None,next_action="Corrigir critérios do Quality Gate" if blocked else None,source_execution_id=execution.execution_id)
         execution = self._persist_progress(
             execution,
             validations=tuple(validations),

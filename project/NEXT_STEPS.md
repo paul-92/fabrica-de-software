@@ -1,6 +1,6 @@
 # Próximos passos
 
-**Estado:** Fase 23 em andamento; Sprint 23.6 formalmente concluída
+**Estado:** Fase 23 concluída; definição da próxima fase pendente
 
 **Atualizado em:** 2026-08-12
 
@@ -8,11 +8,11 @@
 
 ## Objetivo imediato
 
-Preservar o fechamento da vertical Runtime Branding e priorizar explicitamente
-o próximo incremento da Fase 23. A conclusão da Sprint 23.6 não
-encerra a Fase 23.
+Definir a próxima fase sobre o vertical Project Engineering comprovado, com
+prioridade para capacidades de engenharia de software e critérios de aceite
+explícitos. A Fase 23 não deve ser reaberta para infraestrutura periférica.
 
-## Entrega consolidada da 23.6
+## Entrega consolidada da Fase 23
 
 - branding institucional canônico e persistência Memory/File/SQLite;
 - query read-only com defaults e `GET /api/v1/branding`;
@@ -21,10 +21,18 @@ encerra a Fase 23.
 - administração completa somente por Application service e composição confiável;
 - query/admin compartilham o mesmo repository do bundle;
 - nenhuma rota HTTP de mutação ou UI administrativa.
+- Project Engineering operacional sob uma única `ProjectExecution`;
+- tarefa → plano → mutação → diff → validação → repair bounded → Quality Gate;
+- memória/histórico e projeção pública em `/projects`;
+- contratos legados de AI runtime, `Run` e `SequentialExecution` preservados.
 
-## Continuidade da Fase 23
+## Continuidade pós-Fase 23
 
-Produto deve definir o próximo objetivo, contratos e critérios de aceite. Não
+Produto deve definir o próximo objetivo, contratos e critérios de aceite. Os
+candidatos prioritários são decomposição/planejamento mais ricos,
+`DeveloperAgent` operacional, tarefas multi-step, seleção de validação, repair
+mais inteligente, coordenação multi-agent controlada e acceptance em projetos
+maiores. Não
 inferir integração entre Session Memory, Agent Memory, `Run`,
 `SequentialExecution` ou `ProjectExecution`. Auth/Authz e administração HTTP/UI
 de branding são evoluções adiadas que exigem uma fronteira real de segurança;

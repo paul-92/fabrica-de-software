@@ -104,6 +104,8 @@ from asep.ai_usage import AIUsageService
 from asep.ai_quotas import AIQuotaService
 from datetime import UTC, datetime
 from asep.maintenance import MaintenanceGate
+from asep.project_lifecycle import SQLiteProjectLifecycleRepository
+from asep.dependency_provisioning import ControlledDependencyBrokerRunner, ProjectDependencyProvisioningService, SQLiteDependencyRequestRepository, SQLiteProvisioningEvidenceRepository
 
 
 @dataclass(frozen=True, slots=True)
@@ -223,12 +225,19 @@ def _create_project_application_services(
     usage = AIUsageService(repositories.ai_usage_repository)
     assert repositories.ai_quota_repository is not None
     quotas = AIQuotaService(repositories.ai_quota_repository, repositories.access_repository)
+    dependency_requests = SQLiteDependencyRequestRepository(effective_settings.storage_directory / "dependency-requests.db")
+    provisioning_evidence = SQLiteProvisioningEvidenceRepository(effective_settings.storage_directory / "provisioning-evidence.db")
+    lifecycle = SQLiteProjectLifecycleRepository(effective_settings.storage_directory / "project-lifecycle.db")
     runtime_execution = ProjectAIRuntimeExecutionService(
         project_service,
         registry,
         sessions,
         repositories.project_execution_repository,
         memory_service=memory,
+        dependency_provisioning=ProjectDependencyProvisioningService(),
+        dependency_broker=ControlledDependencyBrokerRunner(),
+        dependency_requests=dependency_requests,
+        provisioning_evidence=provisioning_evidence,
     ).with_usage_metering(usage).with_quota_guard(quotas)
     internal_execution = None
     engineering_tools = None
@@ -267,6 +276,10 @@ def _create_project_application_services(
         sessions,
         repositories.project_execution_repository,
         memory_service=memory,
+        dependency_provisioning=ProjectDependencyProvisioningService(),
+        dependency_broker=ControlledDependencyBrokerRunner(),
+        dependency_requests=dependency_requests,
+        provisioning_evidence=provisioning_evidence,
         engineering_planning=(
             ProjectEngineeringPlanningService(
                 ProjectAnalyzer(),
@@ -297,6 +310,7 @@ def _create_project_application_services(
                 QualityGateEngine(),
                 repositories.quality_gate_result_repository,
             ),
+            lifecycle=lifecycle,
         )
     return _ProjectApplicationServices(
         projects=project_service,
@@ -386,6 +400,9 @@ def _create_configured_app(
         ai_quota_service=project_services.quotas,
         readiness=readiness,
         maintenance_gate=MaintenanceGate(settings.maintenance_directory),
+        project_lifecycle_repository=SQLiteProjectLifecycleRepository(settings.storage_directory / "project-lifecycle.db"),
+        dependency_request_repository=SQLiteDependencyRequestRepository(settings.storage_directory / "dependency-requests.db"),
+        provisioning_evidence_repository=SQLiteProvisioningEvidenceRepository(settings.storage_directory / "provisioning-evidence.db"),
     )
 
 

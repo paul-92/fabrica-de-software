@@ -4,9 +4,9 @@
 
 **Dono:** Engenharia ASEP
 
-**Versão:** 1.2
+**Versão:** 1.3
 
-**Status:** em andamento; Sprints 23.1–23.6 concluídas
+**Status:** concluída; Sprints 23.1–23.8 encerradas em 2026-08-12
 
 ## Objetivo e fronteira
 
@@ -37,9 +37,87 @@ instância de cada dependência compartilhada.
 - **23.6:** Runtime Branding canônico e persistente, projeção pública read-only,
   consumo resiliente no App Shell e administração somente por composição
   confiável, sem mutação HTTP.
+- **23.7:** primeiro vertical Project Engineering operacional: tarefa, plano,
+  mutação confinada, diff, validação, repair limitado, Quality Gate,
+  memória/histórico e projeção API/UI sob uma única `ProjectExecution`.
+- **23.8:** auditoria arquitetural, regressão econômica e sincronização
+  documental de fechamento.
 
-A Sprint 23.6 está formalmente encerrada. A Fase 23 continua em andamento e
-incrementos posteriores dependem de priorização explícita.
+**PHASE 23 — COMPLETED.** O fechamento não afirma autonomia geral nem que todos
+os agentes e fluxos da ASEP sejam operacionais ponta a ponta.
+
+## Marco operacional — Project Engineering
+
+O primeiro vertical operacional comprovado da ASEP é Project Engineering:
+
+```text
+tarefa → plano bounded → runtime → mutação do workspace → diff
+→ pytest → repair opcional (máximo 1) → pytest final → Quality Gate
+→ memória/histórico → API pública → /projects
+```
+
+`ProjectEngineeringExecutionService` coordena portas Application. A composição
+constrói e compartilha repositories de projeto, sessão, execução e memória,
+runtime, snapshot/diff, `RunTestsTool`, repair, `QualityGateEngine` e
+`QualityGateResultRepository`. Não há singleton, service locator ou extração de
+dependências por `app.state`; o adapter HTTP recebe o serviço Application.
+
+Uma única `ProjectExecution` nasce antes da mutação e mantém o mesmo
+`execution_id` no plano, diff, validações, repair, Quality Gate, memória,
+histórico e DTO público. Nesse bounded context, o `run_id` do resultado de
+Quality Gate recebe explicitamente `ProjectExecution.execution_id`; isso não o
+transforma em `Run` ou `SequentialExecution`. Sucesso exige validação final
+verde e gate não bloqueado; `BLOCKED` nunca é projetado como sucesso.
+
+O endpoint legado de AI runtime foi preservado. `read_only` continua no fluxo
+anterior; somente `workspace_write` usa o orchestrator de engenharia. O painel
+em `/projects` exibe plano, mudanças, validações, repair e gate por DTOs do
+cliente HTTP, sem importar internals Python.
+
+### Acceptance/E2E comprovado
+
+`tests/qa/api/test_project_engineering_operational_composition.py` cria projeto
+e sessão descartáveis, usa fake apenas no boundary do runtime externo e mantém
+composição real abaixo dele. O fake altera arquivos reais da fixture; o fluxo
+real calcula diff, executa pytest por `RunTestsTool`, avalia e persiste o gate,
+registra memória/histórico e devolve a mesma execução por HTTP. Há ainda caminho
+de validação falha, repair único, segunda falha e gate `BLOCKED`. O teste não
+substitui cada camada por mocks e confirma que nenhum `Run` ou
+`SequentialExecution` é criado.
+
+## Metodologia de testes da Fase 23
+
+| Tipo | Exemplo real | Prova | Não prova |
+|---|---|---|---|
+| Unitário | `test_project_engineering_validation_repair.py` | regra isolada, output bounded e repair máximo 1 | wiring HTTP ou persistência real |
+| Contrato/modelo | `test_branding_repository.py` e modelos de `ProjectExecution` | strict/frozen, invariantes e defaults | integração entre componentes |
+| Paridade de repository | `test_quality_gate_result_repository.py` e `test_session_memory_query.py` | semântica Memory/File/SQLite suportada e reconstrução | operação distribuída/transacional |
+| Application | `test_project_engineering_execution.py` | orchestration, ordem, identidade e estados finais | serialização/OpenAPI |
+| API/OpenAPI | `test_project_engineering_operational_composition.py` | mapping público, campos bounded e compatibilidade | comportamento visual no browser |
+| Fronteira arquitetural | testes de source/import em API e frontend | ausência de imports proibidos | correção funcional completa |
+| Composition/shared lifetime | compositions de Branding e Project Engineering | identidade compartilhada e isolamento | concorrência entre processos |
+| Componente frontend | `ProjectRuntimePanel.test.tsx` e `QualityWorkspace.test.tsx` | estados e projeção visual acessível | servidor/API reais |
+| Service/client | `knowledge.test.ts`, `branding.test.ts`, `sequentialQuality.test.ts` | URL, encoding, DTO e erros HTTP | renderização React |
+| Acceptance/E2E | `test_http_acceptance_task_to_public_result_uses_one_execution` | vertical real abaixo do fake externo | Codex real, cloud ou produção |
+| Segurança/erros | cross-project, cursor, path confinement e erro sanitizado | ownership e não vazamento conhecido | threat model completo/pentest |
+
+Fakes implementam um boundary determinístico, como o runtime externo no
+Acceptance; stubs fornecem respostas predeterminadas; mocks verificam
+interações. São úteis em testes focados, mas trocar todas as camadas por mocks
+deixa de provar composição, filesystem, pytest, persistência e serialização.
+
+Uma suite **focused** cobre o slice alterado; uma **regression** acrescenta
+consumidores e contratos vizinhos; a **complete suite** cobre o repositório todo
+e é reservada para risco proporcional. `compileall` detecta sintaxe/imports;
+`typecheck`, contratos TypeScript; `lint`, regras estáticas; o build Next.js,
+compilação de produção e rotas; `git diff --check`, whitespace; auditoria
+OpenAPI, o schema público. Nenhum gate isolado prova o comportamento E2E.
+
+Falha funcional reproduz defeito do produto; falha ambiental impede o gate por
+restrição externa. O `WinError 5` em named pipes de multiprocessing e o
+`spawn EPERM` em workers Vite são exemplos ambientais em Windows restrito.
+Devem ser registrados e rerodados em ambiente apto, nunca tratados
+silenciosamente como sucesso.
 
 ## Runtime Branding — Sprint 23.6
 
@@ -253,8 +331,29 @@ severity, remediation, health ou readiness.
   consultáveis sem a execução canônica;
 - Intelligent Orchestration não foi conectada a este fluxo;
 - a Fase 23 não unifica `Run`, `SequentialExecution` e `ProjectExecution`;
+- o plano Project Engineering é determinístico e bounded, não generativo;
+- o Acceptance automatizado usa fake do boundary Codex;
+- não há multi-agent operacional completo, rollback automático, execução
+  distribuída, produção/cloud ou observabilidade externa;
+- repair permanece limitado a uma tentativa neste vertical;
+- não existe auth/RBAC nem mutação administrativa HTTP de branding;
 - no Windows, um teste legado de multiprocessing pode falhar com `WinError 5`
   ao criar named pipe; essa falha ambiental deve ser classificada separadamente.
+
+## Evidências de fechamento da Fase 23
+
+Na entrega 23.7D, 164 testes backend passaram. No fechamento 23.8, uma regressão
+focada ampliada aprovou 290 testes backend. O frontend final aprovou 28 arquivos
+e 164 testes, typecheck, lint e build; `/projects` foi gerada. `compileall`,
+referências Markdown e `git diff --check` foram aprovados. São gates focados na
+Fase 23 e consumidores, não uma nova suite Python completa.
+
+## Direção pós-Fase 23
+
+A próxima fase deve aprofundar engenharia de software: decomposição e
+planejamento mais ricos, `DeveloperAgent` operacional, tarefas multi-step,
+seleção de validação mais precisa, repair mais inteligente, coordenação
+multi-agent controlada e acceptance em projetos reais maiores.
 
 ## Evidências de fechamento da Sprint 23.4
 

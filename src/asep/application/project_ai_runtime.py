@@ -10,7 +10,8 @@ from threading import Lock
 from typing import Any, Protocol
 from uuid import uuid4
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from enum import StrEnum
 
 from asep._json_values import freeze_json
 from asep.access.models import RequestPrincipal
@@ -37,6 +38,7 @@ from asep.application.session_memory import (
     serialize_session_memory_context,
 )
 from asep.application.workspace_changes import WorkspaceChange, WorkspaceSnapshotter
+from asep.dependency_provisioning import ControlledDependencyBrokerRunner, ProjectDependencyProvisioningService, SQLiteDependencyRequestRepository, DependencyRequestDecision, SQLiteProvisioningEvidenceRepository, ProvisioningEvidence, DependencyProvisioningStatus
 from asep.application.project_engineering_planning import BoundedProjectAnalysis
 from asep.projects import (
     ProjectExecution,
@@ -76,6 +78,32 @@ class ProjectEngineeringInternalExecutionCapability(Protocol):
     ) -> tuple[ProjectEngineeringStepResult, ...] | None: ...
 
 
+class EngineeringPhase(StrEnum):
+    PLANNING="planning"; ARCHITECTURE="architecture"; DEVELOPMENT="development"; TESTING="testing"; DELIVERY="delivery"
+class EngineeringDependencyRequest(BaseModel):
+    model_config=ConfigDict(extra="forbid",frozen=True)
+    package:str; requested_version:str; reason:str; ecosystem:str="node"; registry:str|None=None
+    @field_validator("package","requested_version","reason")
+    @classmethod
+    def valid_text(cls,value:str)->str:
+        value=value.strip()
+        if not value or any(token in value.casefold() for token in ("http:","https:","git:","file:")): raise ValueError("invalid dependency request")
+        return value
+    @field_validator("ecosystem")
+    @classmethod
+    def node_only(cls,value:str)->str:
+        if value!="node": raise ValueError("unsupported ecosystem")
+        return value
+    @field_validator("requested_version")
+    @classmethod
+    def node_version(cls,value:str)->str:
+        if re.fullmatch(r"(?:[~^]|>=?|<=?)?\d+(?:\.\d+){0,2}(?:-[0-9A-Za-z.-]+)?",value) is None: raise ValueError("invalid node version")
+        return value
+    @field_validator("registry")
+    @classmethod
+    def allowed_registry(cls,value:str|None)->str|None:
+        if value is not None and value.rstrip("/").casefold()!="https://registry.npmjs.org": raise ValueError("registry not allowed")
+        return value
 class ProjectAIRuntimeExecutionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     project_id: str
@@ -85,6 +113,20 @@ class ProjectAIRuntimeExecutionRequest(BaseModel):
     metadata: Mapping[str, Any] = Field(default_factory=dict)
     execution_mode: AIRuntimeExecutionMode = AIRuntimeExecutionMode.READ_ONLY
     principal: RequestPrincipal | None = None
+    dependency_requests: tuple[EngineeringDependencyRequest,...]=()
+    sprint_id:str|None=None
+    sprint_name:str|None=None
+    engineering_phase:EngineeringPhase|None=None
+    @model_validator(mode="after")
+    def normalize_dependencies(self):
+        unique={}; packages={}
+        for item in self.dependency_requests:
+            key=(item.ecosystem,item.package,item.requested_version,item.registry or "https://registry.npmjs.org/")
+            prior=packages.get((item.ecosystem,item.package))
+            if prior is not None and prior!=key: raise ValueError("conflicting dependency requests")
+            packages[(item.ecosystem,item.package)]=key; unique[key]=item
+        object.__setattr__(self,"dependency_requests",tuple(unique.values()))
+        return self
 
     @field_validator("project_id", "session_id", "runtime_id", "instruction")
     @classmethod
@@ -113,6 +155,10 @@ class ProjectAIRuntimeExecutionService:
     def __init__(self, projects: ProjectService, runtimes: AIRuntimeRegistry,
                  sessions: ProjectSessionService, executions: ProjectExecutionRepository,
                  snapshotter: WorkspaceSnapshotter | None = None,
+                 dependency_provisioning: ProjectDependencyProvisioningService | None = None,
+                 dependency_broker: ControlledDependencyBrokerRunner | None = None,
+                 dependency_requests: SQLiteDependencyRequestRepository | None = None,
+                 provisioning_evidence: SQLiteProvisioningEvidenceRepository | None = None,
                  context_builder: SessionContextBuilder | None = None, *,
                  memory_service: ProjectSessionMemoryService | None = None,
                  operational_plan_builder: ProjectOperationalPlanBuilder | None = None,
@@ -138,6 +184,10 @@ class ProjectAIRuntimeExecutionService:
         self._quotas: AIQuotaService | None = None
         self._locks_guard = Lock()
         self._write_locks: dict[str, Lock] = {}
+        self._dependency_provisioning = dependency_provisioning
+        self._dependency_broker = dependency_broker
+        self._dependency_requests = dependency_requests
+        self._provisioning_evidence = provisioning_evidence
 
     def with_usage_metering(self, service: AIUsageService) -> "ProjectAIRuntimeExecutionService":
         self._usage = service
@@ -156,8 +206,25 @@ class ProjectAIRuntimeExecutionService:
         trusted_org = principal.organization_id if principal else LEGACY_ORGANIZATION_ID
         admission = self._quotas.admit(trusted_org, trusted_user) if self._quotas else None
         try:
+            if runtime_request.execution_mode is AIRuntimeExecutionMode.WORKSPACE_WRITE and runtime_request.workspace is not None and (runtime_request.workspace / "package.json").is_file():
+                for requested in execution.dependency_requests:
+                    if self._dependency_requests is None: raise RuntimeError("dependency_approval_required")
+                    matches=[item for item in self._dependency_requests.list(execution.project_id) if item.package==requested["package"] and item.requested_version==requested["requested_version"]]
+                    if not matches:
+                        self._dependency_requests.create(project_id=execution.project_id,session_id=execution.session_id,execution_id=execution.execution_id,package=requested["package"],requested_version=requested["requested_version"],reason=requested["reason"],registry=requested.get("registry") or "https://registry.npmjs.org/")
+                        raise RuntimeError("dependency_approval_required")
+                    if matches[-1].status is not DependencyRequestDecision.APPROVED: raise RuntimeError("dependency_approval_required" if matches[-1].status is DependencyRequestDecision.PENDING else "dependency_policy_blocked")
+                if self._dependency_provisioning is None or self._dependency_broker is None:
+                    raise RuntimeError("dependency_provisioning_failed")
+                self._dependency_provisioning.provision_node(runtime_request.workspace, self._dependency_broker)
+                if self._provisioning_evidence is not None:
+                    self._provisioning_evidence.save(ProvisioningEvidence(evidence_id=str(uuid4()),execution_id=execution.execution_id,project_id=execution.project_id,package_manager="node",registry="https://registry.npmjs.org/",status=DependencyProvisioningStatus.PROVISIONED,created_at=started,completed_at=self._clock()))
             result = runtime.execute(runtime_request)
-        except Exception:
+        except Exception as error:
+            if self._provisioning_evidence is not None and str(error).startswith("dependency_"):
+                try: status=DependencyProvisioningStatus(str(error))
+                except ValueError: status=DependencyProvisioningStatus.FAILED
+                self._provisioning_evidence.save(ProvisioningEvidence(evidence_id=str(uuid4()),execution_id=execution.execution_id,project_id=execution.project_id,package_manager="node",registry="https://registry.npmjs.org/",status=status,created_at=started,completed_at=self._clock(),error_code=str(error)))
             if self._usage is not None:
                 self._usage.record(organization_id=trusted_org, user_id=trusted_user,
                     project_id=execution.project_id, session_id=execution.session_id,
@@ -228,6 +295,9 @@ class ProjectAIRuntimeExecutionService:
             organization_id=project.organization_id,
             requested_by_user_id=request.principal.user_id if request.principal else LEGACY_ADMIN_USER_ID,
             instruction=request.instruction, execution_mode=request.execution_mode,
+            dependency_requests=tuple(item.model_dump(mode="json") for item in request.dependency_requests),
+            sprint_id=request.sprint_id, sprint_name=request.sprint_name,
+            engineering_phase=request.engineering_phase,
             status=ProjectExecutionStatus.PENDING,
             context_entry_count=len(session_context.entries),
             context_truncated=session_context.truncated,
@@ -430,6 +500,9 @@ class ProjectAIRuntimeExecutionService:
             organization_id=project.organization_id,
             requested_by_user_id=request.principal.user_id if request.principal else LEGACY_ADMIN_USER_ID,
             instruction=request.instruction, execution_mode=request.execution_mode,
+            dependency_requests=tuple(item.model_dump(mode="json") for item in request.dependency_requests),
+            sprint_id=request.sprint_id, sprint_name=request.sprint_name,
+            engineering_phase=request.engineering_phase,
             status=ProjectExecutionStatus.RUNNING,
             context_entry_count=len(session_context.entries),
             context_truncated=session_context.truncated,

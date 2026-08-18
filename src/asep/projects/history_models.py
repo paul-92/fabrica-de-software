@@ -275,6 +275,10 @@ class ProjectExecution(BaseModel):
     usage: AIRuntimeUsage | None = None
     changes: tuple[WorkspaceChange, ...] = ()
     error_code: str | None = None
+    dependency_requests: tuple[dict, ...] = ()
+    sprint_id: str | None = None
+    sprint_name: str | None = None
+    engineering_phase: str | None = None
     context_entry_count: int = Field(default=0, ge=0)
     context_truncated: bool = False
     context_char_count: int = Field(default=0, ge=0)

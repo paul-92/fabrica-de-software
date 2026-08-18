@@ -55,6 +55,22 @@ class FailingFixtureRuntime(FixtureRuntime):
         return result
 
 
+class DocumentationRuntime(FixtureRuntime):
+    def __init__(self, *, perform_write: bool = True) -> None:
+        super().__init__()
+        self.perform_write = perform_write
+
+    def execute(self, request: AIRuntimeRequest) -> AIRuntimeResult:
+        self.requests.append(request)
+        workspace = request.workspace
+        assert workspace is not None
+        if self.perform_write:
+            (workspace / "README.md").write_text(
+                "# Empty project\n", encoding="utf-8"
+            )
+        return AIRuntimeResult(output="documentation task completed", identity=self.identity)
+
+
 class PlanningRuntime:
     identity = AIRuntimeIdentity(runtime_id="codex-planning", model_id="fixture")
 
@@ -303,6 +319,142 @@ def test_http_acceptance_task_to_public_result_uses_one_execution(
     assert schema["$ref"].endswith("ProjectAIRuntimeExecutionResponse")
 
 
+def test_document_only_workspace_write_succeeds_with_change_evidence(
+    tmp_path: Path,
+) -> None:
+    implementation = DocumentationRuntime()
+    composition = create_project_engineering_operational_composition(
+        ApplicationSettings(), runtime_registry=registry(implementation)
+    )
+    client = TestClient(composition.app)
+    project_id, session_id = create_project_and_session(client, tmp_path)
+    body = {
+        "session_id": session_id,
+        "runtime_id": "codex",
+        "instruction": "Create README.md.",
+        "execution_mode": "workspace_write",
+    }
+    prepared = client.post(
+        f"/api/v1/projects/{project_id}/engineering/prepare", json=body,
+    ).json()
+
+    response = client.post(
+        f"/api/v1/projects/{project_id}/engineering/{prepared['execution_id']}/approve",
+        json=body,
+    )
+
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert result["status"] == "succeeded"
+    assert result["error_code"] is None
+    assert len(result["changes"]) == 1
+    assert result["changes"][0]["path"] == "README.md"
+    assert result["changes"][0]["change_type"] == "created"
+    assert result["changes"][0]["size_before"] is None
+    assert result["changes"][0]["size_after"] > 0
+    assert [item["validator"] for item in result["validations"]] == [
+        "workspace_changes"
+    ]
+    assert result["quality_gate"]["decision"] == "APPROVED"
+    assert (tmp_path / "README.md").read_text(encoding="utf-8") == "# Empty project\n"
+
+    implementation.perform_write = False
+    second_prepared = client.post(
+        f"/api/v1/projects/{project_id}/engineering/prepare", json=body,
+    ).json()
+    second = client.post(
+        f"/api/v1/projects/{project_id}/engineering/{second_prepared['execution_id']}/approve",
+        json=body,
+    )
+
+    assert second.status_code == 200, second.text
+    repeated = second.json()
+    assert repeated["status"] == "succeeded"
+    assert repeated["error_code"] is None
+    assert repeated["changes"] == []
+    assert repeated["repair"] is None
+    assert repeated["quality_gate"]["decision"] == "APPROVED"
+    assert [item["validator"] for item in repeated["validations"]] == [
+        "idempotent_state"
+    ]
+    assert repeated["idempotent_noop_evidence"]["prior_execution_id"] == result[
+        "execution_id"
+    ]
+    assert repeated["idempotent_noop_evidence"]["artifact_paths"] == [
+        "README.md"
+    ]
+
+
+def test_unproven_noop_is_blocked_and_not_silently_approved(tmp_path: Path) -> None:
+    implementation = DocumentationRuntime(perform_write=False)
+    composition = create_project_engineering_operational_composition(
+        ApplicationSettings(), runtime_registry=registry(implementation)
+    )
+    client = TestClient(composition.app)
+    project_id, session_id = create_project_and_session(client, tmp_path)
+    body = {
+        "session_id": session_id,
+        "runtime_id": "codex",
+        "instruction": "Create README.md.",
+        "execution_mode": "workspace_write",
+    }
+    prepared = client.post(
+        f"/api/v1/projects/{project_id}/engineering/prepare", json=body,
+    ).json()
+
+    response = client.post(
+        f"/api/v1/projects/{project_id}/engineering/{prepared['execution_id']}/approve",
+        json=body,
+    )
+
+    assert response.status_code == 200
+    result = response.json()
+    assert result["status"] == "failed"
+    assert result["changes"] == []
+    assert result["idempotent_noop_evidence"] is None
+    assert result["quality_gate"]["decision"] == "BLOCKED"
+
+
+def test_existing_incorrect_content_is_not_idempotent(tmp_path: Path) -> None:
+    implementation = DocumentationRuntime()
+    composition = create_project_engineering_operational_composition(
+        ApplicationSettings(), runtime_registry=registry(implementation)
+    )
+    client = TestClient(composition.app)
+    project_id, session_id = create_project_and_session(client, tmp_path)
+    body = {
+        "session_id": session_id,
+        "runtime_id": "codex",
+        "instruction": "Create README.md.",
+        "execution_mode": "workspace_write",
+    }
+    first = client.post(
+        f"/api/v1/projects/{project_id}/engineering/prepare", json=body,
+    ).json()
+    assert client.post(
+        f"/api/v1/projects/{project_id}/engineering/{first['execution_id']}/approve",
+        json=body,
+    ).json()["status"] == "succeeded"
+    executed_workspace = implementation.requests[-1].workspace
+    assert executed_workspace is not None
+    (executed_workspace / "README.md").write_text("incorrect\n", encoding="utf-8")
+    implementation.perform_write = False
+    second = client.post(
+        f"/api/v1/projects/{project_id}/engineering/prepare", json=body,
+    ).json()
+
+    response = client.post(
+        f"/api/v1/projects/{project_id}/engineering/{second['execution_id']}/approve",
+        json=body,
+    )
+
+    assert response.status_code == 200
+    result = response.json()
+    assert result["status"] == "failed"
+    assert result["idempotent_noop_evidence"] is None
+    assert result["quality_gate"]["decision"] == "BLOCKED"
+
+
 def test_project_route_depends_only_on_application_boundary() -> None:
     source = Path("src/asep/api/project_routes.py").read_text(encoding="utf-8")
     for forbidden in (
@@ -321,6 +473,10 @@ def test_ai_plan_changes_the_context_used_by_execution(tmp_path: Path) -> None:
     for suffix, description in (("a", "Inspect route conventions."), ("b", "Inspect API modules.")):
         workspace = tmp_path / suffix
         workspace.mkdir()
+        (workspace / "pyproject.toml").write_text(
+            '[project]\nname="fixture"\ndependencies=["pytest"]\n',
+            encoding="utf-8",
+        )
         (workspace / "src" / "app").mkdir(parents=True)
         (workspace / "src" / "app" / "main.py").write_text(
             "from fastapi import FastAPI\n", encoding="utf-8"
@@ -368,6 +524,10 @@ def test_ai_plan_changes_the_context_used_by_execution(tmp_path: Path) -> None:
 def test_http_validation_failure_preserves_bounded_evidence(
     tmp_path: Path,
 ) -> None:
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname="fixture"\ndependencies=["pytest"]\n',
+        encoding="utf-8",
+    )
     composition = create_project_engineering_operational_composition(
         ApplicationSettings(), runtime_registry=failing_registry()
     )

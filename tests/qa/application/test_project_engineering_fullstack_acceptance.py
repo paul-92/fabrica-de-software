@@ -165,6 +165,7 @@ def write_file(root: Path, relative: str, content: str) -> None:
 
 
 def write_fullstack_fixture(root: Path) -> None:
+    write_file(root, "pytest.ini", "[pytest]\n")
     write_file(
         root, "products.py",
         "PRODUCTS = [{'id': 1, 'name': 'Product 1'}]\n\n"

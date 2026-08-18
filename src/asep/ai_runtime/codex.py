@@ -33,6 +33,7 @@ from asep.providers.process import (
     ProcessStartError,
     ProcessTimeoutError,
 )
+from asep.dependency_provisioning import ProjectDependencyProvisioningService
 
 
 class CodexAIRuntimeConfig(BaseModel):
@@ -72,10 +73,12 @@ class CodexAIRuntime:
         *,
         process_runner: ProcessRunnerProtocol | None = None,
         parser: CodexJSONLParser | None = None,
+        dependency_provisioning: ProjectDependencyProvisioningService | None = None,
     ) -> None:
         self._config = config
         self._process_runner = process_runner or ProcessRunner()
         self._parser = parser or CodexJSONLParser()
+        self._dependency_provisioning = dependency_provisioning or ProjectDependencyProvisioningService()
         self._identity = AIRuntimeIdentity(
             runtime_id="codex",
             model_id=config.model_id,
@@ -93,13 +96,20 @@ class CodexAIRuntime:
         if not self._process_runner.is_available(self._config.executable):
             raise AIRuntimeUnavailableError(self.identity.runtime_id)
 
+        workspace = request.workspace or self._config.workspace
+        provisioning = (
+            self._dependency_provisioning.prepare_node(workspace)
+            if request.execution_mode is AIRuntimeExecutionMode.WORKSPACE_WRITE
+            else None
+        )
+        environment = dict(provisioning.environment) if provisioning is not None else {}
         try:
             result = self._process_runner.run(
                 self._command(request.execution_mode),
                 input_text=self._input(request),
                 timeout=self._config.timeout,
-                working_directory=request.workspace or self._config.workspace,
-                environment={},
+                working_directory=workspace,
+                environment=environment,
                 encoding=self._config.encoding,
             )
         except ProcessExecutableNotFoundError as exc:
@@ -111,7 +121,12 @@ class CodexAIRuntime:
 
         if result.exit_code != 0:
             self._raise_process_failure(result.stderr)
-        return self._parser.parse(result.stdout, identity=self.identity)
+        parsed = self._parser.parse(result.stdout, identity=self.identity)
+        if provisioning is None:
+            return parsed
+        metadata = dict(parsed.metadata)
+        metadata["dependency_provisioning"] = provisioning.evidence.model_dump(mode="json")
+        return parsed.model_copy(update={"metadata": metadata})
 
     def _command(
         self, execution_mode: AIRuntimeExecutionMode

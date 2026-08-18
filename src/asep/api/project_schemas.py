@@ -96,6 +96,10 @@ class ProjectAIRuntimeExecutionRequestBody(ProjectHttpSchema):
     instruction: str
     metadata: dict[str, Any] = Field(default_factory=dict)
     execution_mode: AIRuntimeExecutionMode = AIRuntimeExecutionMode.READ_ONLY
+    dependency_requests: tuple[dict[str, Any], ...] = ()
+    sprint_id: str | None = None
+    sprint_name: str | None = None
+    engineering_phase: str | None = None
 
     @field_validator("session_id", "runtime_id", "instruction")
     @classmethod
@@ -364,9 +368,14 @@ class ProjectExecutionResponse(ProjectHttpSchema):
     quality_gate: ProjectQualityGateResponse | None
     step_results: tuple[ProjectEngineeringStepResultResponse, ...]
     idempotent_noop_evidence: ProjectIdempotentNoOpEvidenceResponse | None
+    dependency_requests: tuple[dict[str, Any], ...] = ()
+    sprint_id: str | None = None
+    sprint_name: str | None = None
+    engineering_phase: str | None = None
+    dependency_provisioning: tuple[dict[str, Any], ...] = ()
 
     @classmethod
-    def from_domain(cls, execution: ProjectExecution) -> "ProjectExecutionResponse":
+    def from_domain(cls, execution: ProjectExecution, dependency_provisioning: tuple[dict[str, Any], ...] = ()) -> "ProjectExecutionResponse":
         return cls.model_validate({
             **execution.model_dump(
                 mode="json",
@@ -396,6 +405,7 @@ class ProjectExecutionResponse(ProjectHttpSchema):
                 )
                 for item in execution.step_results
             ),
+            "dependency_provisioning": dependency_provisioning,
         })
 
 

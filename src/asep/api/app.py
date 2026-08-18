@@ -49,6 +49,8 @@ from asep.api.ai_usage_routes import create_ai_usage_router
 from asep.ai_quotas import AIQuotaService
 from asep.api.ai_quota_routes import create_ai_quota_router
 from asep.maintenance import MaintenanceActiveError, MaintenanceGate
+from asep.project_lifecycle import InMemoryProjectLifecycleRepository
+from asep.dependency_provisioning import SQLiteDependencyRequestRepository, SQLiteProvisioningEvidenceRepository
 
 
 def create_app(
@@ -76,6 +78,9 @@ def create_app(
     ai_quota_service: AIQuotaService | None = None,
     readiness: Callable[[], bool] | None = None,
     maintenance_gate: MaintenanceGate | None = None,
+    project_lifecycle_repository: InMemoryProjectLifecycleRepository | None = None,
+    dependency_request_repository: SQLiteDependencyRequestRepository | None = None,
+    provisioning_evidence_repository: SQLiteProvisioningEvidenceRepository | None = None,
 ) -> FastAPI:
     app = FastAPI(
         title="ASEP Dashboard API",
@@ -158,6 +163,9 @@ def create_app(
                 session_memory_search_service,
                 project_engineering_execution_service,
                 principal_dependency,
+                project_lifecycle_repository,
+                dependency_request_repository,
+                provisioning_evidence_repository,
             )
         )
         if ai_usage_service is not None and principal_dependency is not None:

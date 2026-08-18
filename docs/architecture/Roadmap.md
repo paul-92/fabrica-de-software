@@ -1,6 +1,6 @@
 # Roadmap arquitetural
 
-**Dono:** Engenharia ASEP | **Versão:** 1.9 | **Status:** atualizado até a Sprint 23.6
+**Dono:** Engenharia ASEP | **Versão:** 2.0 | **Status:** atualizado até o fechamento da Fase 23
 
 O roadmap registra intenção, não compromisso nem comportamento implementado.
 Mudanças de contrato exigem decisão arquitetural e testes.
@@ -192,7 +192,7 @@ Detalhes e checklist estão na
 
 ## Fase 23 — Projeções operacionais públicas
 
-Fase em andamento. As Sprints 23.1–23.3 entregaram projeção e métricas
+**Concluída em 2026-08-12.** As Sprints 23.1–23.3 entregaram projeção e métricas
 operacionais por agente com composição compartilhada. A Sprint 23.4 entregou a
 vertical detalhada de Quality Gates sequenciais: persistência estruturada,
 projeção de Application, resolução autorizada, endpoint opt-in e explorador
@@ -210,9 +210,16 @@ persistência Memory/File/SQLite, `BrandingQueryService`, leitura pública em
 Mutação HTTP e UI administrativa permanecem adiadas até existir autenticação e
 autorização reais; não são requisitos para o fechamento da 23.6.
 
+A Sprint 23.7 comprovou o primeiro vertical operacional, Project Engineering:
+tarefa, plano bounded, mutação confinada, diff, pytest, repair opcional limitado,
+validação final, Quality Gate, memória/histórico e apresentação API/UI sob uma
+única `ProjectExecution`. A Sprint 23.8 auditou e encerrou a fase.
+
 `Run`, `SequentialExecution` e `ProjectExecution` permanecem agregados
-distintos. Migração de YAML histórico, integração com Intelligent
-Orchestration e incrementos posteriores à 23.6 permanecem não priorizados. Consulte a
+distintos. Migração de YAML histórico e unificação de identidades permanecem
+adiadas. A próxima fase deve priorizar decomposição, planejamento,
+`DeveloperAgent` operacional, tarefas multi-step, melhor seleção de validação,
+repair inteligente, coordenação controlada e acceptance maior. Consulte a
 [documentação da Fase 23](../phase-23/operational-projections.md).
 
 ## Pré-condições arquiteturais

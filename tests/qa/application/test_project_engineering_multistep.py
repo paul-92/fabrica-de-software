@@ -155,6 +155,7 @@ class TaskImplementationProvider:
 
 
 def write_initial_fixture(root: Path) -> None:
+    (root / "pytest.ini").write_text("[pytest]\n", encoding="utf-8")
     (root / "tests").mkdir()
     (root / "task_model.py").write_text(
         "from dataclasses import dataclass\n\n@dataclass(frozen=True)\n"

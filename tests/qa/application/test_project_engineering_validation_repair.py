@@ -28,8 +28,11 @@ from asep.tools import (
 
 
 class RecordingTools:
-    def __init__(self, *, test_exit_code: int = 0) -> None:
+    def __init__(
+        self, *, test_exit_code: int = 0, failure_output: str | None = None,
+    ) -> None:
         self.test_exit_code = test_exit_code
+        self.failure_output = failure_output
         self.requests: list[ToolRequest] = []
 
     def execute(self, request: ToolRequest) -> ToolResult:
@@ -54,7 +57,8 @@ class RecordingTools:
                         else (
                             "SyntaxError: invalid syntax"
                             if request.capability.id == "compile"
-                            else "AssertionError: FAILED tests/test_app.py::test_app"
+                            else self.failure_output
+                            or "AssertionError: FAILED tests/test_app.py::test_app"
                         )
                     ),
                     "stderr": "",
@@ -143,21 +147,56 @@ def test_validation_falls_back_to_bounded_project_pytest(tmp_path: Path) -> None
     assert tools.requests[0].payload["paths"] == ["."]
 
 
-@pytest.mark.parametrize("hints", (("pytest",), ()))
-def test_plan_validation_selects_pytest_and_empty_hints_keep_safe_fallback(
-    tmp_path: Path, hints: tuple[str, ...]
-) -> None:
+def test_plan_validation_selects_explicit_pytest(tmp_path: Path) -> None:
     tools = RecordingTools()
     results = ProjectValidationService(tools).validate_plan(
         "execution-1",
         tmp_path,
-        validation_plan(*hints),
+        validation_plan("pytest"),
         start_sequence=3,
     )
     assert [(item.validator, item.sequence) for item in results] == [
         ("pytest", 3)
     ]
     assert len(tools.requests) == 1
+
+
+def test_document_change_uses_internal_evidence_without_pytest(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "README.md").write_text("# Project\n", encoding="utf-8")
+    tools = RecordingTools()
+    service = ProjectValidationService(tools)
+    strategy = service.strategy(
+        "execution-1",
+        tmp_path,
+        validation_plan("pytest"),
+        analysis=BoundedProjectAnalysis(),
+        changed_paths=("README.md",),
+    )
+
+    results = service.validate_strategy(strategy, tmp_path, start_sequence=1)
+
+    assert strategy.validators == ("workspace_changes",)
+    assert results[0].status is ProjectValidationStatus.PASSED
+    assert tools.requests == []
+
+
+def test_missing_pytest_is_skipped_instead_of_project_failure(
+    tmp_path: Path,
+) -> None:
+    tools = RecordingTools(
+        test_exit_code=1,
+        failure_output="C:/Python/python.exe: No module named pytest",
+    )
+    service = ProjectValidationService(tools)
+    strategy = service.strategy(
+        "execution-1", tmp_path, validation_plan("pytest")
+    )
+
+    result = service.validate_strategy(strategy, tmp_path, start_sequence=1)[0]
+
+    assert result.status is ProjectValidationStatus.SKIPPED
 
 
 def test_non_executable_validation_hint_is_rejected(tmp_path: Path) -> None:
@@ -238,7 +277,11 @@ def test_repair_loop_is_limited_and_tool_requests_keep_execution_identity(
 def test_node_validators_are_ordered_and_use_confined_package_root(
     tmp_path: Path,
 ) -> None:
-    (tmp_path / "package.json").write_text("{}", encoding="utf-8")
+    (tmp_path / "package.json").write_text(
+        '{"scripts":{"typecheck":"tsc","test":"vitest","lint":"eslint",'
+        '"build":"next build"},"dependencies":{"next":"1"}}',
+        encoding="utf-8",
+    )
     tools = RecordingTools()
     service = ProjectValidationService(tools)
     strategy = service.strategy(
@@ -321,9 +364,14 @@ def test_strategy_selects_validators_by_changed_domain(
     web = tmp_path / "web"
     if "TypeScript" in languages:
         web.mkdir(exist_ok=True)
-        (web / "package.json").write_text("{}", encoding="utf-8")
+        (web / "package.json").write_text(
+            '{"scripts":{"typecheck":"tsc","test":"vitest","lint":"eslint",'
+            '"build":"next build"},"dependencies":{"next":"1"}}',
+            encoding="utf-8",
+        )
     analysis = BoundedProjectAnalysis(
         languages=languages,
+        dependencies=("pytest",) if "Python" in languages else (),
         package_managers=("npm",) if "TypeScript" in languages else (),
         package_manifests=("web/package.json",) if "TypeScript" in languages else (),
         has_tests=True,
@@ -360,3 +408,22 @@ def test_strategy_rejects_ambiguous_package_roots(tmp_path: Path) -> None:
             "execution-1", tmp_path, validation_plan(), analysis=analysis,
             changed_paths=("web-a/page.tsx", "web-b/page.tsx"),
         )
+
+
+def test_node_project_without_detectable_validation_scripts_uses_evidence(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "package.json").write_text("{}", encoding="utf-8")
+    (tmp_path / "app.js").write_text("export default 1", encoding="utf-8")
+
+    strategy = ProjectValidationService(RecordingTools()).strategy(
+        "execution-1",
+        tmp_path,
+        validation_plan("vitest", "eslint", "next_build"),
+        analysis=BoundedProjectAnalysis(
+            languages=("JavaScript",), package_manifests=("package.json",),
+        ),
+        changed_paths=("app.js",),
+    )
+
+    assert strategy.validators == ("workspace_changes",)

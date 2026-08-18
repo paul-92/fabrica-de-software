@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useEffectEvent, useMemo, useState } from "react";
-import type { AIRuntimeExecutionMode, AIRuntimeStatusDto, ProjectAIRuntimeExecutionDto, ProjectEngineeringPreparationDto, ProjectExecutionDto, ProjectSessionDto, SessionMemoryDto, SessionMemoryKind } from "../../lib/api/dtos";
+import type { AIRuntimeExecutionMode, AIRuntimeStatusDto, ProjectAIRuntimeExecutionDto, ProjectEngineeringPreparationDto, ProjectExecutionDto, ProjectLifecycleDto, ProjectSessionDto, SessionMemoryDto, SessionMemoryKind } from "../../lib/api/dtos";
 import { createProjectRuntimeWorkspaceService, type ProjectRuntimeWorkspaceService } from "../../lib/services/projectRuntimeWorkspace";
 import { Button } from "../Button";
 import { Card } from "../Card";
@@ -11,6 +11,7 @@ import { formatExecutionMode, formatExecutionStatus, formatMemoryKind } from "..
 import { ProjectExecutionEvidence } from "./ProjectExecutionEvidence";
 import type { AIUsageResponseDto } from "../../lib/api/dtos";
 import { ApiHttpError, ApiNetworkError, ApiResponseError, ApiTimeoutError } from "../../lib/api/errors";
+import { ProjectLifecycle } from "./ProjectLifecycle";
 
 type Props = { projectId: string; projectName: string; workspaceLabel: string; service?: ProjectRuntimeWorkspaceService; initialSessionId?: string; initialExecutionId?: string; onNavigate?: (sessionId: string, executionId?: string) => void };
 
@@ -27,6 +28,9 @@ export function ProjectRuntimePanel({ projectId, projectName, workspaceLabel, se
   const [sessionError, setSessionError] = useState<string | null>(null);
   const [creatingSession, setCreatingSession] = useState(false);
   const [history, setHistory] = useState<readonly ProjectExecutionDto[] | null>(null);
+  const [lifecycle, setLifecycle] = useState<ProjectLifecycleDto|null>(null);
+  const [lifecycleLoading, setLifecycleLoading] = useState(true);
+  const [lifecycleError, setLifecycleError] = useState(false);
   const [selectedExecution, setSelectedExecution] = useState<ProjectExecutionDto | null>(null);
   const [executionLoadError, setExecutionLoadError] = useState<string | null>(null);
   const [executionAttempt, setExecutionAttempt] = useState(0);
@@ -44,6 +48,13 @@ export function ProjectRuntimePanel({ projectId, projectName, workspaceLabel, se
   const [memoryContent, setMemoryContent] = useState("");
   const [memoryError, setMemoryError] = useState<string | null>(null);
   const [addingMemory, setAddingMemory] = useState(false);
+
+  useEffect(() => {
+    let active=true;
+    if (!api.getLifecycle) return;
+    api.getLifecycle(projectId).then(value=>{if(active){setLifecycle(value);setLifecycleError(false)}},()=>{if(active)setLifecycleError(true)}).finally(()=>{if(active)setLifecycleLoading(false)});
+    return()=>{active=false};
+  },[api,projectId,result,preparation]);
 
   useEffect(() => {
     let active = true;
@@ -215,6 +226,10 @@ export function ProjectRuntimePanel({ projectId, projectName, workspaceLabel, se
   async function submit(event: FormEvent) {
     event.preventDefault(); if (submitting) return;
     if (!instruction.trim()) { setError("Descreva a tarefa antes de executar."); return; }
+    if (mode === "read_only" && requiresWorkspaceWrite(instruction)) {
+      setError("Esta etapa requer alterações no projeto. Ative 'Permitir alterações no projeto' para preparar a implementação.");
+      return;
+    }
     if (mode === "workspace_write") {
       setSubmitting(true); setError(null);
       try {
@@ -251,9 +266,11 @@ export function ProjectRuntimePanel({ projectId, projectName, workspaceLabel, se
     : selectedExecution;
 
   return <div className="page-stack">
+    <Card title="Ciclo de vida" eyebrow="Progresso estruturado"><ProjectLifecycle projectName={projectName} state={lifecycle} loading={lifecycleLoading} error={lifecycleError} /></Card>
     <Card title="Sessões" eyebrow="Trabalho do projeto"><form className="engineering-form" onSubmit={createSession}><label>Nome da sessão<input placeholder="Ex.: Implementação da API de clientes" value={sessionTitle} onChange={(event) => setSessionTitle(event.target.value)} disabled={creatingSession} /></label>{sessionError ? <p role="alert" className="engineering-form__error">{sessionError}</p> : null}<Button type="submit" disabled={creatingSession}>{creatingSession ? "Criando…" : "Nova sessão"}</Button></form>{sessions === null ? <p role="status">Carregando sessões...</p> : sessionsLoadError ? <div role="alert"><p>Não foi possível carregar as sessões.</p><Button onClick={() => { setSessions(null); setSessionsAttempt((value) => value + 1); }}>Tentar novamente</Button></div> : sessions.length === 0 ? <p>Nenhuma sessão ainda.</p> : <ul className="project-runtime-selection-list">{sessions.map((session) => <li key={session.session_id}><button type="button" onClick={() => { setHistory(null); setHistoryRefreshError(null); setNavigationError(null); setMemory(null); setMemoryError(null); setMemoryContent(""); setSelectedExecution(null); setExecutionLoadError(null); setResult(null); setError(null); setConfirmingWrite(false); setSelectedSession(session); onNavigate?.(session.session_id); }} aria-pressed={selectedSession?.session_id === session.session_id}>{session.title}</button></li>)}</ul>}</Card>
     {selectedSession ? <Card title={selectedSession.title} eyebrow="Assistente de IA">
       <div className="status-row"><StatusBadge status={runtimeReady ? "success" : "warning"}>{`● ${runtimeLabel}`}</StatusBadge><StatusBadge>{mode === "read_only" ? "Sessão somente leitura" : "Alterações permitidas"}</StatusBadge></div>
+      {mode === "workspace_write" && instruction.trim() && !requiresWorkspaceWrite(instruction) ? <p role="status">Esta tarefa parece analítica. Considere voltar para Somente leitura. O modo não será alterado automaticamente.</p> : null}
       {statusFailed ? <Button onClick={() => { setStatus(null); setStatusFailed(false); setStatusAttempt((value) => value + 1); }}>Verificar novamente</Button> : status === null ? null : !runtimeReady ? <p><Link href="/settings/ai">Configurar assistente de IA</Link></p> : <form className="engineering-form" onSubmit={submit}><fieldset className="mode-selector" disabled={submitting}><legend>Modo de execução</legend><label><input type="radio" name="execution-mode" value="read_only" checked={mode === "read_only"} onChange={() => { setMode("read_only"); setConfirmingWrite(false); setPreparation(null); }} /> Somente leitura</label><label><input type="radio" name="execution-mode" value="workspace_write" checked={mode === "workspace_write"} onChange={() => setMode("workspace_write")} /> Permitir alterações no projeto</label></fieldset><label>Tarefa<textarea placeholder="Descreva o que você quer que o Codex faça neste projeto..." value={instruction} onChange={(event) => setInstruction(event.target.value)} disabled={submitting || preparation !== null} /></label>{error ? <p role="alert" className="engineering-form__error">{error}</p> : null}<Button type="submit" disabled={submitting || preparation !== null}>{submitting ? (mode === "workspace_write" ? "Preparando plano…" : "Executando…") : mode === "workspace_write" ? "Preparar plano" : "Executar com Codex"}</Button></form>}
       {confirmingWrite && preparation ? <section role="alertdialog" aria-labelledby="write-confirmation-title"><h3 id="write-confirmation-title">Revisar e aprovar plano</h3><p>O workspace ainda não foi alterado. Após a aprovação, o plano abaixo poderá criar, modificar ou excluir arquivos.</p><dl className="execution-facts"><div><dt>Execution ID</dt><dd><code>{preparation.execution_id}</code></dd></div><div><dt>Projeto</dt><dd>{projectName}</dd></div><div><dt>Workspace</dt><dd>{workspaceLabel}</dd></div><div><dt>Linguagens</dt><dd>{preparation.analysis.languages.join(", ") || "Não detectadas"}</dd></div><div><dt>Frameworks</dt><dd>{preparation.analysis.frameworks.join(", ") || "Não detectados"}</dd></div></dl><h4>Plano operacional</h4><ol>{preparation.operational_plan.steps.map((step) => <li key={step.step_id}><strong>{step.description}</strong><p>Dependências: {step.dependencies.join(", ") || "nenhuma"}</p><p>Targets: {step.target_hints.join(", ") || "nenhum"}</p><p>Validators: {step.validation_hints.join(", ") || "nenhum"}</p></li>)}</ol><Button onClick={cancelPreparation} disabled={submitting}>Cancelar</Button><Button onClick={run} disabled={submitting}>Aprovar e executar</Button></section> : null}
       {navigationError ? <p role="status">{navigationError}</p> : null}
@@ -266,6 +283,10 @@ export function ProjectRuntimePanel({ projectId, projectName, workspaceLabel, se
     {visibleSelectedExecution ? <Card title="Detalhes da execução" eyebrow={formatExecutionStatus(visibleSelectedExecution.status)}><p><strong>Tarefa</strong><br />{visibleSelectedExecution.instruction}</p><ProjectExecutionEvidence evidence={visibleSelectedExecution} changes={visibleSelectedExecution.changes} output={visibleSelectedExecution.output} /><ContextUsage count={visibleSelectedExecution.context_entry_count} truncated={visibleSelectedExecution.context_truncated} charCount={visibleSelectedExecution.context_char_count} omittedCount={visibleSelectedExecution.context_omitted_execution_count} /><MemoryUsage count={visibleSelectedExecution.memory_entry_count} charCount={visibleSelectedExecution.memory_char_count} truncated={visibleSelectedExecution.memory_truncated} /><dl className="execution-facts"><div><dt>Assistente</dt><dd>{visibleSelectedExecution.runtime_id}</dd></div><div><dt>Modelo</dt><dd>{visibleSelectedExecution.model ?? "Desconhecido"}</dd></div><div><dt>Modo</dt><dd>{formatExecutionMode(visibleSelectedExecution.execution_mode)}</dd></div></dl></Card> : null}
     {visibleSelectedExecution ? <ExecutionAIUsage projectId={projectId} executionId={visibleSelectedExecution.execution_id} service={api} /> : null}
   </div>;
+}
+
+export function requiresWorkspaceWrite(instruction: string): boolean {
+  return /\b(implement(?:ar|e|ation)?|criar?|create|alterar?|modify|corrigir?|fix|remover?|delete|adicionar?|add|instalar?|install)\b/i.test(instruction);
 }
 
 function executionErrorMessage(

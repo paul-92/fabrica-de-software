@@ -1,0 +1,17 @@
+﻿:8080 {
+    request_body {
+        max_size 10MB
+    }
+
+    @readiness path /api/v1/ready
+    respond @readiness 404
+
+    @api path /api/*
+    reverse_proxy @api 127.0.0.1:8000
+
+    reverse_proxy 127.0.0.1:3000
+
+    handle_errors {
+        respond "Service unavailable." 503
+    }
+}
