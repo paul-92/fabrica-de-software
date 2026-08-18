@@ -422,9 +422,9 @@ describe("ProjectRuntimePanel", () => {
     expect(screen.getByText("src/changed.ts")).toBeTruthy();
     expect(screen.getByText("src/old.ts")).toBeTruthy();
     expect((screen.getByLabelText("Permitir alterações no projeto") as HTMLInputElement).checked).toBe(true);
-    expect(prepare).toHaveBeenCalledWith("p-1", "s-1", "Write safely");
+    expect(prepare).toHaveBeenCalledWith("p-1", "s-1", "Write safely", { engineering_phase: "planning", sprint_id: undefined, sprint_name: undefined, dependency_requests: [] });
     expect(approve).toHaveBeenCalledOnce();
-    expect(approve).toHaveBeenCalledWith("p-1", "e-1", "s-1", "Write safely");
+    expect(approve).toHaveBeenCalledWith("p-1", "e-1", "s-1", "Write safely", { engineering_phase: "planning", sprint_id: undefined, sprint_name: undefined, dependency_requests: [] });
   });
 
   it("renders bounded engineering plan, validation, repair and quality evidence", async () => {

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useEffectEvent, useMemo, useState } from "react";
-import type { AIRuntimeExecutionMode, AIRuntimeStatusDto, ProjectAIRuntimeExecutionDto, ProjectEngineeringPreparationDto, ProjectExecutionDto, ProjectLifecycleDto, ProjectSessionDto, SessionMemoryDto, SessionMemoryKind } from "../../lib/api/dtos";
+import type { AIRuntimeExecutionMode, AIRuntimeStatusDto, EngineeringDependencyRequestDto, EngineeringPhaseDto, ProjectAIRuntimeExecutionDto, ProjectEngineeringPreparationDto, ProjectExecutionDto, ProjectLifecycleDto, ProjectSessionDto, SessionMemoryDto, SessionMemoryKind } from "../../lib/api/dtos";
 import { createProjectRuntimeWorkspaceService, type ProjectRuntimeWorkspaceService } from "../../lib/services/projectRuntimeWorkspace";
 import { Button } from "../Button";
 import { Card } from "../Card";
@@ -35,6 +35,9 @@ export function ProjectRuntimePanel({ projectId, projectName, workspaceLabel, se
   const [executionLoadError, setExecutionLoadError] = useState<string | null>(null);
   const [executionAttempt, setExecutionAttempt] = useState(0);
   const [instruction, setInstruction] = useState("");
+  const [engineeringPhase,setEngineeringPhase]=useState<EngineeringPhaseDto>("planning");
+  const [sprintId,setSprintId]=useState(""); const [sprintName,setSprintName]=useState("");
+  const [dependencies,setDependencies]=useState<EngineeringDependencyRequestDto[]>([]);
   const [mode, setMode] = useState<AIRuntimeExecutionMode>("read_only");
   const [confirmingWrite, setConfirmingWrite] = useState(false);
   const [preparation, setPreparation] = useState<ProjectEngineeringPreparationDto | null>(null);
@@ -52,7 +55,7 @@ export function ProjectRuntimePanel({ projectId, projectName, workspaceLabel, se
   useEffect(() => {
     let active=true;
     if (!api.getLifecycle) return;
-    api.getLifecycle(projectId).then(value=>{if(active){setLifecycle(value);setLifecycleError(false)}},()=>{if(active)setLifecycleError(true)}).finally(()=>{if(active)setLifecycleLoading(false)});
+    api.getLifecycle(projectId).then(value=>{if(active){setLifecycle(value);setEngineeringPhase(value.phase.toLowerCase() as EngineeringPhaseDto);setLifecycleError(false)}},()=>{if(active)setLifecycleError(true)}).finally(()=>{if(active)setLifecycleLoading(false)});
     return()=>{active=false};
   },[api,projectId,result,preparation]);
 
@@ -149,7 +152,7 @@ export function ProjectRuntimePanel({ projectId, projectName, workspaceLabel, se
     let completed: ProjectAIRuntimeExecutionDto;
     try {
       completed = preparation
-        ? await api.approve(projectId, preparation.execution_id, selectedSession.session_id, preparation.instruction)
+        ? await api.approve(projectId, preparation.execution_id, selectedSession.session_id, preparation.instruction, structuredContext)
         : await api.execute(projectId, selectedSession.session_id, instruction.trim(), mode);
     } catch (executionError) {
       let reconciledFailure = false;
@@ -233,7 +236,7 @@ export function ProjectRuntimePanel({ projectId, projectName, workspaceLabel, se
     if (mode === "workspace_write") {
       setSubmitting(true); setError(null);
       try {
-        setPreparation(await api.prepare(projectId, selectedSession!.session_id, instruction.trim()));
+        setPreparation(await api.prepare(projectId, selectedSession!.session_id, instruction.trim(), structuredContext));
         setConfirmingWrite(true);
       } catch (preparationError) {
         setError(executionErrorMessage(
@@ -260,6 +263,7 @@ export function ProjectRuntimePanel({ projectId, projectName, workspaceLabel, se
   }
 
   const runtimeReady = status?.ready === true || status?.state === "ready";
+  const structuredContext={engineering_phase:engineeringPhase,sprint_id:sprintId.trim()||undefined,sprint_name:sprintName.trim()||undefined,dependency_requests:dependencies};
   const runtimeLabel = statusFailed ? "Indisponível" : status === null ? "Carregando status do Codex..." : runtimeReady ? "Pronto" : status.state === "not_installed" ? "Não instalado" : status.state === "error" ? "Indisponível" : "Não conectado";
   const visibleSelectedExecution = initialExecutionId && selectedExecution?.execution_id !== initialExecutionId
     ? null
@@ -270,6 +274,8 @@ export function ProjectRuntimePanel({ projectId, projectName, workspaceLabel, se
     <Card title="Sessões" eyebrow="Trabalho do projeto"><form className="engineering-form" onSubmit={createSession}><label>Nome da sessão<input placeholder="Ex.: Implementação da API de clientes" value={sessionTitle} onChange={(event) => setSessionTitle(event.target.value)} disabled={creatingSession} /></label>{sessionError ? <p role="alert" className="engineering-form__error">{sessionError}</p> : null}<Button type="submit" disabled={creatingSession}>{creatingSession ? "Criando…" : "Nova sessão"}</Button></form>{sessions === null ? <p role="status">Carregando sessões...</p> : sessionsLoadError ? <div role="alert"><p>Não foi possível carregar as sessões.</p><Button onClick={() => { setSessions(null); setSessionsAttempt((value) => value + 1); }}>Tentar novamente</Button></div> : sessions.length === 0 ? <p>Nenhuma sessão ainda.</p> : <ul className="project-runtime-selection-list">{sessions.map((session) => <li key={session.session_id}><button type="button" onClick={() => { setHistory(null); setHistoryRefreshError(null); setNavigationError(null); setMemory(null); setMemoryError(null); setMemoryContent(""); setSelectedExecution(null); setExecutionLoadError(null); setResult(null); setError(null); setConfirmingWrite(false); setSelectedSession(session); onNavigate?.(session.session_id); }} aria-pressed={selectedSession?.session_id === session.session_id}>{session.title}</button></li>)}</ul>}</Card>
     {selectedSession ? <Card title={selectedSession.title} eyebrow="Assistente de IA">
       <div className="status-row"><StatusBadge status={runtimeReady ? "success" : "warning"}>{`● ${runtimeLabel}`}</StatusBadge><StatusBadge>{mode === "read_only" ? "Sessão somente leitura" : "Alterações permitidas"}</StatusBadge></div>
+      <fieldset className="mode-selector"><legend>Contexto da execução</legend><label>Fase do projeto<select value={engineeringPhase} onChange={event=>setEngineeringPhase(event.target.value as EngineeringPhaseDto)}><option value="planning">Planejamento</option><option value="architecture">Arquitetura</option><option value="development">Desenvolvimento</option><option value="testing">Testes</option><option value="delivery">Entrega</option></select></label><label>Sprint<input value={sprintId} onChange={event=>setSprintId(event.target.value)}/></label><label>Nome da sprint<input value={sprintName} onChange={event=>setSprintName(event.target.value)}/></label><p>Dependências adicionais</p>{dependencies.map((item,index)=><div key={index}><input aria-label={`Pacote ${index+1}`} value={item.package} onChange={event=>setDependencies(values=>values.map((value,i)=>i===index?{...value,package:event.target.value}:value))}/><input aria-label={`Versão ${index+1}`} value={item.requested_version} onChange={event=>setDependencies(values=>values.map((value,i)=>i===index?{...value,requested_version:event.target.value}:value))}/><input aria-label={`Motivo ${index+1}`} value={item.reason} onChange={event=>setDependencies(values=>values.map((value,i)=>i===index?{...value,reason:event.target.value}:value))}/><Button onClick={()=>setDependencies(values=>values.filter((_,i)=>i!==index))}>Remover</Button></div>)}<Button onClick={()=>setDependencies(values=>[...values,{package:"",requested_version:"",reason:"",ecosystem:"node"}])}>Adicionar dependência</Button></fieldset>
+      {engineeringPhase==="development"&&mode==="read_only"?<p role="status">Desenvolvimento normalmente requer “Permitir alterações no projeto”. O modo não será alterado automaticamente.</p>:null}
       {mode === "workspace_write" && instruction.trim() && !requiresWorkspaceWrite(instruction) ? <p role="status">Esta tarefa parece analítica. Considere voltar para Somente leitura. O modo não será alterado automaticamente.</p> : null}
       {statusFailed ? <Button onClick={() => { setStatus(null); setStatusFailed(false); setStatusAttempt((value) => value + 1); }}>Verificar novamente</Button> : status === null ? null : !runtimeReady ? <p><Link href="/settings/ai">Configurar assistente de IA</Link></p> : <form className="engineering-form" onSubmit={submit}><fieldset className="mode-selector" disabled={submitting}><legend>Modo de execução</legend><label><input type="radio" name="execution-mode" value="read_only" checked={mode === "read_only"} onChange={() => { setMode("read_only"); setConfirmingWrite(false); setPreparation(null); }} /> Somente leitura</label><label><input type="radio" name="execution-mode" value="workspace_write" checked={mode === "workspace_write"} onChange={() => setMode("workspace_write")} /> Permitir alterações no projeto</label></fieldset><label>Tarefa<textarea placeholder="Descreva o que você quer que o Codex faça neste projeto..." value={instruction} onChange={(event) => setInstruction(event.target.value)} disabled={submitting || preparation !== null} /></label>{error ? <p role="alert" className="engineering-form__error">{error}</p> : null}<Button type="submit" disabled={submitting || preparation !== null}>{submitting ? (mode === "workspace_write" ? "Preparando plano…" : "Executando…") : mode === "workspace_write" ? "Preparar plano" : "Executar com Codex"}</Button></form>}
       {confirmingWrite && preparation ? <section role="alertdialog" aria-labelledby="write-confirmation-title"><h3 id="write-confirmation-title">Revisar e aprovar plano</h3><p>O workspace ainda não foi alterado. Após a aprovação, o plano abaixo poderá criar, modificar ou excluir arquivos.</p><dl className="execution-facts"><div><dt>Execution ID</dt><dd><code>{preparation.execution_id}</code></dd></div><div><dt>Projeto</dt><dd>{projectName}</dd></div><div><dt>Workspace</dt><dd>{workspaceLabel}</dd></div><div><dt>Linguagens</dt><dd>{preparation.analysis.languages.join(", ") || "Não detectadas"}</dd></div><div><dt>Frameworks</dt><dd>{preparation.analysis.frameworks.join(", ") || "Não detectados"}</dd></div></dl><h4>Plano operacional</h4><ol>{preparation.operational_plan.steps.map((step) => <li key={step.step_id}><strong>{step.description}</strong><p>Dependências: {step.dependencies.join(", ") || "nenhuma"}</p><p>Targets: {step.target_hints.join(", ") || "nenhum"}</p><p>Validators: {step.validation_hints.join(", ") || "nenhum"}</p></li>)}</ol><Button onClick={cancelPreparation} disabled={submitting}>Cancelar</Button><Button onClick={run} disabled={submitting}>Aprovar e executar</Button></section> : null}

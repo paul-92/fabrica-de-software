@@ -1,6 +1,6 @@
 import { ApiClient } from "../api/client";
 import type { AIUsageResponseDto } from "../api/dtos";
-import type { AIRuntimeExecutionMode, JsonValue, ProjectAIRuntimeExecutionDto, ProjectEngineeringPreparationDto, ProjectExecutionDto, ProjectLifecycleDto, ProjectSessionDto, SessionMemoryDto, SessionMemoryKind, SessionMemorySearchPageDto, SessionMemorySearchParams } from "../api/dtos";
+import type { AIRuntimeExecutionMode, JsonValue, ProjectAIRuntimeExecutionDto, ProjectEngineeringPreparationDto, ProjectExecutionDto, ProjectLifecycleDto, ProjectSessionDto, SessionMemoryDto, SessionMemoryKind, SessionMemorySearchPageDto, SessionMemorySearchParams, StructuredEngineeringContextDto } from "../api/dtos";
 
 export const AI_OPERATION_TIMEOUT_MS = 600_000;
 
@@ -20,10 +20,10 @@ export class ProjectRuntimeClient {
       timeoutMs: AI_OPERATION_TIMEOUT_MS,
     });
   }
-  prepare(projectId: string, request: Readonly<{ session_id: string; runtime_id: string; instruction: string; execution_mode: "workspace_write" }>): Promise<ProjectEngineeringPreparationDto> {
+  prepare(projectId: string, request: Readonly<{ session_id: string; runtime_id: string; instruction: string; execution_mode: "workspace_write" } & StructuredEngineeringContextDto>): Promise<ProjectEngineeringPreparationDto> {
     return this.api.request({ path: `/api/v1/projects/${encodeURIComponent(projectId)}/engineering/prepare`, method: "POST", body: request, timeoutMs: AI_OPERATION_TIMEOUT_MS });
   }
-  approve(projectId: string, preparationId: string, request: Readonly<{ session_id: string; runtime_id: string; instruction: string; execution_mode: "workspace_write" }>): Promise<ProjectAIRuntimeExecutionDto> {
+  approve(projectId: string, preparationId: string, request: Readonly<{ session_id: string; runtime_id: string; instruction: string; execution_mode: "workspace_write" } & StructuredEngineeringContextDto>): Promise<ProjectAIRuntimeExecutionDto> {
     return this.api.request({ path: `/api/v1/projects/${encodeURIComponent(projectId)}/engineering/${encodeURIComponent(preparationId)}/approve`, method: "POST", body: request, timeoutMs: AI_OPERATION_TIMEOUT_MS });
   }
   cancel(projectId: string, preparationId: string, request: Readonly<{ session_id: string; runtime_id: string; instruction: string; execution_mode: "workspace_write" }>): Promise<ProjectExecutionDto> {

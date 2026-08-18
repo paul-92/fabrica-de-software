@@ -1,12 +1,12 @@
 import { createPlatformClients, type PlatformClients } from "../api";
 import type { AIUsageResponseDto } from "../api/dtos";
-import type { AIRuntimeExecutionMode, AIRuntimeStatusDto, ProjectAIRuntimeExecutionDto, ProjectEngineeringPreparationDto, ProjectExecutionDto, ProjectLifecycleDto, ProjectSessionDto, SessionMemoryDto, SessionMemoryKind } from "../api/dtos";
+import type { AIRuntimeExecutionMode, AIRuntimeStatusDto, ProjectAIRuntimeExecutionDto, ProjectEngineeringPreparationDto, ProjectExecutionDto, ProjectLifecycleDto, ProjectSessionDto, SessionMemoryDto, SessionMemoryKind, StructuredEngineeringContextDto } from "../api/dtos";
 
 export interface ProjectRuntimeWorkspaceService {
   status(): Promise<AIRuntimeStatusDto>;
   execute(projectId: string, sessionId: string, instruction: string, executionMode: AIRuntimeExecutionMode): Promise<ProjectAIRuntimeExecutionDto>;
-  prepare(projectId: string, sessionId: string, instruction: string): Promise<ProjectEngineeringPreparationDto>;
-  approve(projectId: string, preparationId: string, sessionId: string, instruction: string): Promise<ProjectAIRuntimeExecutionDto>;
+  prepare(projectId: string, sessionId: string, instruction: string, context?:StructuredEngineeringContextDto): Promise<ProjectEngineeringPreparationDto>;
+  approve(projectId: string, preparationId: string, sessionId: string, instruction: string, context?:StructuredEngineeringContextDto): Promise<ProjectAIRuntimeExecutionDto>;
   cancel(projectId: string, preparationId: string, sessionId: string, instruction: string): Promise<ProjectExecutionDto>;
   listSessions(projectId: string): Promise<readonly ProjectSessionDto[]>;
   createSession(projectId: string, title: string): Promise<ProjectSessionDto>;
@@ -28,8 +28,8 @@ export function createProjectRuntimeWorkspaceService(
     execute: (projectId, sessionId, instruction, executionMode) => get().projectRuntime.execute(projectId, {
       session_id: sessionId, runtime_id: "codex", instruction, execution_mode: executionMode,
     }),
-    prepare: (projectId, sessionId, instruction) => get().projectRuntime.prepare(projectId, { session_id: sessionId, runtime_id: "codex", instruction, execution_mode: "workspace_write" }),
-    approve: (projectId, preparationId, sessionId, instruction) => get().projectRuntime.approve(projectId, preparationId, { session_id: sessionId, runtime_id: "codex", instruction, execution_mode: "workspace_write" }),
+    prepare: (projectId, sessionId, instruction, context={}) => get().projectRuntime.prepare(projectId, { session_id: sessionId, runtime_id: "codex", instruction, execution_mode: "workspace_write", ...context }),
+    approve: (projectId, preparationId, sessionId, instruction, context={}) => get().projectRuntime.approve(projectId, preparationId, { session_id: sessionId, runtime_id: "codex", instruction, execution_mode: "workspace_write", ...context }),
     cancel: (projectId, preparationId, sessionId, instruction) => get().projectRuntime.cancel(projectId, preparationId, { session_id: sessionId, runtime_id: "codex", instruction, execution_mode: "workspace_write" }),
     listSessions: (projectId) => get().projectHistory.listSessions(projectId),
     createSession: (projectId, title) => get().projectHistory.createSession(projectId, title),

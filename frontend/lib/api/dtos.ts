@@ -47,6 +47,9 @@ export type SequentialQualityGateDto = Readonly<{
 export type AIRuntimeConnectionState = "not_installed" | "not_authenticated" | "ready" | "error";
 export type AIRuntimeExecutionMode = "read_only" | "workspace_write";
 export type ProjectLifecycleDto = Readonly<{ project_id:string; phase:"PLANNING"|"ARCHITECTURE"|"DEVELOPMENT"|"TESTING"|"DELIVERY"; phase_status:"pending"|"active"|"blocked"|"completed"; current_sprint:string|null; blocker:string|null; next_action:string|null; updated_at:string; version:number }>;
+export type EngineeringPhaseDto="planning"|"architecture"|"development"|"testing"|"delivery";
+export type EngineeringDependencyRequestDto=Readonly<{package:string;requested_version:string;reason:string;ecosystem:"node";registry?:string}>;
+export type StructuredEngineeringContextDto=Readonly<{sprint_id?:string;sprint_name?:string;engineering_phase?:EngineeringPhaseDto;dependency_requests?:readonly EngineeringDependencyRequestDto[]}>;
 export type WorkspaceChangeDto = Readonly<{
   path: string;
   change_type: "created" | "modified" | "deleted";
