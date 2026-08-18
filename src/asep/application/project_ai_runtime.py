@@ -408,8 +408,17 @@ class ProjectAIRuntimeExecutionService:
         analysis = self._engineering_planning.analyze(project.workspace_path)
         plan = self._plan(execution, analysis, session_context, memory_context, request.principal)
         dependency_plan = self._dependency_plan(execution, project.workspace_path)
+        blocker_code = None
+        next_action = None
         if request.engineering_phase is EngineeringPhase.DEVELOPMENT and not dependency_plan.items and not (project.workspace_path / "package.json").is_file():
-            raise RuntimeError("dependency_plan_missing_source")
+            blocker_code = "dependency_plan_missing_source"
+            next_action = "Defina ou aprove a stack técnica na preparação da sprint."
+        elif any(item.status == "version_selection_required" for item in dependency_plan.items):
+            blocker_code = "version_selection_required"
+            next_action = "Selecione uma versão estruturada para cada dependência obrigatória."
+        elif any(item.status == "pending" for item in dependency_plan.items):
+            blocker_code = "dependency_approval_required"
+            next_action = "Revise e aprove as dependências necessárias."
         after = self._snapshotter.capture(project.workspace_path)
         if self._snapshotter.changes(before, after):
             raise RuntimeError("planning mutated the workspace")
@@ -422,6 +431,11 @@ class ProjectAIRuntimeExecutionService:
                 "requested_version": item.requested_version, "reason": item.reason,
                 "registry": "https://registry.npmjs.org/",
             } for item in dependency_plan.items if item.requested_version is not None),
+            "status": ProjectExecutionStatus.BLOCKED if blocker_code else ProjectExecutionStatus.PENDING,
+            "error_code": blocker_code,
+            "blocker": "Dependências aguardando revisão" if blocker_code else None,
+            "next_action": next_action,
+            "completed_at": self._clock() if blocker_code else None,
             "preparation_analysis": analysis.model_dump(mode="json"),
             "preparation_workspace_fingerprint": self._snapshot_fingerprint(after),
             "preparation_context_fingerprint": self._context_fingerprint(
@@ -436,8 +450,10 @@ class ProjectAIRuntimeExecutionService:
     ) -> ProjectAIRuntimeExecutionResult:
         """Execute exactly one persisted preparation after fail-closed checks."""
         prepared = self._executions.get(preparation_id)
-        if prepared.status is not ProjectExecutionStatus.PENDING:
+        if prepared.status not in {ProjectExecutionStatus.PENDING, ProjectExecutionStatus.BLOCKED}:
             raise ValueError("preparation is not available for approval")
+        if prepared.status is ProjectExecutionStatus.BLOCKED and prepared.error_code != "dependency_approval_required":
+            raise ValueError("preparation blocker must be resolved before approval")
         if request.execution_mode is not AIRuntimeExecutionMode.WORKSPACE_WRITE:
             raise ValueError("prepared execution requires workspace_write mode")
         if (
@@ -467,6 +483,7 @@ class ProjectAIRuntimeExecutionService:
         analysis = BoundedProjectAnalysis.model_validate(prepared.preparation_analysis)
         execution = ProjectExecution.model_validate({
             **prepared.model_dump(mode="python"), "status": ProjectExecutionStatus.RUNNING,
+            "error_code": None, "blocker": None, "next_action": None, "completed_at": None,
         })
         self._executions.update(execution)
         return self._execute_prepared_runtime(
@@ -478,7 +495,7 @@ class ProjectAIRuntimeExecutionService:
         self, preparation_id: str, request: ProjectAIRuntimeExecutionRequest,
     ) -> ProjectExecution:
         prepared = self._executions.get(preparation_id)
-        if prepared.status is not ProjectExecutionStatus.PENDING:
+        if prepared.status not in {ProjectExecutionStatus.PENDING, ProjectExecutionStatus.BLOCKED}:
             raise ValueError("preparation is not available for cancellation")
         if (
             prepared.project_id != request.project_id

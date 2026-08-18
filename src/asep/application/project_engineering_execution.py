@@ -148,22 +148,12 @@ class ProjectEngineeringExecutionService:
     def prepare(self, request: ProjectAIRuntimeExecutionRequest) -> ProjectExecution:
         if request.execution_mode is not AIRuntimeExecutionMode.WORKSPACE_WRITE:
             raise ValueError("project engineering preparation requires workspace_write mode")
-        try:
-            prepared=self._runtime_execution.prepare(request)
-        except RuntimeError as error:
-            if str(error)=="dependency_plan_missing_source" and self._lifecycle is not None:
-                state=self._lifecycle.get(request.project_id)
-                self._lifecycle.transition(
-                    request.project_id,to_phase=ProjectPhase.DEVELOPMENT,
-                    status=ProjectPhaseStatus.BLOCKED,reason_code="dependency_plan_missing_source",
-                    expected_version=state.version,current_sprint=request.sprint_name,
-                    blocker="Dependências aguardando revisão",
-                    next_action="Defina ou aprove a stack técnica na preparação da sprint.",
-                )
-            raise
+        prepared=self._runtime_execution.prepare(request)
         if self._lifecycle is not None:
             state=self._lifecycle.get(request.project_id); sprint=f"{request.sprint_id} — {request.sprint_name}" if request.sprint_id and request.sprint_name else request.sprint_name
-            self._lifecycle.transition(request.project_id,to_phase=ProjectPhase.DEVELOPMENT,status=ProjectPhaseStatus.PENDING,reason_code="preparation_created",expected_version=state.version,current_sprint=sprint,source_execution_id=prepared.execution_id)
+            blocked=prepared.status is ProjectExecutionStatus.BLOCKED
+            target=(ProjectPhase.DEVELOPMENT if state.phase in {ProjectPhase.PLANNING,ProjectPhase.ARCHITECTURE,ProjectPhase.DEVELOPMENT} else state.phase)
+            self._lifecycle.transition(request.project_id,to_phase=target,status=ProjectPhaseStatus.BLOCKED if blocked else ProjectPhaseStatus.PENDING,reason_code="preparation_created",expected_version=state.version,current_sprint=sprint or state.current_sprint,blocker=prepared.blocker if blocked else None,blocker_code=prepared.error_code if blocked else None,next_action=prepared.next_action if blocked else None,source_execution_id=prepared.execution_id)
         return prepared
 
     def approve(

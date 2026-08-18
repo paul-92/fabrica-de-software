@@ -245,6 +245,12 @@ def create_projects_router(
                         prepared.operational_plan
                     ),
                     dependency_plan=prepared.dependency_plan or {},
+                    error_code=prepared.error_code,
+                    blocker=prepared.blocker,
+                    next_action=prepared.next_action,
+                    sprint_id=prepared.sprint_id,
+                    sprint_name=prepared.sprint_name,
+                    engineering_phase=prepared.engineering_phase,
                     created_at=prepared.created_at,
                 )
 

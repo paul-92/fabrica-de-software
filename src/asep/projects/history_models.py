@@ -14,6 +14,7 @@ from asep.workspace_changes import WorkspaceChange
 
 class ProjectExecutionStatus(StrEnum):
     PENDING = "pending"
+    BLOCKED = "blocked"
     RUNNING = "running"
     SUCCEEDED = "succeeded"
     FAILED = "failed"
@@ -275,6 +276,8 @@ class ProjectExecution(BaseModel):
     usage: AIRuntimeUsage | None = None
     changes: tuple[WorkspaceChange, ...] = ()
     error_code: str | None = None
+    blocker: str | None = None
+    next_action: str | None = None
     dependency_requests: tuple[dict, ...] = ()
     dependency_plan: dict | None = None
     sprint_id: str | None = None
@@ -308,6 +311,7 @@ class ProjectExecution(BaseModel):
     @model_validator(mode="after")
     def terminal_state_is_consistent(self) -> "ProjectExecution":
         terminal = self.status in {
+            ProjectExecutionStatus.BLOCKED,
             ProjectExecutionStatus.SUCCEEDED,
             ProjectExecutionStatus.FAILED,
         }

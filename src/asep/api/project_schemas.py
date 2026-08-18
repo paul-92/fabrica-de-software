@@ -119,6 +119,12 @@ class ProjectEngineeringPreparationResponse(ProjectHttpSchema):
     analysis: dict[str, Any]
     operational_plan: "OperationalPlanResponse"
     dependency_plan: dict[str, Any]
+    error_code: str | None = None
+    blocker: str | None = None
+    next_action: str | None = None
+    sprint_id: str | None = None
+    sprint_name: str | None = None
+    engineering_phase: str | None = None
     created_at: datetime
 
 
@@ -354,6 +360,8 @@ class ProjectExecutionResponse(ProjectHttpSchema):
     usage: AIRuntimeUsageResponse | None
     changes: tuple[WorkspaceChangeResponse, ...]
     error_code: str | None
+    blocker: str | None = None
+    next_action: str | None = None
     context_entry_count: int
     context_truncated: bool
     context_char_count: int

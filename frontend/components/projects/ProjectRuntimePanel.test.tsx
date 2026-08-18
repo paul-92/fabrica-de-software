@@ -18,6 +18,18 @@ function service(overrides: Partial<ProjectRuntimeWorkspaceService> = {}): Proje
 }
 
 describe("ProjectRuntimePanel", () => {
+  it("shows a domain message for a dependency plan blocker", async () => {
+    const defaults=service(); const prepared=await defaults.prepare("p-1","s-1","Write safely",{});
+    render(<ProjectRuntimePanel {...props} service={service({prepare:vi.fn().mockResolvedValue({...prepared,status:"blocked",error_code:"dependency_plan_missing_source",blocker:"Dependências aguardando revisão",next_action:"Defina ou aprove a stack técnica na preparação da sprint."})})}/>);
+    await screen.findByText(/Pronto/);
+    fireEvent.click(screen.getByLabelText("Permitir alterações no projeto"));
+    fireEvent.change(screen.getByLabelText("Tarefa"),{target:{value:"Write safely"}});
+    fireEvent.click(screen.getByRole("button",{name:"Preparar plano"}));
+    expect(await screen.findByText(/stack técnica ainda não possui uma fonte estruturada aprovada/)).toBeTruthy();
+    expect(screen.getByText(/Defina ou aprove a stack técnica/)).toBeTruthy();
+    expect(screen.queryByText(/comunicação foi interrompida antes/)).toBeNull();
+  });
+
   it("shows the structured dependency plan and approves all through existing requests", async () => {
     const defaults=service();
     const prepared=await defaults.prepare("p-1","s-1","Write safely",{});

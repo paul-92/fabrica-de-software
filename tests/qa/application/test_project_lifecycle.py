@@ -13,6 +13,13 @@ def test_invalid_blocked_and_concurrency():
     repo.transition("p",to_phase=ProjectPhase.PLANNING,reason_code="blocked",expected_version=1,status=ProjectPhaseStatus.BLOCKED,blocker="dependencies unavailable")
     with pytest.raises(LifecycleConcurrencyError): repo.transition("p",to_phase=ProjectPhase.ARCHITECTURE,reason_code="approved",expected_version=1)
 
+def test_dependency_blocker_does_not_regress_testing_phase():
+    repo=InMemoryProjectLifecycleRepository(); state=repo.get("p")
+    for phase in (ProjectPhase.ARCHITECTURE,ProjectPhase.DEVELOPMENT,ProjectPhase.TESTING):
+        state=repo.transition("p",to_phase=phase,reason_code="structured_event",expected_version=state.version)
+    blocked=repo.transition("p",to_phase=ProjectPhase.TESTING,reason_code="preparation_created",expected_version=state.version,status=ProjectPhaseStatus.BLOCKED,blocker="Dependências aguardando revisão",blocker_code="dependency_plan_missing_source",next_action="Defina ou aprove a stack técnica na preparação da sprint.")
+    assert (blocked.phase,blocked.phase_status,blocked.blocker_code)==(ProjectPhase.TESTING,ProjectPhaseStatus.BLOCKED,"dependency_plan_missing_source")
+
 def test_sqlite_restart_preserves_testing_state_and_transition(tmp_path):
     database=tmp_path/"lifecycle.db"; repo=SQLiteProjectLifecycleRepository(database)
     state=repo.transition("p",to_phase=ProjectPhase.DEVELOPMENT,reason_code="preparation_created",expected_version=1,status=ProjectPhaseStatus.ACTIVE,current_sprint="sprint-1 — Foundation",source_execution_id="e")

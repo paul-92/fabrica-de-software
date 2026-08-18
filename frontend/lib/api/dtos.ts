@@ -126,7 +126,7 @@ export type ProjectEngineeringPreparationDto = Readonly<{
   session_id: string;
   runtime_id: string;
   instruction: string;
-  status: "pending";
+  status: "pending" | "blocked";
   analysis: Readonly<{
     languages: readonly string[];
     frameworks: readonly string[];
@@ -142,6 +142,12 @@ export type ProjectEngineeringPreparationDto = Readonly<{
   }>;
   operational_plan: ProjectOperationalPlanDto;
   dependency_plan: DependencyPlanDto;
+  error_code?: string | null;
+  blocker?: string | null;
+  next_action?: string | null;
+  sprint_id?: string | null;
+  sprint_name?: string | null;
+  engineering_phase?: EngineeringPhaseDto | null;
   created_at: string;
 }>;
 export type DependencyPlanItemDto = Readonly<{
@@ -228,12 +234,14 @@ export type ProjectExecutionDto = Readonly<{
   runtime_id: string;
   instruction: string;
   execution_mode: AIRuntimeExecutionMode;
-  status: "pending" | "running" | "succeeded" | "failed";
+  status: "pending" | "blocked" | "running" | "succeeded" | "failed";
   output: string | null;
   model: string | null;
   usage: ProjectAIRuntimeExecutionDto["usage"];
   changes: readonly WorkspaceChangeDto[];
   error_code: string | null;
+  blocker?: string | null;
+  next_action?: string | null;
   dependency_plan?: DependencyPlanDto | null;
   context_entry_count: number;
   context_truncated: boolean;

@@ -18,7 +18,7 @@ class InvalidLifecycleTransitionError(RuntimeError): pass
 class ProjectLifecycleState(BaseModel):
     model_config=ConfigDict(extra="forbid", frozen=True)
     project_id:str; phase:ProjectPhase=ProjectPhase.PLANNING; phase_status:ProjectPhaseStatus=ProjectPhaseStatus.ACTIVE
-    current_sprint:str|None=None; blocker:str|None=None; next_action:str|None=None
+    current_sprint:str|None=None; blocker:str|None=None; blocker_code:str|None=None; next_action:str|None=None
     updated_at:datetime=Field(default_factory=lambda:datetime.now(UTC)); version:int=1
 class ProjectLifecycleTransition(BaseModel):
     model_config=ConfigDict(extra="forbid", frozen=True)
@@ -30,13 +30,13 @@ class InMemoryProjectLifecycleRepository:
         with self._lock: return self._states.setdefault(project_id,ProjectLifecycleState(project_id=project_id))
     def history(self, project_id:str)->tuple[ProjectLifecycleTransition,...]:
         with self._lock: return tuple(self._history.get(project_id,()))
-    def transition(self,project_id:str,*,to_phase:ProjectPhase,reason_code:str,expected_version:int,status:ProjectPhaseStatus=ProjectPhaseStatus.ACTIVE,current_sprint:str|None=None,blocker:str|None=None,next_action:str|None=None,source_execution_id:str|None=None)->ProjectLifecycleState:
+    def transition(self,project_id:str,*,to_phase:ProjectPhase,reason_code:str,expected_version:int,status:ProjectPhaseStatus=ProjectPhaseStatus.ACTIVE,current_sprint:str|None=None,blocker:str|None=None,blocker_code:str|None=None,next_action:str|None=None,source_execution_id:str|None=None)->ProjectLifecycleState:
         with self._lock:
             state=self._states.setdefault(project_id,ProjectLifecycleState(project_id=project_id)); order=list(ProjectPhase)
             if state.version!=expected_version: raise LifecycleConcurrencyError("lifecycle version conflict")
             if reason_code!="preparation_created" and (order.index(to_phase)<order.index(state.phase) or order.index(to_phase)>order.index(state.phase)+1): raise InvalidLifecycleTransitionError("invalid lifecycle transition")
             if status is ProjectPhaseStatus.BLOCKED and not blocker: raise InvalidLifecycleTransitionError("blocked lifecycle requires reason")
-            new=ProjectLifecycleState(project_id=project_id,phase=to_phase,phase_status=status,current_sprint=current_sprint,blocker=blocker,next_action=next_action,version=state.version+1); self._states[project_id]=new
+            new=ProjectLifecycleState(project_id=project_id,phase=to_phase,phase_status=status,current_sprint=current_sprint,blocker=blocker,blocker_code=blocker_code,next_action=next_action,version=state.version+1); self._states[project_id]=new
             self._history.setdefault(project_id,[]).append(ProjectLifecycleTransition(transition_id=str(uuid4()),project_id=project_id,from_phase=state.phase,to_phase=to_phase,reason_code=reason_code,source_execution_id=source_execution_id))
             return new
 
