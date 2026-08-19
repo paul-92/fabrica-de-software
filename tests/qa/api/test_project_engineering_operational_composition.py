@@ -630,13 +630,13 @@ def test_http_dependency_version_selection_creates_pending_request_without_runti
     response = client.post(
         (
             f"/api/v1/projects/{project_id}/engineering/"
-            f"{prepared['execution_id']}/dependencies/typescript/version"
+            f"{prepared['execution_id']}/dependencies/version"
         ),
         json={
+            "package": "typescript",
             "version": "5.9.2",
         },
     )
-
     assert response.status_code == 200, response.text
 
     updated = response.json()
@@ -700,3 +700,102 @@ def test_http_dependency_version_selection_creates_pending_request_without_runti
 
     assert after == before
     assert implementation_runtime.requests == []
+def test_http_dependency_version_selection_supports_scoped_npm_package(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / ".asep").mkdir()
+
+    (tmp_path / ".asep" / "dependency-baseline.json").write_text(
+        (
+            '{"status":"approved","dependencies":['
+            '{"package":"@nestjs/core","reason":"api framework"}'
+            "]}"
+        ),
+        encoding="utf-8",
+    )
+
+    implementation_runtime = FixtureRuntime()
+
+    composition = create_project_engineering_operational_composition(
+        ApplicationSettings(),
+        runtime_registry=registry(implementation_runtime),
+    )
+
+    client = TestClient(composition.app)
+
+    project_id, session_id = create_project_and_session(
+        client,
+        tmp_path,
+    )
+
+    request_body = {
+        "session_id": session_id,
+        "runtime_id": "codex",
+        "instruction": "Prepare the application foundation.",
+        "execution_mode": "workspace_write",
+        "engineering_phase": "development",
+        "sprint_id": "1",
+        "sprint_name": "Foundation",
+    }
+
+    prepared_response = client.post(
+        f"/api/v1/projects/{project_id}/engineering/prepare",
+        json=request_body,
+    )
+
+    assert prepared_response.status_code == 201, prepared_response.text
+
+    prepared = prepared_response.json()
+
+    assert prepared["status"] == "blocked"
+    assert prepared["error_code"] == "version_selection_required"
+
+    assert len(prepared["dependency_plan"]["items"]) == 1
+
+    initial = prepared["dependency_plan"]["items"][0]
+
+    assert initial["package"] == "@nestjs/core"
+    assert initial["requested_version"] is None
+    assert initial["status"] == "version_selection_required"
+
+    response = client.post(
+        (
+            f"/api/v1/projects/{project_id}/engineering/"
+            f"{prepared['execution_id']}/dependencies/version"
+        ),
+        json={
+            "package": "@nestjs/core",
+            "version": "11.1.29",
+        },
+    )
+
+    assert response.status_code == 200, response.text
+
+    updated = response.json()
+
+    assert updated["status"] == "blocked"
+    assert updated["error_code"] == "dependency_approval_required"
+
+    assert len(updated["dependency_plan"]["items"]) == 1
+
+    item = updated["dependency_plan"]["items"][0]
+
+    assert item["package"] == "@nestjs/core"
+    assert item["requested_version"] == "11.1.29"
+    assert item["status"] == "pending"
+    assert item["dependency_request_id"]
+
+    dependency_requests = client.get(
+        f"/api/v1/projects/{project_id}/dependency-requests"
+    )
+
+    assert dependency_requests.status_code == 200
+
+    stored = dependency_requests.json()
+
+    assert len(stored) == 1
+    assert stored[0]["package"] == "@nestjs/core"
+    assert stored[0]["requested_version"] == "11.1.29"
+    assert stored[0]["status"] == "pending"
+
+    assert implementation_runtime.requests == []    

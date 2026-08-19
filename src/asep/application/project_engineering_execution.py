@@ -157,24 +157,56 @@ class ProjectEngineeringExecutionService:
         return prepared
 
     def approve(
-        self, preparation_id: str, request: ProjectAIRuntimeExecutionRequest,
+        self,
+        preparation_id: str,
+        request: ProjectAIRuntimeExecutionRequest,
     ) -> ProjectAIRuntimeExecutionResult:
         runtime_result = self._runtime_execution.execute_prepared(
-            preparation_id, request,
+            preparation_id,
+            request,
         )
         execution = runtime_result.execution
+
         if self._lifecycle is not None:
-            state=self._lifecycle.get(execution.project_id); self._lifecycle.transition(execution.project_id,to_phase=ProjectPhase.DEVELOPMENT,status=ProjectPhaseStatus.ACTIVE,reason_code="preparation_approved",expected_version=state.version,current_sprint=state.current_sprint,source_execution_id=execution.execution_id)
+            state = self._lifecycle.get(execution.project_id)
+
+            target_phase = (
+                ProjectPhase.DEVELOPMENT
+                if state.phase
+                in {
+                    ProjectPhase.PLANNING,
+                    ProjectPhase.ARCHITECTURE,
+                    ProjectPhase.DEVELOPMENT,
+                }
+                else state.phase
+            )
+
+            self._lifecycle.transition(
+                execution.project_id,
+                to_phase=target_phase,
+                status=ProjectPhaseStatus.ACTIVE,
+                reason_code="preparation_approved",
+                expected_version=state.version,
+                current_sprint=state.current_sprint,
+                source_execution_id=execution.execution_id,
+            )
+
         if execution.execution_id != preparation_id:
             raise RuntimeError("prepared execution identity changed")
+
         if execution.status is not ProjectExecutionStatus.RUNNING:
-            raise RuntimeError("prepared runtime completed before validation")
+            raise RuntimeError(
+                "prepared runtime completed before validation"
+            )
+
         try:
             return self._complete_execution(runtime_result, execution)
         except Exception as error:
-            self._persist_unexpected_failure(execution.execution_id, error)
+            self._persist_unexpected_failure(
+                execution.execution_id,
+                error,
+            )
             raise
-
     def cancel(
         self, preparation_id: str, request: ProjectAIRuntimeExecutionRequest,
     ) -> ProjectExecution:

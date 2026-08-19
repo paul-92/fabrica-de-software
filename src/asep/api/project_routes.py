@@ -67,7 +67,9 @@ class ResolveDependencyRequestBody(BaseModel):
 
 class SelectDependencyVersionBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    version: str = Field(min_length=1)
+
+    package: str
+    version: str
 
 
 Identifier = Annotated[str, PathParameter(min_length=1, pattern=r".*\S.*")]
@@ -424,13 +426,12 @@ def create_projects_router(
     if runtime_execution is not None:
 
         @router.post(
-            "/{project_id}/engineering/{preparation_id}/dependencies/{package}/version",
+            "/{project_id}/engineering/{preparation_id}/dependencies/version",
             response_model=ProjectExecutionResponse,
         )
         def select_dependency_version(
             project_id: str,
             preparation_id: str,
-            package: str,
             body: SelectDependencyVersionBody,
             current: RequestPrincipal = Depends(principal_dependency),
         ) -> ProjectExecutionResponse:
@@ -439,7 +440,7 @@ def create_projects_router(
             updated = runtime_execution.select_dependency_version(
                 project_id=project_id,
                 preparation_id=preparation_id,
-                package=package,
+                package=body.package,
                 version=body.version,
             )
 

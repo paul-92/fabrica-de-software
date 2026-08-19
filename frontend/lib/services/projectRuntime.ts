@@ -40,9 +40,12 @@ export class ProjectRuntimeClient {
     version: string,
   ): Promise<ProjectExecutionDto> {
     return this.api.request({
-      path: `/api/v1/projects/${encodeURIComponent(projectId)}/engineering/${encodeURIComponent(preparationId)}/dependencies/${encodeURIComponent(packageName)}/version`,
+      path: `/api/v1/projects/${encodeURIComponent(projectId)}/engineering/${encodeURIComponent(preparationId)}/dependencies/version`,
       method: "POST",
-      body: { version },
+      body: {
+        package: packageName,
+        version,
+      },
     });
   }
   rejectDependency(projectId: string, requestId: string, expectedVersion = 1): Promise<unknown> {

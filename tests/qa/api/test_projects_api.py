@@ -18,7 +18,7 @@ def test_default_app_publishes_project_engineering_routes(tmp_path: Path) -> Non
         "/api/v1/projects/{project_id}/engineering/{preparation_id}/cancel": "post",
         (
             "/api/v1/projects/{project_id}/engineering/"
-            "{preparation_id}/dependencies/{package}/version"
+            "{preparation_id}/dependencies/version"
         ): "post",
     }
 
