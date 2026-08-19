@@ -32,6 +32,19 @@ export class ProjectRuntimeClient {
   approveDependency(projectId: string, requestId: string, expectedVersion = 1): Promise<unknown> {
     return this.api.request({ path: `/api/v1/projects/${encodeURIComponent(projectId)}/dependency-requests/${encodeURIComponent(requestId)}/approve`, method: "POST", body: { expected_version: expectedVersion } });
   }
+
+  selectDependencyVersion(
+    projectId: string,
+    preparationId: string,
+    packageName: string,
+    version: string,
+  ): Promise<ProjectExecutionDto> {
+    return this.api.request({
+      path: `/api/v1/projects/${encodeURIComponent(projectId)}/engineering/${encodeURIComponent(preparationId)}/dependencies/${encodeURIComponent(packageName)}/version`,
+      method: "POST",
+      body: { version },
+    });
+  }
   rejectDependency(projectId: string, requestId: string, expectedVersion = 1): Promise<unknown> {
     return this.api.request({ path: `/api/v1/projects/${encodeURIComponent(projectId)}/dependency-requests/${encodeURIComponent(requestId)}/reject`, method: "POST", body: { expected_version: expectedVersion } });
   }

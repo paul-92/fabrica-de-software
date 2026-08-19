@@ -15,6 +15,21 @@ from urllib.parse import urlsplit
 from pydantic import BaseModel, ConfigDict
 from asep.providers.process import ProcessRunner
 
+NODE_VERSION_PATTERN = re.compile(
+    r"(?:[~^]|>=?|<=?)?\d+(?:\.\d+){0,2}(?:-[0-9A-Za-z.-]+)?"
+)
+
+
+def validate_node_dependency_version(value: str) -> str:
+    normalized = value.strip()
+
+    if not normalized:
+        raise ValueError("invalid node version")
+
+    if NODE_VERSION_PATTERN.fullmatch(normalized) is None:
+        raise ValueError("invalid node version")
+
+    return normalized
 
 class DependencyProvisioningMode(StrEnum):
     CACHED = "cached"

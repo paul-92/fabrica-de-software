@@ -2,7 +2,12 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path as PathParameter, Query
 from collections.abc import Callable
-from asep.access.models import LEGACY_ADMIN_USER_ID, LEGACY_ORGANIZATION_ID, OrganizationRole, RequestPrincipal
+from asep.access.models import (
+    LEGACY_ADMIN_USER_ID,
+    LEGACY_ORGANIZATION_ID,
+    OrganizationRole,
+    RequestPrincipal,
+)
 
 from asep.api.project_schemas import (
     CreateProjectRequest,
@@ -41,13 +46,28 @@ from asep.application import (
     SessionMemorySearchService,
 )
 from asep.api.schemas import ErrorResponse
-from asep.project_lifecycle import InMemoryProjectLifecycleRepository, ProjectLifecycleState, ProjectLifecycleTransition
-from asep.dependency_provisioning import SQLiteDependencyRequestRepository, StoredDependencyRequest, DependencyRequestDecision, SQLiteProvisioningEvidenceRepository
+from asep.project_lifecycle import (
+    InMemoryProjectLifecycleRepository,
+    ProjectLifecycleState,
+    ProjectLifecycleTransition,
+)
+from asep.dependency_provisioning import (
+    SQLiteDependencyRequestRepository,
+    StoredDependencyRequest,
+    DependencyRequestDecision,
+    SQLiteProvisioningEvidenceRepository,
+)
 from pydantic import BaseModel, ConfigDict, Field
 
+
 class ResolveDependencyRequestBody(BaseModel):
-    model_config=ConfigDict(extra="forbid")
-    expected_version:int=Field(ge=1)
+    model_config = ConfigDict(extra="forbid")
+    expected_version: int = Field(ge=1)
+
+
+class SelectDependencyVersionBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    version: str = Field(min_length=1)
 
 
 Identifier = Annotated[str, PathParameter(min_length=1, pattern=r".*\S.*")]
@@ -61,36 +81,60 @@ def _runtime_response(result) -> ProjectAIRuntimeExecutionResponse:
         "output": runtime_result.output,
         "runtime_id": runtime_result.identity.runtime_id,
         "model_id": runtime_result.identity.model_id,
-        "usage": None if runtime_result.usage is None else runtime_result.usage.model_dump(mode="json"),
+        "usage": (
+            None
+            if runtime_result.usage is None
+            else runtime_result.usage.model_dump(mode="json")
+        ),
         "metadata": runtime_result.model_dump(mode="json")["metadata"],
         "execution_mode": result.execution_mode,
-        "changes": tuple(change.model_dump(mode="json") for change in result.changes),
+        "changes": tuple(
+            change.model_dump(mode="json") for change in result.changes
+        ),
         "context_entry_count": result.execution.context_entry_count,
         "context_truncated": result.execution.context_truncated,
         "context_char_count": result.execution.context_char_count,
-        "context_omitted_execution_count": result.execution.context_omitted_execution_count,
+        "context_omitted_execution_count": (
+            result.execution.context_omitted_execution_count
+        ),
         "memory_entry_count": result.execution.memory_entry_count,
         "memory_char_count": result.execution.memory_char_count,
         "memory_truncated": result.execution.memory_truncated,
     }
+
     if result.execution.operational_plan is not None:
-        public.update({
-            "status": result.execution.status,
-            "instruction": result.execution.instruction,
-            "operational_plan": OperationalPlanResponse.from_domain(result.execution.operational_plan),
-            "validations": tuple(ValidationResponse.from_domain(item) for item in result.execution.validations),
-            "repair": RepairResponse.from_domain(result.execution.repair),
-            "quality_gate": ProjectQualityGateResponse.from_domain(result.execution.quality_gate),
-            "step_results": tuple(item.model_dump(mode="json") for item in result.execution.step_results),
-            "error_code": result.execution.error_code,
-            "created_at": result.execution.created_at,
-            "completed_at": result.execution.completed_at,
-            "idempotent_noop_evidence": (
-                None
-                if result.execution.idempotent_noop_evidence is None
-                else result.execution.idempotent_noop_evidence.model_dump(mode="json")
-            ),
-        })
+        public.update(
+            {
+                "status": result.execution.status,
+                "instruction": result.execution.instruction,
+                "operational_plan": OperationalPlanResponse.from_domain(
+                    result.execution.operational_plan
+                ),
+                "validations": tuple(
+                    ValidationResponse.from_domain(item)
+                    for item in result.execution.validations
+                ),
+                "repair": RepairResponse.from_domain(result.execution.repair),
+                "quality_gate": ProjectQualityGateResponse.from_domain(
+                    result.execution.quality_gate
+                ),
+                "step_results": tuple(
+                    item.model_dump(mode="json")
+                    for item in result.execution.step_results
+                ),
+                "error_code": result.execution.error_code,
+                "created_at": result.execution.created_at,
+                "completed_at": result.execution.completed_at,
+                "idempotent_noop_evidence": (
+                    None
+                    if result.execution.idempotent_noop_evidence is None
+                    else result.execution.idempotent_noop_evidence.model_dump(
+                        mode="json"
+                    )
+                ),
+            }
+        )
+
     return ProjectAIRuntimeExecutionResponse.model_validate(public)
 
 
@@ -108,107 +152,301 @@ def create_projects_router(
     provisioning_evidence: SQLiteProvisioningEvidenceRepository | None = None,
 ) -> APIRouter:
     if principal_dependency is None:
+
         def principal_dependency() -> RequestPrincipal:
             # Explicitly injected applications without an access service are a
             # trusted embedding boundary (used by unit compositions), never the
             # configured HTTP composition.
-            return RequestPrincipal(user_id=LEGACY_ADMIN_USER_ID, organization_id=LEGACY_ORGANIZATION_ID, role=OrganizationRole.ADMIN)
+            return RequestPrincipal(
+                user_id=LEGACY_ADMIN_USER_ID,
+                organization_id=LEGACY_ORGANIZATION_ID,
+                role=OrganizationRole.ADMIN,
+            )
+
     router = APIRouter(prefix="/api/v1/projects", tags=["projects"])
+
     def execution_response(item):
-        evidence=() if provisioning_evidence is None else tuple(value.model_dump(mode="json") for value in provisioning_evidence.for_execution(item.project_id,item.execution_id))
-        return ProjectExecutionResponse.from_domain(item,evidence)
+        evidence = (
+            ()
+            if provisioning_evidence is None
+            else tuple(
+                value.model_dump(mode="json")
+                for value in provisioning_evidence.for_execution(
+                    item.project_id, item.execution_id
+                )
+            )
+        )
+        return ProjectExecutionResponse.from_domain(item, evidence)
 
     if dependency_requests is not None:
-        @router.get("/{project_id}/dependency-requests",response_model=tuple[StoredDependencyRequest,...])
-        def list_dependency_requests(project_id:str,current:RequestPrincipal=Depends(principal_dependency)):
-            service.get(project_id,current); return dependency_requests.list(project_id)
-        @router.get("/{project_id}/dependency-requests/{request_id}",response_model=StoredDependencyRequest)
-        def get_dependency_request(project_id:str,request_id:str,current:RequestPrincipal=Depends(principal_dependency)):
-            service.get(project_id,current); item=dependency_requests.get(project_id,request_id)
-            if item is None: raise KeyError(request_id)
+
+        @router.get(
+            "/{project_id}/dependency-requests",
+            response_model=tuple[StoredDependencyRequest, ...],
+        )
+        def list_dependency_requests(
+            project_id: str,
+            current: RequestPrincipal = Depends(principal_dependency),
+        ):
+            service.get(project_id, current)
+            return dependency_requests.list(project_id)
+
+        @router.get(
+            "/{project_id}/dependency-requests/{request_id}",
+            response_model=StoredDependencyRequest,
+        )
+        def get_dependency_request(
+            project_id: str,
+            request_id: str,
+            current: RequestPrincipal = Depends(principal_dependency),
+        ):
+            service.get(project_id, current)
+            item = dependency_requests.get(project_id, request_id)
+            if item is None:
+                raise KeyError(request_id)
             return item
-        @router.post("/{project_id}/dependency-requests/{request_id}/approve",response_model=StoredDependencyRequest)
-        def approve_dependency_request(project_id:str,request_id:str,body:ResolveDependencyRequestBody,current:RequestPrincipal=Depends(principal_dependency)):
-            service.get(project_id,current); return dependency_requests.resolve(project_id,request_id,DependencyRequestDecision.APPROVED,current.user_id,body.expected_version)
-        @router.post("/{project_id}/dependency-requests/{request_id}/reject",response_model=StoredDependencyRequest)
-        def reject_dependency_request(project_id:str,request_id:str,body:ResolveDependencyRequestBody,current:RequestPrincipal=Depends(principal_dependency)):
-            service.get(project_id,current); return dependency_requests.resolve(project_id,request_id,DependencyRequestDecision.REJECTED,current.user_id,body.expected_version)
+
+        @router.post(
+            "/{project_id}/dependency-requests/{request_id}/approve",
+            response_model=StoredDependencyRequest,
+        )
+        def approve_dependency_request(
+            project_id: str,
+            request_id: str,
+            body: ResolveDependencyRequestBody,
+            current: RequestPrincipal = Depends(principal_dependency),
+        ):
+            service.get(project_id, current)
+            return dependency_requests.resolve(
+                project_id,
+                request_id,
+                DependencyRequestDecision.APPROVED,
+                current.user_id,
+                body.expected_version,
+            )
+
+        @router.post(
+            "/{project_id}/dependency-requests/{request_id}/reject",
+            response_model=StoredDependencyRequest,
+        )
+        def reject_dependency_request(
+            project_id: str,
+            request_id: str,
+            body: ResolveDependencyRequestBody,
+            current: RequestPrincipal = Depends(principal_dependency),
+        ):
+            service.get(project_id, current)
+            return dependency_requests.resolve(
+                project_id,
+                request_id,
+                DependencyRequestDecision.REJECTED,
+                current.user_id,
+                body.expected_version,
+            )
 
     if lifecycle_repository is not None:
-        @router.get("/{project_id}/lifecycle", response_model=ProjectLifecycleState)
-        def get_lifecycle(project_id: str, current: RequestPrincipal = Depends(principal_dependency)) -> ProjectLifecycleState:
-            service.get(project_id, current); return lifecycle_repository.get(project_id)
-        @router.get("/{project_id}/lifecycle/transitions", response_model=tuple[ProjectLifecycleTransition, ...])
-        def get_lifecycle_transitions(project_id: str, current: RequestPrincipal = Depends(principal_dependency)) -> tuple[ProjectLifecycleTransition, ...]:
-            service.get(project_id, current); return lifecycle_repository.history(project_id)
+
+        @router.get(
+            "/{project_id}/lifecycle",
+            response_model=ProjectLifecycleState,
+        )
+        def get_lifecycle(
+            project_id: str,
+            current: RequestPrincipal = Depends(principal_dependency),
+        ) -> ProjectLifecycleState:
+            service.get(project_id, current)
+            return lifecycle_repository.get(project_id)
+
+        @router.get(
+            "/{project_id}/lifecycle/transitions",
+            response_model=tuple[ProjectLifecycleTransition, ...],
+        )
+        def get_lifecycle_transitions(
+            project_id: str,
+            current: RequestPrincipal = Depends(principal_dependency),
+        ) -> tuple[ProjectLifecycleTransition, ...]:
+            service.get(project_id, current)
+            return lifecycle_repository.history(project_id)
 
     @router.post("", response_model=ProjectResponse, status_code=201)
-    def create_project(body: CreateProjectRequest, current: RequestPrincipal = Depends(principal_dependency)) -> ProjectResponse:
+    def create_project(
+        body: CreateProjectRequest,
+        current: RequestPrincipal = Depends(principal_dependency),
+    ) -> ProjectResponse:
         return ProjectResponse.from_domain(
             service.create_hosted(body.name, current)
         )
 
     @router.get("", response_model=ProjectListResponse)
-    def list_projects(current: RequestPrincipal = Depends(principal_dependency)) -> ProjectListResponse:
+    def list_projects(
+        current: RequestPrincipal = Depends(principal_dependency),
+    ) -> ProjectListResponse:
         return ProjectListResponse(
-            items=tuple(ProjectResponse.from_domain(item) for item in service.list(current))
+            items=tuple(
+                ProjectResponse.from_domain(item)
+                for item in service.list(current)
+            )
         )
 
     @router.get("/{project_id}", response_model=ProjectResponse)
-    def get_project(project_id: str, current: RequestPrincipal = Depends(principal_dependency)) -> ProjectResponse:
+    def get_project(
+        project_id: str,
+        current: RequestPrincipal = Depends(principal_dependency),
+    ) -> ProjectResponse:
         return ProjectResponse.from_domain(service.get(project_id, current))
 
     if workspace_service is not None:
-        @router.get("/{project_id}/workspace", response_model=WorkspaceDirectoryResponse)
-        def list_workspace(project_id: str, path: str = Query(default=""), current: RequestPrincipal = Depends(principal_dependency)) -> WorkspaceDirectoryResponse:
-            service.get(project_id, current)
-            return WorkspaceDirectoryResponse.from_domain(workspace_service.list_directory(project_id, path))
 
-        @router.get("/{project_id}/workspace/file", response_model=WorkspaceFileContentResponse)
-        def read_workspace_file(project_id: str, path: str = Query(..., min_length=1), current: RequestPrincipal = Depends(principal_dependency)) -> WorkspaceFileContentResponse:
+        @router.get(
+            "/{project_id}/workspace",
+            response_model=WorkspaceDirectoryResponse,
+        )
+        def list_workspace(
+            project_id: str,
+            path: str = Query(default=""),
+            current: RequestPrincipal = Depends(principal_dependency),
+        ) -> WorkspaceDirectoryResponse:
             service.get(project_id, current)
-            return WorkspaceFileContentResponse.from_domain(workspace_service.read_file(project_id, path))
+            return WorkspaceDirectoryResponse.from_domain(
+                workspace_service.list_directory(project_id, path)
+            )
+
+        @router.get(
+            "/{project_id}/workspace/file",
+            response_model=WorkspaceFileContentResponse,
+        )
+        def read_workspace_file(
+            project_id: str,
+            path: str = Query(..., min_length=1),
+            current: RequestPrincipal = Depends(principal_dependency),
+        ) -> WorkspaceFileContentResponse:
+            service.get(project_id, current)
+            return WorkspaceFileContentResponse.from_domain(
+                workspace_service.read_file(project_id, path)
+            )
 
     if session_service is not None:
-        @router.post("/{project_id}/sessions", response_model=ProjectSessionResponse, status_code=201)
-        def create_session(project_id: str, body: CreateProjectSessionRequest, current: RequestPrincipal = Depends(principal_dependency)) -> ProjectSessionResponse:
-            service.get(project_id, current)
-            return ProjectSessionResponse.from_domain(session_service.create(project_id, body.title))
 
-        @router.get("/{project_id}/sessions", response_model=ProjectSessionListResponse)
-        def list_sessions(project_id: str, current: RequestPrincipal = Depends(principal_dependency)) -> ProjectSessionListResponse:
+        @router.post(
+            "/{project_id}/sessions",
+            response_model=ProjectSessionResponse,
+            status_code=201,
+        )
+        def create_session(
+            project_id: str,
+            body: CreateProjectSessionRequest,
+            current: RequestPrincipal = Depends(principal_dependency),
+        ) -> ProjectSessionResponse:
             service.get(project_id, current)
-            return ProjectSessionListResponse(items=tuple(
-                ProjectSessionResponse.from_domain(item) for item in session_service.list(project_id)
-            ))
+            return ProjectSessionResponse.from_domain(
+                session_service.create(project_id, body.title)
+            )
 
-        @router.get("/{project_id}/sessions/{session_id}", response_model=ProjectSessionResponse)
-        def get_session(project_id: str, session_id: str, current: RequestPrincipal = Depends(principal_dependency)) -> ProjectSessionResponse:
+        @router.get(
+            "/{project_id}/sessions",
+            response_model=ProjectSessionListResponse,
+        )
+        def list_sessions(
+            project_id: str,
+            current: RequestPrincipal = Depends(principal_dependency),
+        ) -> ProjectSessionListResponse:
             service.get(project_id, current)
-            return ProjectSessionResponse.from_domain(session_service.get(project_id, session_id))
+            return ProjectSessionListResponse(
+                items=tuple(
+                    ProjectSessionResponse.from_domain(item)
+                    for item in session_service.list(project_id)
+                )
+            )
 
-        @router.get("/{project_id}/executions", response_model=ProjectExecutionListResponse)
-        def list_executions(project_id: str, current: RequestPrincipal = Depends(principal_dependency)) -> ProjectExecutionListResponse:
+        @router.get(
+            "/{project_id}/sessions/{session_id}",
+            response_model=ProjectSessionResponse,
+        )
+        def get_session(
+            project_id: str,
+            session_id: str,
+            current: RequestPrincipal = Depends(principal_dependency),
+        ) -> ProjectSessionResponse:
             service.get(project_id, current)
-            return ProjectExecutionListResponse(items=tuple(
-                execution_response(item) for item in session_service.list_executions(project_id)
-            ))
+            return ProjectSessionResponse.from_domain(
+                session_service.get(project_id, session_id)
+            )
 
-        @router.get("/{project_id}/sessions/{session_id}/executions", response_model=ProjectExecutionListResponse)
-        def list_session_executions(project_id: str, session_id: str, current: RequestPrincipal = Depends(principal_dependency)) -> ProjectExecutionListResponse:
+        @router.get(
+            "/{project_id}/executions",
+            response_model=ProjectExecutionListResponse,
+        )
+        def list_executions(
+            project_id: str,
+            current: RequestPrincipal = Depends(principal_dependency),
+        ) -> ProjectExecutionListResponse:
             service.get(project_id, current)
-            return ProjectExecutionListResponse(items=tuple(
-                execution_response(item)
-                for item in session_service.list_session_executions(project_id, session_id)
-            ))
+            return ProjectExecutionListResponse(
+                items=tuple(
+                    execution_response(item)
+                    for item in session_service.list_executions(project_id)
+                )
+            )
 
-        @router.get("/{project_id}/executions/{execution_id}", response_model=ProjectExecutionResponse)
-        def get_execution(project_id: str, execution_id: str, current: RequestPrincipal = Depends(principal_dependency)) -> ProjectExecutionResponse:
+        @router.get(
+            "/{project_id}/sessions/{session_id}/executions",
+            response_model=ProjectExecutionListResponse,
+        )
+        def list_session_executions(
+            project_id: str,
+            session_id: str,
+            current: RequestPrincipal = Depends(principal_dependency),
+        ) -> ProjectExecutionListResponse:
             service.get(project_id, current)
-            return execution_response(session_service.get_execution(project_id, execution_id))
+            return ProjectExecutionListResponse(
+                items=tuple(
+                    execution_response(item)
+                    for item in session_service.list_session_executions(
+                        project_id, session_id
+                    )
+                )
+            )
+
+        @router.get(
+            "/{project_id}/executions/{execution_id}",
+            response_model=ProjectExecutionResponse,
+        )
+        def get_execution(
+            project_id: str,
+            execution_id: str,
+            current: RequestPrincipal = Depends(principal_dependency),
+        ) -> ProjectExecutionResponse:
+            service.get(project_id, current)
+            return execution_response(
+                session_service.get_execution(project_id, execution_id)
+            )
 
     if runtime_execution is not None:
+
+        @router.post(
+            "/{project_id}/engineering/{preparation_id}/dependencies/{package}/version",
+            response_model=ProjectExecutionResponse,
+        )
+        def select_dependency_version(
+            project_id: str,
+            preparation_id: str,
+            package: str,
+            body: SelectDependencyVersionBody,
+            current: RequestPrincipal = Depends(principal_dependency),
+        ) -> ProjectExecutionResponse:
+            service.get(project_id, current)
+
+            updated = runtime_execution.select_dependency_version(
+                project_id=project_id,
+                preparation_id=preparation_id,
+                package=package,
+                version=body.version,
+            )
+
+            return execution_response(updated)
+
         if engineering_execution is not None:
+
             @router.post(
                 "/{project_id}/engineering/prepare",
                 response_model=ProjectEngineeringPreparationResponse,
@@ -220,6 +458,7 @@ def create_projects_router(
                 current: RequestPrincipal = Depends(principal_dependency),
             ) -> ProjectEngineeringPreparationResponse:
                 service.get(project_id, current)
+
                 request = ProjectAIRuntimeExecutionRequest(
                     project_id=project_id,
                     session_id=body.session_id,
@@ -229,10 +468,13 @@ def create_projects_router(
                     execution_mode=body.execution_mode,
                     principal=current,
                     dependency_requests=body.dependency_requests,
-                    sprint_id=body.sprint_id, sprint_name=body.sprint_name,
+                    sprint_id=body.sprint_id,
+                    sprint_name=body.sprint_name,
                     engineering_phase=body.engineering_phase,
                 )
+
                 prepared = engineering_execution.prepare(request)
+
                 return ProjectEngineeringPreparationResponse(
                     execution_id=prepared.execution_id,
                     project_id=prepared.project_id,
@@ -266,8 +508,12 @@ def create_projects_router(
                 current: RequestPrincipal = Depends(principal_dependency),
             ) -> ProjectAIRuntimeExecutionResponse:
                 service.get(project_id, current)
+
                 if session_service is not None:
-                    session_service.get_execution(project_id, preparation_id)
+                    session_service.get_execution(
+                        project_id, preparation_id
+                    )
+
                 request = ProjectAIRuntimeExecutionRequest(
                     project_id=project_id,
                     session_id=body.session_id,
@@ -277,7 +523,10 @@ def create_projects_router(
                     execution_mode=body.execution_mode,
                     principal=current,
                 )
-                result = engineering_execution.approve(preparation_id, request)
+
+                result = engineering_execution.approve(
+                    preparation_id, request
+                )
                 return _runtime_response(result)
 
             @router.post(
@@ -291,8 +540,12 @@ def create_projects_router(
                 current: RequestPrincipal = Depends(principal_dependency),
             ) -> ProjectExecutionResponse:
                 service.get(project_id, current)
+
                 if session_service is not None:
-                    session_service.get_execution(project_id, preparation_id)
+                    session_service.get_execution(
+                        project_id, preparation_id
+                    )
+
                 request = ProjectAIRuntimeExecutionRequest(
                     project_id=project_id,
                     session_id=body.session_id,
@@ -302,8 +555,11 @@ def create_projects_router(
                     execution_mode=body.execution_mode,
                     principal=current,
                 )
+
                 return ProjectExecutionResponse.from_domain(
-                    engineering_execution.cancel(preparation_id, request)
+                    engineering_execution.cancel(
+                        preparation_id, request
+                    )
                 )
 
         @router.post(
@@ -317,15 +573,17 @@ def create_projects_router(
             current: RequestPrincipal = Depends(principal_dependency),
         ) -> ProjectAIRuntimeExecutionResponse:
             service.get(project_id, current)
+
             request = ProjectAIRuntimeExecutionRequest(
-                    project_id=project_id,
-                    session_id=body.session_id,
-                    runtime_id=body.runtime_id,
-                    instruction=body.instruction,
-                    metadata=body.metadata,
-                    execution_mode=body.execution_mode,
-                    principal=current,
-                )
+                project_id=project_id,
+                session_id=body.session_id,
+                runtime_id=body.runtime_id,
+                instruction=body.instruction,
+                metadata=body.metadata,
+                execution_mode=body.execution_mode,
+                principal=current,
+            )
+
             result = (
                 engineering_execution.execute(request)
                 if (
@@ -334,19 +592,28 @@ def create_projects_router(
                 )
                 else runtime_execution.execute(request)
             )
+
             return _runtime_response(result)
 
     if memory_service is not None:
+
         @router.get(
             "/{project_id}/sessions/{session_id}/memory",
             response_model=SessionMemoryListResponse,
         )
-        def list_memory(project_id: str, session_id: str, current: RequestPrincipal = Depends(principal_dependency)) -> SessionMemoryListResponse:
+        def list_memory(
+            project_id: str,
+            session_id: str,
+            current: RequestPrincipal = Depends(principal_dependency),
+        ) -> SessionMemoryListResponse:
             service.get(project_id, current)
-            return SessionMemoryListResponse(items=tuple(
-                SessionMemoryResponse.from_domain(item)
-                for item in memory_service.list(project_id, session_id)
-            ))
+
+            return SessionMemoryListResponse(
+                items=tuple(
+                    SessionMemoryResponse.from_domain(item)
+                    for item in memory_service.list(project_id, session_id)
+                )
+            )
 
         @router.post(
             "/{project_id}/sessions/{session_id}/memory",
@@ -360,11 +627,18 @@ def create_projects_router(
             current: RequestPrincipal = Depends(principal_dependency),
         ) -> SessionMemoryResponse:
             service.get(project_id, current)
-            return SessionMemoryResponse.from_domain(memory_service.add(
-                project_id, session_id, body.kind, body.content
-            ))
+
+            return SessionMemoryResponse.from_domain(
+                memory_service.add(
+                    project_id,
+                    session_id,
+                    body.kind,
+                    body.content,
+                )
+            )
 
     if memory_search_service is not None:
+
         @router.get(
             "/{project_id}/sessions/{session_id}/memory/search",
             response_model=SessionMemorySearchResponse,
@@ -387,16 +661,19 @@ def create_projects_router(
             current: RequestPrincipal = Depends(principal_dependency),
         ) -> SessionMemorySearchResponse:
             service.get(project_id, current)
+
             return SessionMemorySearchResponse.from_application(
-                memory_search_service.search(SessionMemorySearchRequest(
-                    project_id=project_id,
-                    session_id=session_id,
-                    text=text,
-                    kind=kind,
-                    order=order,
-                    page_size=page_size,
-                    cursor=cursor,
-                ))
+                memory_search_service.search(
+                    SessionMemorySearchRequest(
+                        project_id=project_id,
+                        session_id=session_id,
+                        text=text,
+                        kind=kind,
+                        order=order,
+                        page_size=page_size,
+                        cursor=cursor,
+                    )
+                )
             )
 
     return router

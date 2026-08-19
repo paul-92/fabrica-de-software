@@ -4,7 +4,7 @@ from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 import hashlib
 import json
-import re
+
 from pathlib import Path
 from threading import Lock
 from typing import Any, Protocol
@@ -38,7 +38,7 @@ from asep.application.session_memory import (
     serialize_session_memory_context,
 )
 from asep.application.workspace_changes import WorkspaceChange, WorkspaceSnapshotter
-from asep.dependency_provisioning import ControlledDependencyBrokerRunner, ProjectDependencyProvisioningService, SQLiteDependencyRequestRepository, DependencyRequestDecision, SQLiteProvisioningEvidenceRepository, ProvisioningEvidence, DependencyProvisioningStatus, DependencyPlan, DependencyPlanItem
+from asep.dependency_provisioning import ControlledDependencyBrokerRunner, ProjectDependencyProvisioningService, SQLiteDependencyRequestRepository, DependencyRequestDecision, SQLiteProvisioningEvidenceRepository, ProvisioningEvidence, DependencyProvisioningStatus, DependencyPlan, DependencyPlanItem,validate_node_dependency_version
 from asep.application.project_engineering_planning import BoundedProjectAnalysis
 from asep.projects import (
     ProjectExecution,
@@ -96,14 +96,12 @@ class EngineeringDependencyRequest(BaseModel):
         return value
     @field_validator("requested_version")
     @classmethod
-    def node_version(cls,value:str)->str:
-        if re.fullmatch(r"(?:[~^]|>=?|<=?)?\d+(?:\.\d+){0,2}(?:-[0-9A-Za-z.-]+)?",value) is None: raise ValueError("invalid node version")
-        return value
-    @field_validator("registry")
-    @classmethod
-    def allowed_registry(cls,value:str|None)->str|None:
-        if value is not None and value.rstrip("/").casefold()!="https://registry.npmjs.org": raise ValueError("registry not allowed")
-        return value
+    def node_version(cls, value: str) -> str:
+        return validate_node_dependency_version(value)
+        @classmethod
+        def allowed_registry(cls,value:str|None)->str|None:
+            if value is not None and value.rstrip("/").casefold()!="https://registry.npmjs.org": raise ValueError("registry not allowed")
+            return value
 class ProjectAIRuntimeExecutionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     project_id: str
@@ -444,7 +442,130 @@ class ProjectAIRuntimeExecutionService:
         })
         self._executions.create(prepared)
         return prepared
+    def select_dependency_version(
+        self,
+        project_id: str,
+        preparation_id: str,
+        package: str,
+        version: str,
+    ) -> ProjectExecution:
+        """Resolve one structured dependency version without executing the runtime."""
 
+        if self._dependency_requests is None:
+            raise RuntimeError("dependency approval repository is unavailable")
+
+        normalized_version = validate_node_dependency_version(version)
+
+        prepared = self._executions.get_by_project(project_id, preparation_id)
+
+        if prepared.status not in {
+            ProjectExecutionStatus.PENDING,
+            ProjectExecutionStatus.BLOCKED,
+        }:
+            raise ValueError("preparation is not available for dependency version selection")
+
+        if prepared.dependency_plan is None:
+            raise ValueError("preparation dependency plan is unavailable")
+
+        dependency_plan = DependencyPlan.model_validate(prepared.dependency_plan)
+
+        matching = [
+            item
+            for item in dependency_plan.items
+            if item.ecosystem == "node" and item.package == package
+        ]
+
+        if len(matching) != 1:
+            raise ValueError("dependency plan item not found or ambiguous")
+
+        selected = matching[0]
+
+        if selected.status != "version_selection_required":
+            raise ValueError("dependency version has already been selected")
+
+        existing = [
+            item
+            for item in self._dependency_requests.list(project_id)
+            if item.execution_id == preparation_id
+            and item.ecosystem == selected.ecosystem
+            and item.package == selected.package
+            and item.requested_version == normalized_version
+        ]
+
+        if existing:
+            stored = existing[-1]
+        else:
+            stored = self._dependency_requests.create(
+                project_id=prepared.project_id,
+                session_id=prepared.session_id,
+                execution_id=prepared.execution_id,
+                package=selected.package,
+                requested_version=normalized_version,
+                reason=selected.reason,
+                registry="https://registry.npmjs.org/",
+            )
+
+        updated_items = tuple(
+            item.model_copy(
+                update={
+                    "requested_version": normalized_version,
+                    "status": stored.status.value,
+                    "dependency_request_id": stored.request_id,
+                }
+            )
+            if item.package == selected.package
+            and item.ecosystem == selected.ecosystem
+            else item
+            for item in dependency_plan.items
+        )
+
+        updated_plan = dependency_plan.model_copy(
+            update={
+                "items": updated_items,
+                "version": dependency_plan.version + 1,
+            }
+        )
+
+        has_version_selection = any(
+            item.status == "version_selection_required"
+            for item in updated_items
+        )
+
+        if has_version_selection:
+            error_code = "version_selection_required"
+            next_action = (
+                "Selecione uma versão estruturada para cada dependência obrigatória."
+            )
+        else:
+            error_code = "dependency_approval_required"
+            next_action = "Revise e aprove as dependências necessárias."
+
+        updated = ProjectExecution.model_validate(
+            {
+                **prepared.model_dump(mode="python"),
+                "dependency_plan": updated_plan.model_dump(mode="json"),
+                "dependency_requests": tuple(
+                    {
+                        "ecosystem": item.ecosystem,
+                        "package": item.package,
+                        "requested_version": item.requested_version,
+                        "reason": item.reason,
+                        "registry": "https://registry.npmjs.org/",
+                    }
+                    for item in updated_items
+                    if item.requested_version is not None
+                ),
+                "status": ProjectExecutionStatus.BLOCKED,
+                "error_code": error_code,
+                "blocker": "Dependências aguardando revisão",
+                "next_action": next_action,
+                "completed_at": self._clock(),
+            }
+        )
+
+        self._executions.update(updated)
+
+        return updated
     def execute_prepared(
         self, preparation_id: str, request: ProjectAIRuntimeExecutionRequest,
     ) -> ProjectAIRuntimeExecutionResult:

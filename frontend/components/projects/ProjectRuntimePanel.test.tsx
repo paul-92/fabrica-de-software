@@ -14,7 +14,7 @@ const failedExecution = { execution_id: "e-failed", session_id: "s-1", project_i
 const props = { projectId: "p-1", projectName: "Pilot", workspaceLabel: "workspace-1" };
 function service(overrides: Partial<ProjectRuntimeWorkspaceService> = {}): ProjectRuntimeWorkspaceService {
   const preparation = { execution_id: "e-1", project_id: "p-1", session_id: "s-1", runtime_id: "codex", instruction: "Write safely", status: "pending" as const, analysis: { languages: ["TypeScript"], frameworks: ["Next.js"], package_managers: ["npm"], package_manifests: ["package.json"], modules: ["src"], entrypoints: [], dependencies: [], architecture: [], has_tests: true, file_count: 3, test_file_count: 1 }, operational_plan: { execution_id: "e-1", source: "ai", created_at: "2026-08-12T00:00:00Z", steps: [{ step_id: "execute", operation: "execute_workspace_task", description: "Implementar a tarefa.", dependencies: [], target_hints: ["src"], validation_hints: ["typecheck", "vitest"] }] }, dependency_plan: { project_id:"p-1",preparation_id:"e-1",items:[],created_at:"2026-08-12T00:00:00Z",version:1 }, created_at: "2026-08-12T00:00:00Z" };
-  return { status: vi.fn().mockResolvedValue(ready), execute: vi.fn().mockResolvedValue(result), prepare: vi.fn().mockImplementation(async (_projectId, _sessionId, instruction) => ({ ...preparation, instruction })), approve: vi.fn().mockResolvedValue(result), cancel: vi.fn().mockResolvedValue(failedExecution), approveDependency:vi.fn(), rejectDependency:vi.fn(), listSessions: vi.fn().mockResolvedValue([session]), createSession: vi.fn().mockResolvedValue(session), listExecutions: vi.fn().mockResolvedValue([]), getExecution: vi.fn(), listMemory: vi.fn().mockResolvedValue([]), addMemory: vi.fn(), ...overrides };
+  return { status: vi.fn().mockResolvedValue(ready), execute: vi.fn().mockResolvedValue(result), prepare: vi.fn().mockImplementation(async (_projectId, _sessionId, instruction) => ({ ...preparation, instruction })), approve: vi.fn().mockResolvedValue(result), cancel: vi.fn().mockResolvedValue(failedExecution),selectDependencyVersion: vi.fn(), approveDependency:vi.fn(), rejectDependency:vi.fn(), listSessions: vi.fn().mockResolvedValue([session]), createSession: vi.fn().mockResolvedValue(session), listExecutions: vi.fn().mockResolvedValue([]), getExecution: vi.fn(), listMemory: vi.fn().mockResolvedValue([]), addMemory: vi.fn(), ...overrides };
 }
 
 describe("ProjectRuntimePanel", () => {
@@ -51,7 +51,161 @@ describe("ProjectRuntimePanel", () => {
     await act(async()=>{});
     expect(approveDependency).toHaveBeenCalledWith("p-1","dep-1");
   });
+  it("selects a structured dependency version and transitions the item to pending", async () => {
+  const defaults = service();
 
+  const prepared = await defaults.prepare(
+    "p-1",
+    "s-1",
+    "Write safely",
+    {},
+  );
+
+  const blockedPreparation = {
+    ...prepared,
+    status: "blocked" as const,
+    error_code: "version_selection_required",
+    blocker: "Dependências aguardando revisão",
+    next_action:
+      "Selecione uma versão estruturada para cada dependência obrigatória.",
+    dependency_plan: {
+      ...prepared.dependency_plan,
+      items: [
+        {
+          ecosystem: "node" as const,
+          package: "typescript",
+          requested_version: null,
+          reason: "Approved foundation",
+          source: "baseline" as const,
+          source_reference: "dependency-baseline.json",
+          required: true,
+          status: "version_selection_required" as const,
+          dependency_request_id: null,
+        },
+      ],
+    },
+  };
+
+  const updatedPreparation = {
+    ...blockedPreparation,
+    error_code: "dependency_approval_required",
+    next_action: "Revise e aprove as dependências necessárias.",
+    dependency_plan: {
+      ...blockedPreparation.dependency_plan,
+      version: blockedPreparation.dependency_plan.version + 1,
+      items: [
+        {
+          ecosystem: "node" as const,
+          package: "typescript",
+          requested_version: "5.9.2",
+          reason: "Approved foundation",
+          source: "baseline" as const,
+          source_reference: "dependency-baseline.json",
+          required: true,
+          status: "pending" as const,
+          dependency_request_id: "dep-1",
+        },
+      ],
+    },
+  };
+
+  const selectDependencyVersion = vi
+    .fn()
+    .mockResolvedValue(updatedPreparation);
+
+  render(
+    <ProjectRuntimePanel
+      {...props}
+      service={service({
+        prepare: vi.fn().mockResolvedValue(blockedPreparation),
+        selectDependencyVersion,
+      })}
+    />,
+  );
+
+  await screen.findByText(/Pronto/);
+
+  fireEvent.click(
+    screen.getByLabelText("Permitir alterações no projeto"),
+  );
+
+  fireEvent.change(
+    screen.getByLabelText("Tarefa"),
+    {
+      target: {
+        value: "Write safely",
+      },
+    },
+  );
+
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Preparar plano",
+    }),
+  );
+
+  expect(
+    await screen.findByText("Dependências necessárias"),
+  ).toBeTruthy();
+
+  expect(
+    screen.getByText("typescript"),
+  ).toBeTruthy();
+
+  expect(
+    screen.getByText("Seleção necessária"),
+  ).toBeTruthy();
+
+  const versionInput = screen.getByLabelText(
+    "Versão de typescript",
+  );
+
+  fireEvent.change(
+    versionInput,
+    {
+      target: {
+        value: "5.9.2",
+      },
+    },
+  );
+
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Selecionar versão",
+    }),
+  );
+
+  await act(async () => {});
+
+  expect(
+    selectDependencyVersion,
+  ).toHaveBeenCalledWith(
+    "p-1",
+    "e-1",
+    "typescript",
+    "5.9.2",
+  );
+
+  expect(
+    screen.getByText("5.9.2"),
+  ).toBeTruthy();
+
+  expect(
+    screen.getByText("pending"),
+  ).toBeTruthy();
+
+  expect(
+    screen.getByRole("button", {
+      name: "Aprovar",
+    }),
+  ).toBeTruthy();
+
+  expect(
+    screen.getByRole("button", {
+      name: "Rejeitar",
+    }),
+  ).toBeTruthy();
+});
   it.each([
     ["pending", "Aguardando aprovação"],
     ["running", "Em execução"],

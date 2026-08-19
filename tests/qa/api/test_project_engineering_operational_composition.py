@@ -560,3 +560,143 @@ def test_http_validation_failure_preserves_bounded_evidence(
     assert "failure_output" not in serialized
     assert "probable_cause" not in serialized
     assert "workspace_path" not in serialized
+def test_http_dependency_version_selection_creates_pending_request_without_runtime(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / ".asep").mkdir()
+
+    (tmp_path / ".asep" / "dependency-baseline.json").write_text(
+        (
+            '{"status":"approved","dependencies":['
+            '{"package":"typescript","reason":"compiler"}'
+            "]}"
+        ),
+        encoding="utf-8",
+    )
+
+    implementation_runtime = FixtureRuntime()
+
+    composition = create_project_engineering_operational_composition(
+        ApplicationSettings(),
+        runtime_registry=registry(implementation_runtime),
+    )
+
+    client = TestClient(composition.app)
+
+    project_id, session_id = create_project_and_session(
+        client,
+        tmp_path,
+    )
+
+    request_body = {
+        "session_id": session_id,
+        "runtime_id": "codex",
+        "instruction": "Prepare Sprint 1 foundation.",
+        "execution_mode": "workspace_write",
+        "engineering_phase": "development",
+        "sprint_id": "1",
+        "sprint_name": "Foundation",
+    }
+
+    before = sorted(
+        path.relative_to(tmp_path).as_posix()
+        for path in tmp_path.rglob("*")
+        if path.is_file()
+    )
+
+    prepared_response = client.post(
+        f"/api/v1/projects/{project_id}/engineering/prepare",
+        json=request_body,
+    )
+
+    assert prepared_response.status_code == 201, prepared_response.text
+
+    prepared = prepared_response.json()
+
+    assert prepared["status"] == "blocked"
+    assert prepared["error_code"] == "version_selection_required"
+
+    assert len(prepared["dependency_plan"]["items"]) == 1
+
+    original_item = prepared["dependency_plan"]["items"][0]
+
+    assert original_item["package"] == "typescript"
+    assert original_item["requested_version"] is None
+    assert original_item["status"] == "version_selection_required"
+    assert original_item["dependency_request_id"] is None
+
+    assert implementation_runtime.requests == []
+
+    response = client.post(
+        (
+            f"/api/v1/projects/{project_id}/engineering/"
+            f"{prepared['execution_id']}/dependencies/typescript/version"
+        ),
+        json={
+            "version": "5.9.2",
+        },
+    )
+
+    assert response.status_code == 200, response.text
+
+    updated = response.json()
+
+    assert updated["execution_id"] == prepared["execution_id"]
+    assert updated["project_id"] == project_id
+    assert updated["status"] == "blocked"
+    assert updated["error_code"] == "dependency_approval_required"
+
+    assert (
+        updated["next_action"]
+        == "Revise e aprove as dependências necessárias."
+    )
+
+    assert len(updated["dependency_plan"]["items"]) == 1
+
+    item = updated["dependency_plan"]["items"][0]
+
+    assert item["package"] == "typescript"
+    assert item["requested_version"] == "5.9.2"
+    assert item["status"] == "pending"
+    assert item["dependency_request_id"]
+
+    dependency_request_id = item["dependency_request_id"]
+
+    requests_response = client.get(
+        f"/api/v1/projects/{project_id}/dependency-requests"
+    )
+
+    assert requests_response.status_code == 200
+
+    dependency_requests = requests_response.json()
+
+    assert len(dependency_requests) == 1
+
+    stored = dependency_requests[0]
+
+    assert stored["request_id"] == dependency_request_id
+    assert stored["project_id"] == project_id
+    assert stored["execution_id"] == prepared["execution_id"]
+    assert stored["package"] == "typescript"
+    assert stored["requested_version"] == "5.9.2"
+    assert stored["reason"] == "compiler"
+    assert stored["status"] == "pending"
+
+    single_request_response = client.get(
+        (
+            f"/api/v1/projects/{project_id}/dependency-requests/"
+            f"{dependency_request_id}"
+        )
+    )
+
+    assert single_request_response.status_code == 200
+    assert single_request_response.json() == stored
+
+    after = sorted(
+        path.relative_to(tmp_path).as_posix()
+        for path in tmp_path.rglob("*")
+        if path.is_file()
+    )
+
+    assert after == before
+    assert implementation_runtime.requests == []
