@@ -241,7 +241,7 @@ def write_fullstack_fixture(root: Path) -> None:
 
 def run_baseline(root: Path, npm: str) -> None:
     commands = (
-        (sys.executable, "-m", "compileall", "-q", "."),
+        (sys.executable,"-m","compileall","-q","-x",r"(^|[\\/])node_modules([\\/]|$)",".",),
         (sys.executable, "-m", "pytest", "-q", "tests"),
     )
     for command in commands:

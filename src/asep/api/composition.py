@@ -17,6 +17,9 @@ from asep.ai_runtime import (
     CodexDiagnosticsConfig,
     InMemoryAIRuntimeRegistry,
 )
+from asep.ai_runtime.engineering_implementation import (
+    AIRuntimeEngineeringImplementationProvider,
+)
 
 from asep.api.app import create_app
 from asep.application import (
@@ -212,6 +215,15 @@ def _create_project_application_services(
                 )
             )
         )
+    effective_implementation_provider = implementation_provider
+    if (
+        include_engineering_execution
+        and effective_implementation_provider is None
+        and runtime_registry is None
+    ):
+        effective_implementation_provider = AIRuntimeEngineeringImplementationProvider(
+            registry.get("codex")
+        )
     sessions = ProjectSessionService(
         project_service,
         repositories.project_session_repository,
@@ -253,7 +265,7 @@ def _create_project_application_services(
             timeline=TimelineRecorder(repositories.timeline_repository),
             policy=ToolExecutionPolicy(fail_fast=False),
         )
-        if implementation_provider is not None:
+        if effective_implementation_provider is not None:
             agent_registry = InMemoryAgentRegistry()
             agent_registry.register(DeveloperAgent(engineering_tools))
             agent_execution = AgentExecutionService(
@@ -262,9 +274,9 @@ def _create_project_application_services(
                 policy=AgentExecutionPolicy(fail_fast=False),
             )
             effective_provider = (
-                MeteredEngineeringImplementationProvider(implementation_provider, usage, quotas)
-                if isinstance(implementation_provider, AIBackedEngineeringImplementationProvider)
-                else implementation_provider
+                MeteredEngineeringImplementationProvider(effective_implementation_provider, usage, quotas)
+                if isinstance(effective_implementation_provider, AIBackedEngineeringImplementationProvider)
+                else effective_implementation_provider
             )
             internal_execution = ProjectEngineeringAgentExecutor(
                 agent_execution,

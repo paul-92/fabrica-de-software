@@ -130,6 +130,7 @@ class EngineeringImplementationContext(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     execution_id: str
+    workspace: Path
     organization_id: str = LEGACY_ORGANIZATION_ID
     user_id: str = LEGACY_ADMIN_USER_ID
     project_id: str = "legacy-project"
@@ -184,6 +185,7 @@ class ProjectEngineeringAgentExecutor:
             )
             changes = self._provider.changes_for(EngineeringImplementationContext(
                 execution_id=execution.execution_id,
+                workspace=workspace,
                 organization_id=execution.organization_id,
                 user_id=execution.requested_by_user_id,
                 project_id=execution.project_id,

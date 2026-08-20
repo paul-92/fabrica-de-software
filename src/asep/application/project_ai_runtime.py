@@ -1,5 +1,5 @@
 """Execução controlada de AI Runtime e histórico de projeto."""
-
+import re
 from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 import hashlib
