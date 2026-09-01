@@ -224,6 +224,7 @@ class ProjectEngineeringStepResultResponse(ProjectHttpSchema):
     tool_id: str
     succeeded: bool
     output: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
     started_at: datetime
     completed_at: datetime
 
@@ -360,6 +361,7 @@ class ProjectExecutionResponse(ProjectHttpSchema):
     usage: AIRuntimeUsageResponse | None
     changes: tuple[WorkspaceChangeResponse, ...]
     error_code: str | None
+    error_detail: str | None = None
     blocker: str | None = None
     next_action: str | None = None
     context_entry_count: int

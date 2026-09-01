@@ -7,7 +7,7 @@ import json
 
 from pathlib import Path
 from threading import Lock
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -83,6 +83,7 @@ class EngineeringPhase(StrEnum):
 class EngineeringDependencyRequest(BaseModel):
     model_config=ConfigDict(extra="forbid",frozen=True)
     package:str; requested_version:str; reason:str; ecosystem:str="node"; registry:str|None=None
+    manifest_group:Literal["dependencies","devDependencies","optionalDependencies"]|None=None
     @field_validator("package","requested_version","reason")
     @classmethod
     def valid_text(cls,value:str)->str:
@@ -119,7 +120,7 @@ class ProjectAIRuntimeExecutionRequest(BaseModel):
     def normalize_dependencies(self):
         unique={}; packages={}
         for item in self.dependency_requests:
-            key=(item.ecosystem,item.package,item.requested_version,item.registry or "https://registry.npmjs.org/")
+            key=(item.ecosystem,item.package,item.requested_version,item.registry or "https://registry.npmjs.org/",item.manifest_group)
             prior=packages.get((item.ecosystem,item.package))
             if prior is not None and prior!=key: raise ValueError("conflicting dependency requests")
             packages[(item.ecosystem,item.package)]=key; unique[key]=item
@@ -299,6 +300,47 @@ class ProjectAIRuntimeExecutionService:
         if admission is not None: self._quotas.reconcile(admission)
         return plan
 
+    @staticmethod
+    def _latest_dependency_request(history):
+        if not history:
+            return None
+        latest_created_at = max(item.created_at for item in history)
+        latest = [item for item in history if item.created_at == latest_created_at]
+        return latest[0] if len(latest) == 1 else None
+
+    @classmethod
+    def _reusable_dependency_request(cls, history):
+        """Return an approved decision that is still reusable, fail-closed otherwise."""
+        latest = cls._latest_dependency_request(history)
+        if latest is None:
+            return None
+
+        if latest.status is DependencyRequestDecision.APPROVED:
+            return latest
+
+        if latest.status is DependencyRequestDecision.REJECTED:
+            return None
+
+        # A later pending request for the exact same version may be only a
+        # duplicate created by a subsequent preparation. Reuse the most recent
+        # resolved decision for that same version only when it is approved.
+        same_version_resolved = [
+            item
+            for item in history
+            if item.requested_version == latest.requested_version
+            and item.status is not DependencyRequestDecision.PENDING
+            and item.created_at < latest.created_at
+        ]
+        previous = cls._latest_dependency_request(same_version_resolved)
+
+        if (
+            previous is not None
+            and previous.status is DependencyRequestDecision.APPROVED
+        ):
+            return previous
+
+        return None
+
     def _dependency_plan(self, execution: ProjectExecution, workspace: Path) -> DependencyPlan:
         candidates: list[DependencyPlanItem] = []
         structured_sources=(
@@ -318,6 +360,7 @@ class ProjectAIRuntimeExecutionService:
                         ecosystem=item.get("ecosystem","node"),package=item["package"],
                         requested_version=item.get("requested_version"),reason=item["reason"],
                         source=source,source_reference=item.get("source_reference") or source_path.name,
+                        manifest_group=item.get("manifest_group"),
                     ))
             except (OSError,json.JSONDecodeError,KeyError,TypeError,ValueError) as exc:
                 raise RuntimeError("dependency_plan_invalid_structured_source") from exc
@@ -326,6 +369,7 @@ class ProjectAIRuntimeExecutionService:
                 ecosystem=item.get("ecosystem", "node"), package=item["package"],
                 requested_version=item["requested_version"], reason=item["reason"],
                 source="sprint_preparation", source_reference=execution.sprint_id,
+                manifest_group=item.get("manifest_group"),
             ))
         manifest = workspace / "package.json"
         if manifest.is_file():
@@ -342,6 +386,7 @@ class ProjectAIRuntimeExecutionService:
                         package=package, requested_version=version,
                         reason=f"Declared in package.json {field}",
                         source="workspace_analysis", source_reference=f"package.json#{field}",
+                        manifest_group=field,
                     ))
         unique: dict[tuple[str, str, str | None, str], DependencyPlanItem] = {}
         for item in candidates:
@@ -350,18 +395,52 @@ class ProjectAIRuntimeExecutionService:
         planned=[]
         for item in unique.values():
             if not item.requested_version:
+                if self._dependency_requests is not None:
+                    history = [
+                        stored
+                        for stored in self._dependency_requests.list(execution.project_id)
+                        if stored.ecosystem == item.ecosystem
+                        and stored.package == item.package
+                        and stored.registry == "https://registry.npmjs.org/"
+                    ]
+                    reusable = self._reusable_dependency_request(history)
+                    if reusable is not None:
+                        planned.append(item.model_copy(update={
+                            "requested_version": reusable.requested_version,
+                            "dependency_request_id": reusable.request_id,
+                            "status": reusable.status.value,
+                        }))
+                        continue
                 planned.append(item.model_copy(update={"status":"version_selection_required"}))
                 continue
             request_id=None; status="pending"
             if self._dependency_requests is not None:
-                matches=[stored for stored in self._dependency_requests.list(execution.project_id)
+                history=[stored for stored in self._dependency_requests.list(execution.project_id)
                          if stored.ecosystem==item.ecosystem and stored.package==item.package
-                         and stored.requested_version==item.requested_version]
-                stored=(matches[-1] if matches else self._dependency_requests.create(
-                    project_id=execution.project_id,session_id=execution.session_id,
-                    execution_id=execution.execution_id,package=item.package,
-                    requested_version=item.requested_version,reason=item.reason,
-                    registry="https://registry.npmjs.org/"))
+                         and stored.registry=="https://registry.npmjs.org/"]
+                latest_decision=self._latest_dependency_request(history)
+                workspace_decision=self._reusable_dependency_request(history)
+                if workspace_decision is None:
+                    workspace_decision=latest_decision
+                if item.source=="workspace_analysis" and workspace_decision is not None:
+                    planned.append(item.model_copy(update={
+                        "requested_version":workspace_decision.requested_version,
+                        "dependency_request_id":workspace_decision.request_id,
+                        "status":workspace_decision.status.value,
+                    }))
+                    continue
+                matches=[stored for stored in history
+                         if stored.requested_version==item.requested_version]
+                reusable=self._reusable_dependency_request(matches)
+                if reusable is not None:
+                    stored=reusable
+                else:
+                    latest=self._latest_dependency_request(matches)
+                    stored=(latest if latest is not None else self._dependency_requests.create(
+                        project_id=execution.project_id,session_id=execution.session_id,
+                        execution_id=execution.execution_id,package=item.package,
+                        requested_version=item.requested_version,reason=item.reason,
+                        registry="https://registry.npmjs.org/"))
                 request_id=stored.request_id; status=stored.status.value
             planned.append(item.model_copy(update={"dependency_request_id":request_id,"status":status}))
         return DependencyPlan(project_id=execution.project_id,preparation_id=execution.execution_id,
@@ -475,35 +554,45 @@ class ProjectAIRuntimeExecutionService:
             if item.ecosystem == "node" and item.package == package
         ]
 
-        if len(matching) != 1:
+        if not matching:
             raise ValueError("dependency plan item not found or ambiguous")
 
         selected = matching[0]
 
-        if selected.status != "version_selection_required":
+        selected_versions = {item.requested_version for item in matching}
+        if normalized_version in selected_versions:
             raise ValueError("dependency version has already been selected")
 
         existing = [
             item
             for item in self._dependency_requests.list(project_id)
-            if item.execution_id == preparation_id
-            and item.ecosystem == selected.ecosystem
+            if item.ecosystem == selected.ecosystem
             and item.package == selected.package
             and item.requested_version == normalized_version
+            and item.registry == "https://registry.npmjs.org/"
         ]
 
-        if existing:
-            stored = existing[-1]
+        reusable = self._reusable_dependency_request(existing)
+        if reusable is not None:
+            stored = reusable
         else:
-            stored = self._dependency_requests.create(
-                project_id=prepared.project_id,
-                session_id=prepared.session_id,
-                execution_id=prepared.execution_id,
-                package=selected.package,
-                requested_version=normalized_version,
-                reason=selected.reason,
-                registry="https://registry.npmjs.org/",
-            )
+            latest = self._latest_dependency_request(existing)
+
+            if (
+                latest is not None
+                and latest.status is DependencyRequestDecision.PENDING
+            ):
+                stored = latest
+            else:
+                stored = self._dependency_requests.create(
+                    project_id=prepared.project_id,
+                    session_id=prepared.session_id,
+                    execution_id=prepared.execution_id,
+                    package=selected.package,
+                    requested_version=normalized_version,
+                    reason=selected.reason,
+                    registry="https://registry.npmjs.org/",
+                )
 
         updated_items = tuple(
             item.model_copy(
@@ -610,6 +699,22 @@ class ProjectAIRuntimeExecutionService:
         return self._execute_prepared_runtime(
             request, execution, project.workspace_path, analysis,
             session_context, memory_context, current_snapshot,
+        )
+
+    def provision_approved_dependencies(
+        self, execution: ProjectExecution, workspace: Path,
+    ) -> ProvisioningEvidence | None:
+        if not (workspace / "package.json").is_file():
+            return None
+        if execution.dependency_plan is None:
+            raise RuntimeError("dependency_plan_missing")
+        if self._dependency_provisioning is None or self._dependency_broker is None or self._provisioning_evidence is None:
+            raise RuntimeError("dependency_provisioning_failed")
+        plan=DependencyPlan.model_validate(execution.dependency_plan)
+        return self._dependency_provisioning.materialize_approved(
+            workspace,self._dependency_broker,dependency_plan=plan,
+            execution_id=execution.execution_id,project_id=execution.project_id,
+            evidence_repository=self._provisioning_evidence,
         )
 
     def cancel_prepared(
@@ -931,9 +1036,16 @@ class ProjectAIRuntimeExecutionService:
                 code = code[:-6]
         else:
             code = str(explicit_code).upper()
+        detail = " ".join(str(error).split())
+        if not detail:
+            detail = None
+        elif len(detail) > 500:
+            detail = detail[:497] + "..."
+
         failed = ProjectExecution.model_validate({**execution.model_dump(), **{
             "status": ProjectExecutionStatus.FAILED, "changes": changes,
-            "error_code": code, "completed_at": self._clock(),
+            "error_code": code, "error_detail": detail,
+            "completed_at": self._clock(),
         }})
         self._executions.update(failed)
 

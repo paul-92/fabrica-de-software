@@ -77,11 +77,6 @@ class AIRuntimeEngineeringImplementationProvider:
                 "AI implementation output is invalid"
             ) from exc
 
-        if not provider_result.changes:
-            raise EngineeringImplementationError(
-                "AI implementation returned no changes"
-            )
-
         return AIImplementationResult(
             changes=provider_result.changes,
             identity=result.identity,
@@ -111,6 +106,7 @@ class AIRuntimeEngineeringImplementationProvider:
             "project_analysis": context.analysis.model_dump(mode="json"),
             "plan": context.plan.model_dump(mode="json"),
             "step": context.step.model_dump(mode="json"),
+            "approved_dependency_plan": context.dependency_plan,
             "dependency_results": [
                 result.model_dump(mode="json")
                 for result in context.dependency_results
@@ -134,6 +130,12 @@ class AIRuntimeEngineeringImplementationProvider:
             "Do not run commands. "
             "Return only the proposed file changes required for the current "
             "implementation step. "
+            "When approved_dependency_plan is present, treat it as authoritative. "
+            "Use only dependency versions explicitly approved there and do not "
+            "invent, upgrade, downgrade, or substitute dependency versions. "
+            "If the requested implementation requires those dependencies, "
+            "materialize the required manifests and configuration using the "
+            "approved versions. "
             "Paths must be safe relative workspace paths. "
             "Do not include markdown fences or explanatory prose.\n"
             + json.dumps(

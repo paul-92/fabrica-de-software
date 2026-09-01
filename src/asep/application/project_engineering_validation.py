@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from datetime import UTC, datetime
 import json
+import logging
 from pathlib import Path, PurePosixPath
 from typing import Protocol
 
@@ -27,6 +28,7 @@ _ORDER = (
     "eslint", "next_build",
 )
 _NODE_VALIDATORS = frozenset({"typecheck", "vitest", "eslint", "next_build"})
+logger = logging.getLogger(__name__)
 _PYTHON_VALIDATORS = frozenset({"compileall", "pytest"})
 _PYTHON_SUFFIXES = frozenset({".py", ".pyi"})
 _FRONTEND_SUFFIXES = frozenset({".js", ".jsx", ".ts", ".tsx", ".css"})
@@ -274,14 +276,39 @@ class ProjectValidationService:
             validator = self._validators.get(validator_id)
             if validator is None:
                 raise ValueError("project validator is not registered")
-            result = validator.validate(
-                strategy.execution_id, workspace,
-                sequence=start_sequence + len(results),
-                targets=target_map.get(validator_id, ()),
+            targets = target_map.get(validator_id, ())
+            target_groups = (
+                tuple((target,) for target in targets)
+                if validator_id in _NODE_VALIDATORS
+                else (targets,)
             )
-            results.append(result)
-            if result.status is ProjectValidationStatus.FAILED:
-                break
+            for target_group in target_groups:
+                sequence = start_sequence + len(results)
+                try:
+                    result = validator.validate(
+                        strategy.execution_id, workspace,
+                        sequence=sequence,
+                        targets=target_group,
+                    )
+                except Exception as error:
+                    logger.exception(
+                        "project validation failed before result persistence",
+                        extra={
+                            "phase": "validation",
+                            "validator": validator_id,
+                            "target": (
+                                target_group[0]
+                                if len(target_group) == 1
+                                else target_group
+                            ),
+                            "sequence": sequence,
+                            "exception_type": type(error).__name__,
+                        },
+                    )
+                    raise
+                results.append(result)
+                if result.status is ProjectValidationStatus.FAILED:
+                    return tuple(results)
         return tuple(results)
 
     def analyze_failure(self, result: ProjectValidationResult) -> ProjectValidationFailureAnalysis:
@@ -389,13 +416,19 @@ class ProjectValidationService:
         workspace: Path, changed_paths: tuple[str, ...],
         analysis: BoundedProjectAnalysis | None,
     ) -> set[str]:
-        try:
-            package_root = ProjectValidationService._safe_package_root(
-                workspace, changed_paths, analysis,
+        package_roots = ProjectValidationService._safe_package_roots(
+            workspace, changed_paths, analysis,
+        )
+        selected: set[str] = set()
+        for package_root in package_roots:
+            root = workspace if package_root == "." else workspace / package_root
+            selected.update(
+                ProjectValidationService._node_validators_for_root(root)
             )
-        except ValueError:
-            raise
-        root = workspace if package_root == "." else workspace / package_root
+        return selected
+
+    @staticmethod
+    def _node_validators_for_root(root: Path) -> set[str]:
         try:
             package = json.loads((root / "package.json").read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
@@ -440,11 +473,21 @@ class ProjectValidationService:
         if validator_id in {"workspace_changes", "idempotent_state"}:
             return candidates
         if validator_id in _NODE_VALIDATORS:
-            return (
-                ProjectValidationService._safe_package_root(
-                    workspace, changed_paths, analysis,
-                ),
+            package_roots = ProjectValidationService._safe_package_roots(
+                workspace, changed_paths, analysis,
             )
+            targets = tuple(
+                package_root
+                for package_root in package_roots
+                if validator_id in ProjectValidationService._node_validators_for_root(
+                    workspace if package_root == "." else workspace / package_root
+                )
+            )
+            if not targets:
+                raise ValueError(
+                    "node validator requires at least one safe package root"
+                )
+            return targets
         selected: list[str] = []
         root = workspace.resolve()
         for raw in candidates:
@@ -464,10 +507,10 @@ class ProjectValidationService:
         return tuple(selected) or (".",)
 
     @staticmethod
-    def _safe_package_root(
+    def _safe_package_roots(
         workspace: Path, changed_paths: tuple[str, ...],
         analysis: BoundedProjectAnalysis | None,
-    ) -> str:
+    ) -> tuple[str, ...]:
         root = workspace.resolve()
         candidates: set[Path] = set()
         if (root / "package.json").is_file():
@@ -494,18 +537,27 @@ class ProjectValidationService:
                 if current == root:
                     break
                 current = current.parent
-        relevant = {
-            candidate for candidate in candidates
-            if not frontend_paths or any(
-                path == candidate or candidate in path.parents
-                for path in frontend_paths
+        relevant: set[Path] = set()
+        if frontend_paths:
+            for path in frontend_paths:
+                applicable = tuple(
+                    candidate for candidate in candidates
+                    if path == candidate or candidate in path.parents
+                )
+                if applicable:
+                    relevant.add(max(applicable, key=lambda item: len(item.parts)))
+        else:
+            relevant = candidates
+        if not relevant:
+            raise ValueError(
+                "frontend validation requires at least one safe package root"
             )
-        }
-        if len(relevant) != 1:
-            raise ValueError("frontend validation requires one safe package root")
-        selected = next(iter(relevant))
-        relative = selected.relative_to(root).as_posix()
-        return relative or "."
+        return tuple(sorted(
+            (
+                candidate.relative_to(root).as_posix() or "."
+                for candidate in relevant
+            )
+        ))
 
     @staticmethod
     def _confined_path(root: Path, path: PurePosixPath) -> Path:

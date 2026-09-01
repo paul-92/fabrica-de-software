@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import logging
+import traceback
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -39,6 +42,8 @@ from asep.ai_runtime import (
     AIRuntimeTimeoutError,
     AIRuntimeUnavailableError,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def register_exception_handlers(app: FastAPI) -> None:
@@ -197,6 +202,21 @@ def register_exception_handlers(app: FastAPI) -> None:
         error: ValueError,
     ) -> JSONResponse:
         if str(error) != "run_id não pode ser vazio":
+            frames = traceback.extract_tb(error.__traceback__)
+            location_chain = " > ".join(
+                f"{frame.filename.rsplit('/', 1)[-1].rsplit(chr(92), 1)[-1]}:"
+                f"{frame.lineno}:{frame.name}"
+                for frame in frames
+            )
+            logger.error(
+                "unexpected value error at API boundary: %s",
+                location_chain,
+                extra={
+                    "phase": "api_request",
+                    "exception_type": type(error).__name__,
+                    "route": request.url.path,
+                },
+            )
             return _error_response(
                 status_code=500,
                 code="INTERNAL_SERVER_ERROR",

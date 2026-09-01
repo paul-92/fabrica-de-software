@@ -37,6 +37,21 @@ def test_no_changes_and_sensitive_paths_are_ignored(tmp_path: Path) -> None:
     assert snapshotter.changes(snapshot, snapshotter.capture(tmp_path)) == ()
 
 
+def test_materialized_node_modules_are_excluded_from_snapshot_limits(
+    tmp_path: Path,
+) -> None:
+    modules = tmp_path / "node_modules" / "dependency"
+    modules.mkdir(parents=True)
+    (modules / "index.js").write_text("x" * 100, encoding="utf-8")
+    (tmp_path / "src.ts").write_text("export {};", encoding="utf-8")
+
+    snapshot = WorkspaceSnapshotter(
+        WorkspaceSnapshotPolicy(max_total_bytes=20)
+    ).capture(tmp_path)
+
+    assert tuple(snapshot) == ("src.ts",)
+
+
 def test_limits_fail_closed(tmp_path: Path) -> None:
     (tmp_path / "a.txt").write_text("12345", encoding="utf-8")
     with pytest.raises(WorkspaceSnapshotLimitError):

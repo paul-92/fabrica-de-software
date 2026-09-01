@@ -1,10 +1,10 @@
-"""Agente determinístico de demonstração do pipeline E2E."""
+Get-Content git-core-diff.txt"""Agente determinístico de demonstração do pipeline E2E."""
 
 from __future__ import annotations
 
 import json
 from collections.abc import Mapping
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 from asep.agents.contracts import (
     AgentCapability,
@@ -144,6 +144,16 @@ class DeveloperAgent:
                     if tool_result.error
                     else "Tool falhou."
                 ),
+                metadata=self._failure_metadata(
+                    tool_id=tool_id,
+                    capability=capability,
+                    payload=payload,
+                    error_metadata=(
+                        tool_result.error.metadata
+                        if tool_result.error
+                        else {}
+                    ),
+                ),
             )
 
         output = tool_result.model_dump(
@@ -274,9 +284,38 @@ class DeveloperAgent:
         return {}
 
     @staticmethod
+    def _failure_metadata(
+        *,
+        tool_id: str,
+        capability: str,
+        payload: Mapping[str, object],
+        error_metadata: Mapping[str, object],
+    ) -> dict[str, object]:
+        metadata: dict[str, object] = {
+            "tool_id": tool_id,
+            "capability": capability,
+        }
+        error_type = error_metadata.get("error_type")
+        if isinstance(error_type, str):
+            metadata["error_type"] = error_type
+
+        requested_path = payload.get("path")
+        if (
+            capability == "write_file"
+            and isinstance(requested_path, str)
+            and requested_path
+            and not PurePosixPath(requested_path).is_absolute()
+            and not PureWindowsPath(requested_path).is_absolute()
+        ):
+            metadata["failed_path"] = requested_path
+        return metadata
+
+    @staticmethod
     def _failed(
         context: AgentContext,
         message: str,
+        *,
+        metadata: Mapping[str, object] | None = None,
     ) -> AgentResult:
         return AgentResult(
             status=AgentResultStatus.FAILED,
@@ -286,6 +325,7 @@ class DeveloperAgent:
             started_at=context.started_at,
             finished_at=context.started_at,
             errors=[message],
+            metadata=dict(metadata or {}),
         )
 
 

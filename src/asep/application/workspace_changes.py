@@ -32,7 +32,7 @@ class _FileState(BaseModel):
 WorkspaceSnapshot = dict[str, _FileState]
 
 _BLOCKED_NAMES = {".env", ".netrc", "credentials", "credentials.json"}
-_BLOCKED_DIRS = {".git", ".ssh", ".asep"}
+_BLOCKED_DIRS = {".git", ".ssh", ".asep", "node_modules"}
 
 
 class WorkspaceSnapshotter:

@@ -8,6 +8,7 @@ from asep.tools.exceptions import ToolSecurityError, ToolValidationError
 
 _BLOCKED_PARTS = {".git", ".ssh"}
 _BLOCKED_NAMES = {".env", ".netrc", "credentials", "credentials.json"}
+_ALLOWED_ENV_TEMPLATES = {".env.example"}
 
 
 def _is_blocked_part(part: str) -> bool:
@@ -15,7 +16,10 @@ def _is_blocked_part(part: str) -> bool:
     return (
         normalized in _BLOCKED_PARTS
         or normalized in _BLOCKED_NAMES
-        or normalized.startswith(".env.")
+        or (
+            normalized.startswith(".env.")
+            and normalized not in _ALLOWED_ENV_TEMPLATES
+        )
     )
 
 

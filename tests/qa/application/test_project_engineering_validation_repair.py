@@ -102,6 +102,13 @@ class RecordingTools:
         )
 
 
+class RaisingValidator:
+    validator_id = "typecheck"
+
+    def validate(self, execution_id, workspace, *, sequence, targets):
+        raise RuntimeError("validator crashed")
+
+
 def validation_plan(*hints: str) -> ProjectOperationalPlan:
     return ProjectOperationalPlan(
         execution_id="execution-1",
@@ -197,6 +204,33 @@ def test_missing_pytest_is_skipped_instead_of_project_failure(
     result = service.validate_strategy(strategy, tmp_path, start_sequence=1)[0]
 
     assert result.status is ProjectValidationStatus.SKIPPED
+
+
+def test_validator_exception_logs_bounded_structured_context(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture,
+) -> None:
+    (tmp_path / "package.json").write_text(
+        '{"scripts":{"typecheck":"tsc --noEmit"}}', encoding="utf-8"
+    )
+    service = ProjectValidationService(RecordingTools())
+    service._validators["typecheck"] = RaisingValidator()
+    strategy = service.strategy(
+        "execution-1", tmp_path, validation_plan("typecheck")
+    )
+
+    with pytest.raises(RuntimeError, match="validator crashed"):
+        service.validate_strategy(strategy, tmp_path, start_sequence=7)
+
+    record = next(
+        item for item in caplog.records
+        if item.message == "project validation failed before result persistence"
+    )
+    assert record.phase == "validation"
+    assert record.validator == "typecheck"
+    assert record.target == "."
+    assert record.sequence == 7
+    assert record.exception_type == "RuntimeError"
+    assert not hasattr(record, "workspace")
 
 
 def test_non_executable_validation_hint_is_rejected(tmp_path: Path) -> None:
@@ -391,11 +425,15 @@ def test_strategy_selects_validators_by_changed_domain(
         assert set(node_targets.values()) == {("web",)}
 
 
-def test_strategy_rejects_ambiguous_package_roots(tmp_path: Path) -> None:
+def test_strategy_runs_node_validator_for_each_relevant_package_root(
+    tmp_path: Path,
+) -> None:
     for package in ("web-a", "web-b"):
         root = tmp_path / package
         root.mkdir()
-        (root / "package.json").write_text("{}", encoding="utf-8")
+        (root / "package.json").write_text(
+            '{"scripts":{"typecheck":"tsc"}}', encoding="utf-8",
+        )
         (root / "page.tsx").write_text("export default 1", encoding="utf-8")
     analysis = BoundedProjectAnalysis(
         languages=("TypeScript",),
@@ -403,10 +441,130 @@ def test_strategy_rejects_ambiguous_package_roots(tmp_path: Path) -> None:
         package_manifests=("web-a/package.json", "web-b/package.json"),
     )
 
-    with pytest.raises(ValueError, match="one safe package root"):
+    tools = RecordingTools()
+    service = ProjectValidationService(tools)
+    strategy = service.strategy(
+        "execution-1", tmp_path, validation_plan(), analysis=analysis,
+        changed_paths=("web-b/page.tsx", "web-a/page.tsx"),
+    )
+    results = service.validate_strategy(strategy, tmp_path, start_sequence=4)
+
+    assert strategy.validators == ("typecheck",)
+    assert strategy.target_hints[0].targets == ("web-a", "web-b")
+    assert [(item.validator, item.sequence) for item in results] == [
+        ("typecheck", 4), ("typecheck", 5),
+    ]
+    assert [request.payload["package_root"] for request in tools.requests] == [
+        "web-a", "web-b",
+    ]
+
+
+def test_monorepo_node_targets_use_most_specific_roots_deterministically(
+    tmp_path: Path,
+) -> None:
+    roots = (".", "apps/api", "apps/web", "apps/worker", "packages/config")
+    changed_paths = (
+        "packages/config/index.ts",
+        "apps/worker/index.ts",
+        "src/index.ts",
+        "apps/web/index.tsx",
+        "apps/api/index.ts",
+    )
+    manifest = (
+        '{"scripts":{"typecheck":"tsc","test":"vitest",'
+        '"lint":"eslint","build":"next build"},'
+        '"dependencies":{"next":"1"}}'
+    )
+    for package_root in roots:
+        root = tmp_path if package_root == "." else tmp_path / package_root
+        root.mkdir(parents=True, exist_ok=True)
+        (root / "package.json").write_text(manifest, encoding="utf-8")
+    for relative in changed_paths:
+        target = tmp_path / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("export default 1", encoding="utf-8")
+    analysis = BoundedProjectAnalysis(
+        languages=("TypeScript",),
+        package_managers=("npm",),
+        package_manifests=tuple(
+            "package.json" if root == "." else f"{root}/package.json"
+            for root in roots
+        ),
+    )
+    tools = RecordingTools()
+    service = ProjectValidationService(tools)
+
+    strategy = service.strategy(
+        "execution-1", tmp_path, validation_plan(), analysis=analysis,
+        changed_paths=changed_paths,
+    )
+    results = service.validate_strategy(strategy, tmp_path, start_sequence=1)
+
+    expected_roots = (".", "apps/api", "apps/web", "apps/worker", "packages/config")
+    assert strategy.validators == ("typecheck", "vitest", "eslint", "next_build")
+    assert all(
+        target.targets == expected_roots for target in strategy.target_hints
+    )
+    assert len(results) == len(strategy.validators) * len(expected_roots)
+    assert [request.payload["package_root"] for request in tools.requests] == [
+        root for _validator in strategy.validators for root in expected_roots
+    ]
+
+
+def test_monorepo_changes_select_only_nearest_applicable_package(
+    tmp_path: Path,
+) -> None:
+    manifest = '{"scripts":{"typecheck":"tsc"}}'
+    for package_root in (".", "apps/api", "apps/web"):
+        root = tmp_path if package_root == "." else tmp_path / package_root
+        root.mkdir(parents=True, exist_ok=True)
+        (root / "package.json").write_text(manifest, encoding="utf-8")
+    changed = tmp_path / "apps/web/page.tsx"
+    changed.write_text("export default 1", encoding="utf-8")
+
+    strategy = ProjectValidationService(RecordingTools()).strategy(
+        "execution-1", tmp_path, validation_plan(),
+        analysis=BoundedProjectAnalysis(
+            languages=("TypeScript",),
+            package_manifests=(
+                "package.json", "apps/api/package.json", "apps/web/package.json",
+            ),
+        ),
+        changed_paths=("apps/web/page.tsx",),
+    )
+
+    assert strategy.validators == ("typecheck",)
+    assert strategy.target_hints[0].targets == ("apps/web",)
+
+
+def test_node_changes_without_package_root_fail_explicitly(tmp_path: Path) -> None:
+    (tmp_path / "page.tsx").write_text("export default 1", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="at least one safe package root"):
         ProjectValidationService(RecordingTools()).strategy(
-            "execution-1", tmp_path, validation_plan(), analysis=analysis,
-            changed_paths=("web-a/page.tsx", "web-b/page.tsx"),
+            "execution-1", tmp_path, validation_plan(),
+            analysis=BoundedProjectAnalysis(languages=("TypeScript",)),
+            changed_paths=("page.tsx",),
+        )
+
+
+@pytest.mark.parametrize(
+    "changed_path", ("../outside.ts", "/outside.ts", "C:/outside.ts"),
+)
+def test_node_strategy_rejects_unsafe_changed_paths(
+    tmp_path: Path, changed_path: str,
+) -> None:
+    (tmp_path / "package.json").write_text(
+        '{"scripts":{"typecheck":"tsc"}}', encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="safe relative path|escapes workspace"):
+        ProjectValidationService(RecordingTools()).strategy(
+            "execution-1", tmp_path, validation_plan(),
+            analysis=BoundedProjectAnalysis(
+                languages=("TypeScript",), package_manifests=("package.json",),
+            ),
+            changed_paths=(changed_path,),
         )
 
 

@@ -216,6 +216,7 @@ def test_failed_workspace_write_preserves_change_evidence(tmp_path: Path) -> Non
     persisted = executions.list_by_project("project-1")[0]
     assert persisted.status.value == "failed"
     assert persisted.error_code == "VALUE_ERROR"
+    assert persisted.error_detail == "runtime failed"
     assert persisted.changes[0].path == "created.txt"
     runtime.error = None
     follow_up = execution.execute(ProjectAIRuntimeExecutionRequest(

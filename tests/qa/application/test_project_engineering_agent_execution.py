@@ -233,5 +233,14 @@ def test_developer_agent_failure_blocks_dependent_write_and_validation(
     assert history[0]["quality_gate"] is None
     assert len(history[0]["step_results"]) == 1
     assert history[0]["step_results"][0]["succeeded"] is False
+    diagnostic = history[0]["step_results"][0]["metadata"]
+    assert diagnostic == {
+        "tool_id": "write-file",
+        "capability": "write_file",
+        "error_type": "NotAFile",
+        "failed_path": "blocked",
+    }
+    assert str(tmp_path.resolve()) not in repr(diagnostic)
+    assert "cannot replace a directory" not in repr(diagnostic)
     assert not (tmp_path / "must-not-exist.py").exists()
     assert runtime.calls == 0

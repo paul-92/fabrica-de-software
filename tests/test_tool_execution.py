@@ -10,6 +10,9 @@ from asep.agents import (
     AgentId,
     AgentCapability,
 )
+from asep.agents.contracts import AgentRequest
+from asep.agents.developer import DeveloperAgent
+from asep.execution.models import AgentContext, AgentResultStatus
 from asep.agents.registry import InMemoryAgentRegistry
 from asep.timeline import (
     InMemoryTimelineRepository,
@@ -335,6 +338,81 @@ def test_agent_runtime_delegates_tools_only_by_contract(tmp_path: Path) -> None:
     with pytest.raises(AgentExecutionValidationError):
         unconfigured.execute_tool(request)
 
+
+def test_developer_agent_preserves_structured_write_failure(
+    tmp_path: Path,
+) -> None:
+    class FailedToolExecutor:
+        def execute(self, request):
+            return ToolResult(
+                execution_id=request.execution_id,
+                tool_id=request.tool_id,
+                status=ToolExecutionStatus.FAILED,
+                duration_seconds=0,
+                started_at=NOW,
+                completed_at=NOW,
+                attempts=1,
+                error=ToolError(
+                    code="execution_failed",
+                    message="ExecuÃ§Ã£o da Tool falhou.",
+                    metadata={"error_type": "NotAFile"},
+                ),
+            )
+
+    context = AgentContext(
+        run_id="run-1",
+        project_id="project-1",
+        project_name="Project",
+        workflow_id="workflow-1",
+        stage_id="implement",
+        agent_id="developer",
+        started_at=NOW,
+        objective="write",
+        scope_received="test",
+    )
+    result = DeveloperAgent(FailedToolExecutor()).execute(
+        AgentRequest(
+            request_id="request-1",
+            objective="write",
+            inputs={"plan_step": {
+                "required_capability": "write_file",
+                "tool_id": "write-file",
+                "metadata": {
+                    "write_path": "src/app.py",
+                    "content": "sensitive file content",
+                },
+            }},
+            metadata={"workspace": str(tmp_path)},
+        ),
+        context,
+    )
+
+    assert result.status is AgentResultStatus.FAILED
+    assert result.errors == ["ExecuÃ§Ã£o da Tool falhou."]
+    assert result.metadata == {
+        "tool_id": "write-file",
+        "capability": "write_file",
+        "error_type": "NotAFile",
+        "failed_path": "src/app.py",
+    }
+    assert str(tmp_path.resolve()) not in repr(result.metadata)
+    assert "sensitive file content" not in repr(result.metadata)
+
+
+def test_developer_failure_diagnostic_omits_absolute_requested_path() -> None:
+    metadata = DeveloperAgent._failure_metadata(
+        tool_id="write-file",
+        capability="write_file",
+        payload={"path": "C:/internal/workspace/secret.py"},
+        error_metadata={"error_type": "ToolSecurityError"},
+    )
+
+    assert metadata == {
+        "tool_id": "write-file",
+        "capability": "write_file",
+        "error_type": "ToolSecurityError",
+    }
+
 def write_file_request(
     tmp_path: Path,
     *,
@@ -413,6 +491,55 @@ def test_write_file_tool_creates_parent_directories(
         / "models"
         / "customer.py"
     ).is_file()
+
+
+def test_write_file_tool_creates_env_example(tmp_path: Path) -> None:
+    service = write_file_runtime()
+
+    result = service.execute(
+        write_file_request(
+            tmp_path,
+            path=".env.example",
+            content="APP_ENV=development\n",
+        )
+    )
+
+    assert result.status is ToolExecutionStatus.SUCCEEDED
+    assert result.output["path"] == ".env.example"
+    assert (tmp_path / ".env.example").read_text(encoding="utf-8") == (
+        "APP_ENV=development\n"
+    )
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        ".env",
+        ".env.local",
+        ".env.production",
+        ".env.development",
+        ".env.test",
+        ".env.sample",
+        ".env.template",
+    ],
+)
+def test_write_file_tool_rejects_sensitive_env_variants(
+    tmp_path: Path,
+    path: str,
+) -> None:
+    service = write_file_runtime()
+
+    with pytest.raises(ToolExecutionError) as captured:
+        service.execute(
+            write_file_request(
+                tmp_path,
+                path=path,
+                content="SECRET=must-not-be-written\n",
+            )
+        )
+
+    assert "ToolSecurityError" in str(captured.value)
+    assert not (tmp_path / path).exists()
 
 
 def test_write_file_tool_refuses_overwrite_by_default(

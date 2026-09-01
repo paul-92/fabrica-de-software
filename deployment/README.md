@@ -31,7 +31,7 @@ The dedicated `asep` user/group is non-root and should have no interactive shell
 
 ## Build/deploy time versus runtime
 
-Build/deploy time installs the Python package and dependencies into `/opt/asep/current/.venv`, runs `npm ci` in `frontend/`, and runs `npm run build` once. Runtime only runs preflight, Uvicorn, `next start`, Codex, and allowlisted validators. ASEP never installs dependencies in hosted projects; current Project Engineering validators continue to execute only predefined Python/npm commands against already-present dependencies.
+Build/deploy time installs the Python package and dependencies into `/opt/asep/current/.venv`, runs `npm ci` in `frontend/`, and runs `npm run build` once. Runtime only runs preflight, Uvicorn, `next start`, Codex, controlled dependency provisioning, and allowlisted validators. For hosted Node projects, Project Engineering may materialize only exact dependencies from an approved dependency plan. It validates every project manifest, permits coherent local workspace packages, uses an allowlisted registry, disables lifecycle scripts/audit/funding, persists fingerprinted evidence, and blocks validation on any mismatch or package-manager failure.
 
 ## Processes and startup
 

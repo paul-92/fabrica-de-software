@@ -139,6 +139,7 @@ class EngineeringImplementationContext(BaseModel):
     analysis: BoundedProjectAnalysis
     plan: ProjectOperationalPlan
     step: ProjectOperationalPlanStep
+    dependency_plan: dict | None = None
     dependency_results: tuple[ProjectEngineeringStepResult, ...] = ()
 
 
@@ -194,10 +195,13 @@ class ProjectEngineeringAgentExecutor:
                 analysis=analysis,
                 plan=plan,
                 step=step,
+                dependency_plan=execution.dependency_plan,
                 dependency_results=dependency_results,
             ))
             if not changes:
-                raise RuntimeError("implementation provider returned no changes")
+                completed_steps.add(step.step_id)
+                continue
+
             for index, change in enumerate(changes, start=1):
                 request = AgentExecutionRequest(
                     execution_id=f"{execution.execution_id}:{step.step_id}:{index}",
@@ -233,6 +237,11 @@ class ProjectEngineeringAgentExecutor:
                     tool_id="write-file",
                     succeeded=succeeded,
                     output=bounded_output,
+                    metadata=(
+                        dict(result.agent_result.metadata)
+                        if result.agent_result is not None
+                        else {}
+                    ),
                     started_at=result.started_at,
                     completed_at=result.completed_at,
                 ))

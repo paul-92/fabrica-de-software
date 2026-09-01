@@ -468,7 +468,25 @@ def test_validation_strategy_exception_persists_terminal_failure(
     )
     assert persisted.validation_strategy is None
     assert persisted.validations == ()
+    assert persisted.error_detail == "strategy unavailable"
     assert quality.list_by_run("execution-1") == ()
+
+
+def test_unexpected_failure_detail_is_bounded_and_normalized(tmp_path: Path) -> None:
+    service, _, executions, _, _, _, _ = graph(tmp_path)
+    service._validation = ExceptionalValidationStrategy(())
+    service._validation.strategy = lambda *args, **kwargs: (_ for _ in ()).throw(
+        RuntimeError("  diagnostic\n" + ("x" * 600))
+    )
+
+    with pytest.raises(RuntimeError):
+        service.execute(request())
+
+    detail = executions.get("execution-1").error_detail
+    assert detail is not None
+    assert len(detail) == 500
+    assert detail.startswith("diagnostic ")
+    assert detail.endswith("...")
 
 
 def test_repair_exception_preserves_failed_validation_and_identity(

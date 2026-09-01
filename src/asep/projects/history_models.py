@@ -218,6 +218,7 @@ class ProjectEngineeringStepResult(BaseModel):
     tool_id: str
     succeeded: bool
     output: str
+    metadata: dict[str, object] = Field(default_factory=dict)
     started_at: datetime
     completed_at: datetime
 
@@ -276,6 +277,7 @@ class ProjectExecution(BaseModel):
     usage: AIRuntimeUsage | None = None
     changes: tuple[WorkspaceChange, ...] = ()
     error_code: str | None = None
+    error_detail: str | None = Field(default=None, max_length=500)
     blocker: str | None = None
     next_action: str | None = None
     dependency_requests: tuple[dict, ...] = ()

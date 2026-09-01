@@ -15,3 +15,20 @@ def test_invalid_versions_are_rejected(version):
 def test_registry_allowlist():
     with pytest.raises(ValueError,match="registry"):
         ProjectAIRuntimeExecutionRequest(project_id="p",session_id="s",runtime_id="r",instruction="x",dependency_requests=({"package":"x","requested_version":"1.0.0","reason":"x","registry":"https://evil.example"},))
+
+
+def test_manifest_group_is_explicit_and_conflicting_groups_are_rejected():
+    item={
+        "package":"@types/node", "requested_version":"24.13.3",
+        "reason":"Node types", "manifest_group":"devDependencies",
+    }
+    request=ProjectAIRuntimeExecutionRequest(
+        project_id="p",session_id="s",runtime_id="r",instruction="x",
+        dependency_requests=(item,),
+    )
+    assert request.dependency_requests[0].manifest_group=="devDependencies"
+    with pytest.raises(ValueError,match="conflicting"):
+        ProjectAIRuntimeExecutionRequest(
+            project_id="p",session_id="s",runtime_id="r",instruction="x",
+            dependency_requests=(item,{**item,"manifest_group":"dependencies"}),
+        )

@@ -74,8 +74,17 @@ def test_read_file_rejects_directory_and_invalid_utf8(tmp_path: Path) -> None:
         "../outside.txt",
         "../../outside.txt",
         ".git/config",
+        ".ssh/config",
         ".env",
         ".env.local",
+        ".env.production",
+        ".env.development",
+        ".env.test",
+        ".env.sample",
+        ".env.template",
+        "credentials",
+        "credentials.json",
+        ".netrc",
     ],
 )
 def test_read_file_blocks_unsafe_paths(tmp_path: Path, path: str) -> None:
@@ -93,6 +102,25 @@ def test_read_file_blocks_absolute_path(tmp_path: Path) -> None:
             {"path": str(target.resolve())},
             "read_file",
         )
+
+
+def test_read_file_allows_env_example(tmp_path: Path) -> None:
+    (tmp_path / ".env.example").write_text(
+        "APP_ENV=development\n",
+        encoding="utf-8",
+    )
+
+    result = call(
+        ReadFileTool(),
+        tmp_path,
+        {"path": ".env.example"},
+        "read_file",
+    )
+
+    assert result.output == {
+        "path": ".env.example",
+        "content": "APP_ENV=development\n",
+    }
 
 
 def test_external_symlink_is_blocked(

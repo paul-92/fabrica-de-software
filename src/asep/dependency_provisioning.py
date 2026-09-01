@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import re
 import sqlite3
 from datetime import UTC, datetime
@@ -50,6 +51,7 @@ class DependencyPlanItem(BaseModel):
     source_reference:str|None=None; required:bool=True
     status:Literal["pending","approved","rejected","version_selection_required"]="pending"
     dependency_request_id:str|None=None
+    manifest_group:Literal["dependencies","devDependencies","optionalDependencies"]|None=None
 
 class DependencyPlan(BaseModel):
     model_config=ConfigDict(extra="forbid", frozen=True)
@@ -91,6 +93,10 @@ class ProvisioningEvidence(BaseModel):
     evidence_id:str; execution_id:str; project_id:str; dependency_request_id:str|None=None
     ecosystem:str="node"; package_manager:str; registry:str; status:DependencyProvisioningStatus
     cache_mode:str="runtime-managed"; created_at:datetime; completed_at:datetime|None=None; error_code:str|None=None
+    dependency_plan_fingerprint:str|None=None
+    manifest_fingerprint:str|None=None
+    materialized_roots:tuple[str,...]=()
+    reused:bool=False
 class SQLiteProvisioningEvidenceRepository:
     def __init__(self,database:Path):
         self.database=database.expanduser().resolve(); self.database.parent.mkdir(parents=True,exist_ok=True)
@@ -100,6 +106,16 @@ class SQLiteProvisioningEvidenceRepository:
     def for_execution(self,project_id:str,execution_id:str):
         with sqlite3.connect(self.database) as db: rows=db.execute("SELECT payload FROM provisioning_evidence WHERE project_id=? AND execution_id=?",(project_id,execution_id)).fetchall()
         return tuple(ProvisioningEvidence.model_validate_json(row[0]) for row in rows)
+    def latest_compatible(self,project_id:str,plan_fingerprint:str,manifest_fingerprint:str):
+        with sqlite3.connect(self.database) as db:
+            rows=db.execute("SELECT payload FROM provisioning_evidence WHERE project_id=? ORDER BY rowid DESC",(project_id,)).fetchall()
+        for row in rows:
+            item=ProvisioningEvidence.model_validate_json(row[0])
+            if (item.status is DependencyProvisioningStatus.PROVISIONED
+                    and item.dependency_plan_fingerprint==plan_fingerprint
+                    and item.manifest_fingerprint==manifest_fingerprint):
+                return item
+        return None
 
 class DependencyBrokerRunner(Protocol):
     def run(self, command:tuple[str,...], *, working_directory:Path, environment:Mapping[str,str], timeout:float): ...
@@ -253,6 +269,149 @@ class ProjectDependencyProvisioningService:
                 succeeded=True, status=DependencyProvisioningStatus.PROVISIONED,
             ),
         )
+
+    def materialize_approved(
+        self, workspace:Path, runner:DependencyBrokerRunner, *,
+        dependency_plan:DependencyPlan, execution_id:str, project_id:str,
+        evidence_repository:SQLiteProvisioningEvidenceRepository,
+        timeout:float=600.0,
+    )->ProvisioningEvidence:
+        root=workspace.expanduser().resolve()
+        if dependency_plan.project_id!=project_id or not dependency_plan.items:
+            raise DependencyProvisioningBlockedError("dependency_plan_missing")
+        if any(item.status!="approved" or not item.requested_version for item in dependency_plan.items):
+            raise DependencyProvisioningBlockedError("dependency_approval_required")
+        approved:dict[str,str]={}
+        approved_groups:dict[str,str]={}
+        for item in dependency_plan.items:
+            if re.fullmatch(r"\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?", item.requested_version or "") is None:
+                raise DependencyProvisioningBlockedError("dependency_exact_version_required")
+            prior=approved.get(item.package)
+            if prior is not None and prior!=item.requested_version:
+                raise DependencyProvisioningBlockedError("dependency_plan_conflict")
+            approved[item.package]=item.requested_version
+            if item.manifest_group is not None:
+                prior_group=approved_groups.get(item.package)
+                if prior_group is not None and prior_group!=item.manifest_group:
+                    raise DependencyProvisioningBlockedError("dependency_manifest_target_conflict")
+                approved_groups[item.package]=item.manifest_group
+        manifests=[]
+        manifest_files={}
+        manifest_paths=sorted(root.rglob("package.json"),key=lambda path:(path!=root/"package.json",path.relative_to(root).as_posix()))
+        for path in manifest_paths:
+            relative=path.relative_to(root)
+            if any(part in {"node_modules",".asep"} for part in relative.parts):
+                continue
+            try: payload=json.loads(path.read_text(encoding="utf-8"))
+            except (OSError,json.JSONDecodeError) as exc:
+                raise DependencyProvisioningBlockedError("dependency_manifest_invalid") from exc
+            if not isinstance(payload,dict):
+                raise DependencyProvisioningBlockedError("dependency_manifest_invalid")
+            relative_path=relative.as_posix()
+            manifests.append((relative_path,payload))
+            manifest_files[relative_path]=path
+        if not manifests or manifests[0][0]!="package.json":
+            raise DependencyProvisioningBlockedError("dependency_manifest_missing")
+        local={payload.get("name"):payload.get("version") for _,payload in manifests if payload.get("name")}
+        changed_manifests:set[str]=set()
+        declared_external:set[str]=set()
+        for relative_path,payload in manifests:
+            for field in ("dependencies","devDependencies","optionalDependencies"):
+                values=payload.get(field,{})
+                if not isinstance(values,dict):
+                    raise DependencyProvisioningBlockedError("dependency_manifest_invalid")
+                for package,version in values.items():
+                    if package in local:
+                        if version!=local[package]:
+                            raise DependencyProvisioningBlockedError("dependency_internal_version_mismatch")
+                    elif package not in approved:
+                        raise DependencyProvisioningBlockedError("dependency_not_approved")
+                    else:
+                        declared_external.add(package)
+                        if approved[package]!=version:
+                            values[package]=approved[package]
+                            changed_manifests.add(relative_path)
+        root_manifest=manifests[0][1]
+        for package in sorted(set(approved)-declared_external):
+            group=approved_groups.get(package)
+            if group is None:
+                raise DependencyProvisioningBlockedError(
+                    "dependency_manifest_target_required"
+                )
+            values=root_manifest.setdefault(group,{})
+            if not isinstance(values,dict):
+                raise DependencyProvisioningBlockedError("dependency_manifest_invalid")
+            values[package]=approved[package]
+            changed_manifests.add("package.json")
+        for relative_path,payload in manifests:
+            if relative_path not in changed_manifests:
+                continue
+            try:
+                manifest_files[relative_path].write_text(
+                    json.dumps(payload,indent=2,ensure_ascii=False)+"\n",
+                    encoding="utf-8",
+                )
+            except OSError as exc:
+                raise DependencyProvisioningBlockedError(
+                    "dependency_manifest_update_failed"
+                ) from exc
+        plan_payload=tuple(sorted(approved.items()))
+        manifest_payload=tuple((path,payload) for path,payload in manifests)
+        plan_fingerprint=hashlib.sha256(json.dumps(plan_payload,separators=(",",":"),ensure_ascii=True).encode()).hexdigest()
+        manifest_fingerprint=hashlib.sha256(json.dumps(manifest_payload,sort_keys=True,separators=(",",":"),ensure_ascii=True).encode()).hexdigest()
+        lockfile=root/"package-lock.json"; modules=root/"node_modules"
+        compatible=evidence_repository.latest_compatible(project_id,plan_fingerprint,manifest_fingerprint)
+        if (compatible is not None and lockfile.is_file() and modules.is_dir()
+                and self._materialization_matches(root,approved)):
+            evidence=ProvisioningEvidence(evidence_id=str(uuid4()),execution_id=execution_id,project_id=project_id,package_manager="npm",registry=self._registries[0],status=DependencyProvisioningStatus.PROVISIONED,created_at=datetime.now(UTC),completed_at=datetime.now(UTC),dependency_plan_fingerprint=plan_fingerprint,manifest_fingerprint=manifest_fingerprint,materialized_roots=(".",),reused=True)
+            evidence_repository.save(evidence); return evidence
+        runtime=root/".asep"/"runtime"; cache=runtime/"npm-cache"; cache.mkdir(parents=True,exist_ok=True)
+        environment={"NPM_CONFIG_CACHE":str(cache),"NPM_CONFIG_REGISTRY":self._registries[0],"NPM_CONFIG_IGNORE_SCRIPTS":"true","NPM_CONFIG_AUDIT":"false","NPM_CONFIG_FUND":"false"}
+        commands=[("npm","install","--package-lock-only","--ignore-scripts","--no-audit","--no-fund","--save-exact")]
+        commands.append(("npm","ci","--ignore-scripts","--no-audit","--no-fund"))
+        try:
+            for command in commands:
+                result=runner.run(command,working_directory=root,environment=environment,timeout=timeout)
+                if result.exit_code!=0: raise DependencyProvisioningBlockedError("dependency_provisioning_failed")
+        except Exception as error:
+            failed=ProvisioningEvidence(evidence_id=str(uuid4()),execution_id=execution_id,project_id=project_id,package_manager="npm",registry=self._registries[0],status=DependencyProvisioningStatus.FAILED,created_at=datetime.now(UTC),completed_at=datetime.now(UTC),error_code="dependency_provisioning_failed",dependency_plan_fingerprint=plan_fingerprint,manifest_fingerprint=manifest_fingerprint,materialized_roots=(".",))
+            evidence_repository.save(failed)
+            if isinstance(error,DependencyProvisioningBlockedError): raise
+            raise DependencyProvisioningBlockedError("dependency_provisioning_failed") from error
+        if not lockfile.is_file() or not modules.is_dir():
+            raise DependencyProvisioningBlockedError("dependency_materialization_missing")
+        if not self._materialization_matches(root,approved):
+            raise DependencyProvisioningBlockedError("dependency_materialization_unverified")
+        evidence=ProvisioningEvidence(evidence_id=str(uuid4()),execution_id=execution_id,project_id=project_id,package_manager="npm",registry=self._registries[0],status=DependencyProvisioningStatus.PROVISIONED,created_at=datetime.now(UTC),completed_at=datetime.now(UTC),dependency_plan_fingerprint=plan_fingerprint,manifest_fingerprint=manifest_fingerprint,materialized_roots=(".",))
+        evidence_repository.save(evidence); return evidence
+
+    @staticmethod
+    def _materialization_matches(root:Path, approved:Mapping[str,str])->bool:
+        try:
+            declared:dict[str,set[str]]={package:set() for package in approved}
+            for manifest_path in root.rglob("package.json"):
+                relative=manifest_path.relative_to(root)
+                if any(part in {"node_modules",".asep"} for part in relative.parts):
+                    continue
+                manifest=json.loads(manifest_path.read_text(encoding="utf-8"))
+                for field in ("dependencies","devDependencies","optionalDependencies"):
+                    for package,version in manifest.get(field,{}).items():
+                        if package in declared:
+                            declared[package].add(version)
+            lock=json.loads((root/"package-lock.json").read_text(encoding="utf-8"))
+            packages=lock["packages"]
+            for package,version in approved.items():
+                if declared[package]!={version}:
+                    return False
+                locked=packages[f"node_modules/{package}"]
+                installed=json.loads(
+                    (root/"node_modules"/package/"package.json").read_text(encoding="utf-8")
+                )
+                if locked.get("version")!=version or installed.get("version")!=version:
+                    return False
+        except (OSError,AttributeError,KeyError,TypeError,json.JSONDecodeError):
+            return False
+        return True
 
     @classmethod
     def _declared_dependencies(cls, manifest: object) -> tuple[str, ...]:

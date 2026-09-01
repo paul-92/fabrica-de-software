@@ -20,7 +20,10 @@ from asep.application.project_engineering_planning import (
     DeterministicEngineeringTaskDecomposer,
     ProjectEngineeringPlanningService,
 )
-from asep.dependency_provisioning import SQLiteDependencyRequestRepository
+from asep.dependency_provisioning import (
+    DependencyRequestDecision,
+    SQLiteDependencyRequestRepository,
+)
 from asep.project_analysis import ProjectAnalyzer
 from asep.projects import (
     InMemoryProjectExecutionRepository,
@@ -429,6 +432,112 @@ def test_select_dependency_version_transitions_to_pending(
     assert executor.calls == 0
 
 
+
+def test_select_dependency_version_creates_new_pending_after_rejected_same_version(
+    tmp_path: Path,
+):
+    (
+        service,
+        request,
+        executions,
+        runtime,
+        executor,
+        dependency_requests,
+    ) = make_service(tmp_path)
+
+    (tmp_path / ".asep").mkdir()
+
+    (
+        tmp_path
+        / ".asep"
+        / "dependency-baseline.json"
+    ).write_text(
+        (
+            '{"status":"approved","dependencies":['
+            '{"package":"typescript","reason":"compiler"}'
+            "]}"
+        ),
+        encoding="utf-8",
+    )
+
+    rejected = dependency_requests.create(
+        project_id="p-1",
+        session_id="old-session",
+        execution_id="old-prep",
+        package="typescript",
+        requested_version="5.9.2",
+        reason="compiler",
+        registry="https://registry.npmjs.org/",
+    )
+
+    rejected = dependency_requests.resolve(
+        "p-1",
+        rejected.request_id,
+        DependencyRequestDecision.REJECTED,
+        "approver",
+        1,
+    )
+
+    request = request.model_copy(
+        update={
+            "engineering_phase": EngineeringPhase.DEVELOPMENT,
+            "sprint_id": "1",
+            "sprint_name": "Foundation",
+        }
+    )
+
+    prepared = service.prepare(request)
+
+    assert prepared.error_code == "version_selection_required"
+
+    updated = service.select_dependency_version(
+        project_id="p-1",
+        preparation_id=prepared.execution_id,
+        package="typescript",
+        version="5.9.2",
+    )
+
+    item = updated.dependency_plan["items"][0]
+
+    assert item["requested_version"] == "5.9.2"
+    assert item["status"] == "pending"
+    assert item["dependency_request_id"] != rejected.request_id
+
+    history = [
+        stored
+        for stored in dependency_requests.list("p-1")
+        if stored.package == "typescript"
+        and stored.requested_version == "5.9.2"
+    ]
+
+    assert len(history) == 2
+
+    by_id = {
+        stored.request_id: stored
+        for stored in history
+    }
+
+    assert (
+        by_id[rejected.request_id].status
+        is DependencyRequestDecision.REJECTED
+    )
+
+    new_request = by_id[item["dependency_request_id"]]
+
+    assert (
+        new_request.status
+        is DependencyRequestDecision.PENDING
+    )
+
+    assert (
+        new_request.execution_id
+        == prepared.execution_id
+    )
+
+    assert runtime.calls == 0
+    assert executor.calls == 0
+
+
 def test_select_dependency_version_rejects_invalid_version(
     tmp_path: Path,
 ):
@@ -583,11 +692,59 @@ def test_select_dependency_version_cannot_be_selected_twice(
             project_id="p-1",
             preparation_id=prepared.execution_id,
             package="typescript",
-            version="5.9.3",
+            version="5.9.2",
         )
 
     assert executions.get(prepared.execution_id) == first
     assert len(dependency_requests.list("p-1")) == 1
+    assert runtime.calls == executor.calls == 0
+
+
+def test_newer_approved_decision_overrides_workspace_analysis_version(tmp_path: Path):
+    service, request, _, runtime, executor, dependency_requests = make_service(tmp_path)
+    (tmp_path / ".asep").mkdir()
+    (tmp_path / ".asep" / "dependency-baseline.json").write_text(
+        '{"status":"approved","dependencies":['
+        '{"package":"bullmq","requested_version":null,"reason":"queues"}'
+        "]}",
+        encoding="utf-8",
+    )
+    (tmp_path / "package.json").write_text(
+        '{"name":"sample","version":"0.1.0",'
+        '"dependencies":{"bullmq":"7.10.0"}}',
+        encoding="utf-8",
+    )
+    decision = dependency_requests.create(
+        project_id="p-1",
+        session_id=request.session_id,
+        execution_id="human-decision",
+        package="bullmq",
+        requested_version="6.3.1",
+        reason="approved replacement for nonexistent version",
+        registry="https://registry.npmjs.org/",
+    )
+    approved = dependency_requests.resolve(
+        "p-1",
+        decision.request_id,
+        DependencyRequestDecision.APPROVED,
+        "authorized-human",
+        decision.version,
+    )
+    prepared = service.prepare(
+        request.model_copy(
+            update={"engineering_phase": EngineeringPhase.DEVELOPMENT}
+        )
+    )
+    items = [
+        item for item in prepared.dependency_plan["items"]
+        if item["package"] == "bullmq"
+    ]
+    assert items
+    assert {item["requested_version"] for item in items} == {"6.3.1"}
+    assert {item["status"] for item in items} == {"approved"}
+    assert {item["dependency_request_id"] for item in items} == {
+        approved.request_id
+    }
     assert runtime.calls == executor.calls == 0
 
 

@@ -216,12 +216,23 @@ def test_preserves_runtime_identity_usage_and_request_id(tmp_path: Path):
     assert result.already_metered is False
 
 
+
+def test_empty_changes_is_valid_noop_candidate(tmp_path: Path):
+    runtime = StubRuntime('{"changes":[]}')
+
+    provider = AIRuntimeEngineeringImplementationProvider(runtime)
+
+    result = provider.invoke_ai(context(tmp_path))
+
+    assert result.changes == ()
+
+
+
 @pytest.mark.parametrize(
     "output",
     [
         "not-json",
         "{}",
-        '{"changes":[]}',
         '{"changes":[{"relative_path":"../unsafe.py","content":"bad"}]}',
         '{"unexpected":"value"}',
     ],

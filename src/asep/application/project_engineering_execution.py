@@ -94,6 +94,10 @@ class ProjectRuntimeExecutionCapability(Protocol):
         self, preparation_id: str, request: ProjectAIRuntimeExecutionRequest,
     ) -> ProjectExecution: ...
 
+    def provision_approved_dependencies(
+        self, execution: ProjectExecution, workspace,
+    ): ...
+
 
 class ProjectEngineeringExecutionService:
     """Application boundary for one real, project-scoped engineering task."""
@@ -238,6 +242,11 @@ class ProjectEngineeringExecutionService:
             "changes": captured_changes,
             "execution": execution,
         })
+        provisioner = getattr(
+            self._runtime_execution, "provision_approved_dependencies", None,
+        )
+        if provisioner is not None:
+            provisioner(execution, workspace)
         strategy_builder = getattr(self._validation, "strategy", None)
         strategy_runner = getattr(self._validation, "validate_strategy", None)
         strategy = None
@@ -466,9 +475,19 @@ class ProjectEngineeringExecutionService:
             **current.model_dump(mode="python"),
             "status": ProjectExecutionStatus.FAILED,
             "error_code": self._public_error_code(error),
+            "error_detail": self._public_error_detail(error),
             "completed_at": self._clock(),
         })
         self._executions.update(failed)
+
+    @staticmethod
+    def _public_error_detail(error: Exception) -> str | None:
+        detail = " ".join(str(error).split())
+        if not detail:
+            return None
+        if len(detail) > 500:
+            return detail[:497] + "..."
+        return detail
 
     @staticmethod
     def _public_error_code(error: Exception) -> str:
