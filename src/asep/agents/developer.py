@@ -1,4 +1,4 @@
-Get-Content git-core-diff.txt"""Agente determinístico de demonstração do pipeline E2E."""
+"""Agente determinístico de demonstração do pipeline E2E."""
 
 from __future__ import annotations
 
