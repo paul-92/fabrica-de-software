@@ -1,5 +1,0 @@
-version: 0.1.0
-knowledge:
-  - id: foundations
-    version: 0.1.0
-    path: ../knowledge/foundations.md

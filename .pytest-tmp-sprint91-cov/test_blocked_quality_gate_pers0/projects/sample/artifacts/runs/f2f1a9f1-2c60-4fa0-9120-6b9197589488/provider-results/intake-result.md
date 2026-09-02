@@ -1,3 +1,0 @@
-# Provider result
-
-Execution completed.

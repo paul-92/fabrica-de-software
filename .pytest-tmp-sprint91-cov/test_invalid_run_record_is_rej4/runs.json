@@ -1,1 +1,0 @@
-{"version": "1.0", "runs": [{"id": "run-1", "status": "pending", "started_at": "2026-07-30T10:00:00Z", "finished_at": "invalid", "project_id": null, "workflow_id": null, "stage_id": null, "provider_name": null, "summary": null, "error": null, "metadata": {}}]}

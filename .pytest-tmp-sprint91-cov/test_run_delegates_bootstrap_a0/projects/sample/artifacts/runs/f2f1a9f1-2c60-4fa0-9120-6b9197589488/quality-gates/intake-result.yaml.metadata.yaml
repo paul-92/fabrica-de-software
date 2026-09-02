@@ -1,9 +1,0 @@
-artifact_id: b547717c-a94b-4be7-bc19-85fcb8d8825d
-run_id: f2f1a9f1-2c60-4fa0-9120-6b9197589488
-project_id: sample
-stage_id: intake
-agent_id: quality-gate-engine
-path: quality-gates/intake-result.yaml
-type: yaml
-created_at: '2026-07-30T14:27:22.387974Z'
-checksum: ca1017b01a838922ccb3d8fbd37b4a99fc2f0d47260cf1da212b2b82af065e1d
