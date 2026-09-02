@@ -13,4 +13,5 @@ autorização operacional e não substitui as evidências preservadas pela ASEP.
 ## Registros
 
 - [Fechamento formal da Sprint 1](reports/sprint-1-closure.md)
-
+- [Readiness e revisão da Sprint 2](reports/sprint-2-readiness.md)
+- [ADR-014 — credencial inicial do bootstrap](decisions/ADR-014-bootstrap-initial-credentials.md)

@@ -117,6 +117,13 @@ Copie `projects/_template/`, atribua ID único em `kebab-case`, escolha `project
 
 O material anterior útil foi preservado em `docs/`, `prompts/` e nos playbooks por tipo de produto. Use o [índice da documentação ASEP](docs/DocumentationIndex.md) como ponto de entrada. O [inventário de ambiente](project/ENVIRONMENT_INVENTORY.md) registra requisitos não sensíveis. O glossário histórico está em [docs/glossary.md](docs/glossary.md) e os termos de persistência em [docs/glossary/PersistenceGlossary.md](docs/glossary/PersistenceGlossary.md). Decisões humanas abertas estão em [reports/open-decisions.md](reports/open-decisions.md).
 
+## Project Context for AI / Engineering Handoff
+
+Use [PROJECT_CONTEXT](.context/PROJECT_CONTEXT.md) como memória estrutural,
+arquitetural e histórica do ASEP. Use [AI_HANDOFF](.context/AI_HANDOFF.md) como
+checkpoint operacional para retomar o trabalho em outra sessão, modelo,
+provedor ou ambiente; o estado executável continua sendo a fonte final da verdade.
+
 Os contratos e o catálogo em memória de agentes da Fase 8 estão documentados
 em [Agent Contracts](docs/workflows/AgentContracts.md) e
 [Agent Registry](docs/workflows/AgentRegistry.md).

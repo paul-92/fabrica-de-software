@@ -1,8 +1,31 @@
 # TaskFlow — Sprint 2 readiness
 
-**ID:** TASKFLOW-SPRINT-2-READINESS | **Versão:** 1.1.0 | **Status:** blocked  
-**Dono:** autoridade do projeto | **Data:** 2026-08-29  
+**ID:** TASKFLOW-SPRINT-2-READINESS | **Versão:** 1.2.0 | **Status:** revised — awaiting authorization
+**Dono:** autoridade do projeto | **Data original:** 2026-08-29 | **Revisão:** 2026-09-02
 **Project ID:** `9be00568-4026-4929-8abb-9933581c31bd`
+
+## Atualização de interpretação — 2026-09-02
+
+**Classificação da conclusão anterior:** **SUPERSEDED / REVISED**.
+
+A versão 1.1.0 tratou `validation_strategy = null` na preparation como um gap
+que, isoladamente, exigiria decisão antes de qualquer aprovação. Auditoria
+posterior do modelo `ProjectExecution`, do fluxo de Project Engineering, dos
+testes de compatibilidade e da persistência operacional confirmou que
+`validation_strategy` é opcional durante preparation. No desenho atual, a
+strategy estruturada é construída e persistida durante execution/validation;
+quando o serviço estruturado não está disponível, permanece um fallback legado.
+
+Portanto, `validation_strategy = null` durante preparation **não constitui,
+sozinho, blocker** e não deve motivar uma correção artificial no fluxo de
+preparation.
+
+Esta revisão **não declara a Sprint 2 pronta, aprovada ou autorizada**. A
+cobertura efetiva dos critérios, os validators/targets aplicáveis, os riscos de
+dependência e migração e o Quality Gate ainda precisam ser comprovados no ciclo
+apropriado. Approval e execution continuam dependentes de decisão humana
+explícita. O restante deste documento é preservado como análise histórica; onde
+houver conflito, esta atualização prevalece.
 
 ## Objetivo
 
@@ -268,7 +291,7 @@ não podem ser desativados nem substituídos por declaração textual.
 | Autorização de preparation | READY | Concedida e integralmente consumida |
 | Autorização de execution | APPROVAL REQUIRED | Não concedida |
 
-**READINESS: C — VALIDATION GAP REQUIRES DECISION**
+**[HISTÓRICO — SUPERSEDED / REVISED] READINESS: C — VALIDATION GAP REQUIRES DECISION**
 
 A Sprint 2 permanece **BLOQUEADA PARA EXECUÇÃO**. Além de não existir
 autorização de execution, os critérios sem cobertura precisam de tratamento
