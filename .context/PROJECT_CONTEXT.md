@@ -654,6 +654,74 @@ como fato entre sessões; verificar processos e health novamente.
 
 # 35. Future Architecture
 
+## Visual UX baseline — 2026-09-02
+
+Os itens abaixo são **[BUG/UX OBSERVADO]** no primeiro teste visual governado da
+própria ASEP. Eles formam o baseline inicial de usabilidade; não representam
+score, solução implementada ou mudança automática do escopo da Sprint 2.
+
+| ID | Achado observado | Impacto para o usuário |
+|---|---|---|
+| UX-01 | “Reconstruindo sessão” pode permanecer indefinidamente quando a hydration falha, sem diagnóstico ou alternativa visível. | O usuário não distingue espera normal, falha de frontend e indisponibilidade da API. |
+| UX-02 | Um login aceito seguido de perda ou rejeição da sessão pode retornar ao AccessGate sem feedback. | A interface aparenta ignorar credenciais válidas e não informa a ação segura seguinte. |
+| UX-03 | Estados e metadados internos, como `pending`, IDs, targets e validators, são expostos diretamente. | Vocabulário de implementação substitui significado e consequência para o usuário. |
+| UX-04 | “Fase atual: Testes” pode ser confundida com o estado da Sprint 2, embora a preparation esteja `pending` e ainda não executada. | Lifecycle do projeto e lifecycle da execution parecem uma única coisa. |
+| UX-05 | “Continuar a fase atual” não explica claramente o que acontecerá. | Ação, efeito, risco e responsável ficam implícitos. |
+| UX-06 | “Sessões” ocupa papel excessivamente central para um conceito técnico. | O usuário precisa compreender mecanismo interno antes de expressar sua intenção. |
+| UX-07 | Existe entrada em linguagem natural, mas ela permanece subordinada a sessões, modos e runtime e usa linguagem vinculada ao Codex. | A experiência parece operar uma ferramenta/provider, não conversar com a ASEP. |
+
+Categorias preparadas para futuras comparações do benchmark:
+
+- Natural Language Experience;
+- Discoverability;
+- Clarity;
+- Time to First Useful Result;
+- Human Intervention;
+- Technical Vocabulary Exposure;
+- Error Recovery;
+- Visual Product Testing;
+- Governance;
+- Traceability;
+- Provider Flexibility;
+- Cost/Usage Control.
+
+**[REFERÊNCIA COMPETITIVA]** Hercules é referência de simplicidade e experiência
+para o benchmark, não arquitetura a ser copiada. Nenhum score foi atribuído.
+
+## Natural Language First — [DIREÇÃO DE PRODUTO / NÃO IMPLEMENTADO]
+
+Qualquer operação que possa ser expressa naturalmente pelo usuário deve poder
+ser iniciada em linguagem natural. As abas existem para oferecer visibilidade,
+exploração e controle; elas não devem obrigar o usuário a compreender a
+arquitetura interna antes de obter valor.
+
+Direções associadas:
+
+- Chat ASEP como centro de comando;
+- progressive disclosure;
+- organizar a experiência por “Onde estou / O que aconteceu / O que posso
+  fazer agora”;
+- traduzir estados internos para linguagem humana;
+- oferecer ações orientadas a resultado, com efeito e consequência claros;
+- tratar sessões como mecanismo interno ou histórico;
+- manter detalhes técnicos disponíveis em uma camada avançada;
+- impedir que um provider defina a identidade visual ou conversacional da ASEP.
+
+Exemplo conceitual:
+
+- evitar: “O que você quer que o Codex faça?”;
+- preferir: “O que você quer que a ASEP faça?”.
+
+## Organization & Identity — [FUTURO / NÃO IMPLEMENTADO]
+
+- o criador/contratante pode tornar-se `OWNER` da organização;
+- `OWNER` é distinto de `ADMIN` e controla configurações comerciais e sensíveis;
+- `ADMIN` permanece papel operacional;
+- `MEMBER` permanece papel de uso.
+
+`OWNER` comercial não existe no modelo atual e exige decisão de produto,
+autorização, threat model, migration e validação próprias antes de implementação.
+
 ## ASEP MCP — [FUTURO]
 
 Pode expor capacidades governadas do ASEP a agentes/provedores externos. Não
@@ -662,10 +730,56 @@ override de Quality Gate ou instalação arbitrária de packages.
 
 ## Provider Hub — [FUTURO]
 
-Pode centralizar providers, credentials/auth, models, routing, usage, budgets e
-BYO provider. Não foi localizado como capacidade implementada neste checkpoint.
+Pode centralizar providers, credenciais/autenticação, models, routing, fallback,
+usage e budgets. A ASEP deve permanecer provider-agnostic: Codex é um provider,
+não a identidade da IA da ASEP. Adapters devem ser intercambiáveis e uma futura
+política pode selecionar providers por custo, capacidade, privacidade e
+disponibilidade. Multi-provider e Provider Hub **não estão implementados**.
+
+### BYOK — [FUTURO / NÃO IMPLEMENTADO]
+
+- o cliente pode conectar sua própria credencial de provider;
+- o consumo ocorre na conta/token do próprio cliente;
+- secrets nunca aparecem em prompts, logs ou evidências;
+- armazenamento deve ser seguro e criptografado;
+- rotação, revogação e validação da conexão são obrigatórias.
+
+### ASEP Managed AI — [POSSIBILIDADE COMERCIAL / NÃO IMPLEMENTADO]
+
+O cliente pode futuramente optar por créditos ou IA fornecidos pela própria
+ASEP, em coexistência com BYOK. Essa oferta não existe atualmente e depende de
+política comercial, segurança, billing, limites e evidência operacional.
+
+### AI Usage & Budget — [DIREÇÃO FUTURA]
+
+A governança futura deve permitir consumo por organização, usuário, projeto,
+execution, provider e model; input/output tokens; custo estimado; budgets;
+alertas; limites; e comportamento fail-closed quando a política exigir. A
+plataforma já possui partes de usage/quota, mas isso não comprova a experiência
+comercial completa aqui descrita.
+
 Qualquer desenho deve preservar classificação de dados, auditabilidade,
 governança de custos e as fronteiras de provider existentes.
+
+## Provider versus governance — [PRINCÍPIO]
+
+Trocar o provider não altera a governança da ASEP. O pipeline conceitual
+permanece:
+
+```text
+User Intent
+→ Planning
+→ Architecture
+→ Dependency Governance
+→ AI Runtime / Provider
+→ Governed Tools
+→ Validation
+→ Repair
+→ Quality Gate
+→ Evidence
+```
+
+O provider gera ou propõe. A ASEP governa.
 
 # 36. Protocolo de retomada por outro provedor
 
